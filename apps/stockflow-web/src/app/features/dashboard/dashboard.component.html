@@ -1,0 +1,141 @@
+<div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><span></span><span></span><span></span></div>
+      <div class="brand-copy">
+        <strong>StockFlow AI</strong>
+        <small>Intelligent Inventory Network</small>
+      </div>
+    </div>
+
+    <nav class="nav-scroll">
+      <section *ngFor="let group of navGroups" class="nav-group">
+        <div class="nav-title" *ngIf="group.title">{{ group.title }}</div>
+        <button *ngFor="let item of group.items" class="nav-item" [class.active]="item.active">
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+        </button>
+      </section>
+    </nav>
+
+    <button class="collapse-button" (click)="toggleSidebar()">
+      <span>{{ sidebarCollapsed ? '›' : '‹' }}</span>
+      <span class="nav-label">Collapse</span>
+    </button>
+  </aside>
+
+  <main class="main-area">
+    <header class="topbar">
+      <button class="menu-button" (click)="toggleSidebar()">☰</button>
+      <div class="global-search">
+        <span>⌕</span>
+        <input aria-label="Global search" placeholder="Search for SKU, Product, Warehouse, Order...">
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button notification">♧<b>8</b></button>
+        <button class="icon-button">?</button>
+        <button class="icon-button">☼</button>
+        <div class="profile">
+          <div class="avatar">RS</div>
+          <div><strong>{{ data?.userName || 'Rohit Sharma' }}</strong><small>{{ data?.userRole || 'Inventory Manager' }}</small></div>
+          <span>⌄</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="content" *ngIf="data as dashboard; else loadingState">
+      <div class="welcome-row">
+        <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! <span>👋</span></h1><p>Here’s what’s happening with your inventory today.</p></div>
+        <button class="ask-ai">✦ <span>Ask StockFlow AI</span></button>
+      </div>
+
+      <section class="kpi-grid">
+        <article *ngFor="let kpi of dashboard.kpis" class="card kpi-card">
+          <div class="kpi-icon" [style.background]="kpi.accent">{{ kpi.icon }}</div>
+          <div class="kpi-body"><span>{{ kpi.label }}</span><strong>{{ kpi.value }}</strong><small [class.positive]="kpi.intent === 'positive'" [class.negative]="kpi.intent === 'negative'">{{ kpi.direction === 'up' ? '↑' : '↓' }} {{ kpi.change }} <em>{{ kpi.comparison }}</em></small></div>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="card risk-overview">
+          <div class="card-header"><h2>Inventory Risk Overview</h2><div><select aria-label="Warehouse filter"><option>All Warehouses</option></select><button>⋮</button></div></div>
+          <div class="risk-body">
+            <div class="donut-wrap"><div class="donut" [style.background]="riskDonutStyle()"><div><strong>{{ dashboard.riskTotal }}</strong><span>Total Risks</span></div></div></div>
+            <div class="legend">
+              <div *ngFor="let risk of dashboard.riskBreakdown"><i [style.background]="risk.color"></i><span>{{ risk.label }}</span><strong>{{ risk.count }}</strong><small>({{ risk.percentage }}%)</small></div>
+            </div>
+          </div>
+          <button class="card-cta">View All Risk Details <span>→</span></button>
+        </article>
+
+        <article class="card top-risks">
+          <div class="card-header"><h2>Top Risks</h2><div><a>View All</a><button>⋮</button></div></div>
+          <div class="risk-list">
+            <div *ngFor="let risk of dashboard.topRisks" class="risk-item">
+              <div class="risk-icon">{{ risk.icon }}</div>
+              <div class="risk-copy"><div><strong>{{ risk.product }}</strong><span [class]="'risk-badge ' + risk.badgeClass">{{ risk.type }}</span></div><small>{{ risk.batch ? 'Batch: ' + risk.batch + ' · ' : '' }}{{ risk.warehouse }} · {{ risk.detail }}</small></div>
+              <div class="risk-metric"><strong>{{ risk.quantity }}</strong><small [class.high]="risk.metricIntent === 'high'" [class.good]="risk.metricIntent === 'good'">{{ risk.metric }}</small></div>
+            </div>
+          </div>
+        </article>
+
+        <aside class="card copilot-panel">
+          <div class="card-header"><h2><span class="sparkle">✦</span> StockFlow AI Assistant</h2><button>⋮</button></div>
+          <div class="messages">
+            <div *ngFor="let message of dashboard.copilotMessages" class="message" [class.user]="message.role === 'user'">
+              <div>{{ message.text }}</div><small>{{ message.timestamp }}</small>
+            </div>
+          </div>
+          <form class="copilot-input" (ngSubmit)="sendCopilotMessage()">
+            <input [(ngModel)]="copilotInput" name="copilotInput" placeholder="Ask anything about inventory...">
+            <button type="submit">➤</button>
+          </form>
+        </aside>
+
+        <article class="card chart-card demand-card">
+          <div class="card-header"><h2>Demand Forecast <small>(Next 30 Days)</small></h2><a>View Full Forecast</a></div>
+          <div class="chart-legend"><span><i class="actual-line"></i>Actual Demand</span><span><i class="forecast-line"></i>Forecast</span></div>
+          <svg viewBox="0 0 360 190" preserveAspectRatio="none" class="line-chart" aria-label="Demand forecast chart">
+            <g class="grid-lines"><line x1="12" y1="30" x2="348" y2="30"/><line x1="12" y1="70" x2="348" y2="70"/><line x1="12" y1="110" x2="348" y2="110"/><line x1="12" y1="150" x2="348" y2="150"/></g>
+            <rect x="198" y="20" width="150" height="140" rx="8" class="forecast-zone"/>
+            <polyline [attr.points]="actualPoints()" class="actual-path"/>
+            <polyline [attr.points]="forecastPoints()" class="forecast-path"/>
+          </svg>
+          <div class="x-labels"><span *ngFor="let label of dashboard.demandForecast.labels">{{ label }}</span></div>
+        </article>
+
+        <article class="card chart-card trend-card">
+          <div class="card-header"><h2>Inventory Value Trend</h2><select><option>This Month</option></select></div>
+          <svg viewBox="0 0 260 190" preserveAspectRatio="none" class="line-chart trend-chart" aria-label="Inventory value trend chart">
+            <defs><linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#18b76a" stop-opacity=".28"/><stop offset="1" stop-color="#18b76a" stop-opacity="0"/></linearGradient></defs>
+            <g class="grid-lines"><line x1="12" y1="30" x2="248" y2="30"/><line x1="12" y1="70" x2="248" y2="70"/><line x1="12" y1="110" x2="248" y2="110"/><line x1="12" y1="150" x2="248" y2="150"/></g>
+            <polygon [attr.points]="inventoryTrendPoints() + ' 248,170 12,170'" fill="url(#areaGradient)"/>
+            <polyline [attr.points]="inventoryTrendPoints()" class="trend-path"/>
+          </svg>
+          <div class="x-labels"><span *ngFor="let label of dashboard.inventoryTrend.labels">{{ label }}</span></div>
+        </article>
+
+        <article class="card recommendations-card">
+          <div class="card-header"><h2>Recommendations ({{ dashboard.recommendations.length }})</h2><a>View All</a></div>
+          <div class="recommendation-list">
+            <div *ngFor="let recommendation of dashboard.recommendations" class="recommendation-item">
+              <div class="recommendation-icon">{{ recommendation.icon }}</div>
+              <div><strong>{{ recommendation.title }}</strong><small>{{ recommendation.subtitle }}</small></div>
+              <span>{{ recommendation.benefit }}<small>Benefit</small></span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <footer class="network-bar">
+        <div *ngFor="let metric of dashboard.networkMetrics"><span>{{ metric.icon }}</span><strong>{{ metric.value }}</strong><small>{{ metric.label }}</small></div>
+        <div class="sync"><i></i> Last synced: {{ dashboard.asOf }} <button>⟳</button></div>
+      </footer>
+    </section>
+  </main>
+</div>
+
+<ng-template #loadingState>
+  <div class="loading-state"><div class="spinner"></div><p *ngIf="!error">Loading StockFlow dashboard…</p><p *ngIf="error">{{ error }}</p></div>
+</ng-template>

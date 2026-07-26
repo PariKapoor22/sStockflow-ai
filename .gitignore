@@ -1,0 +1,26 @@
+# Angular / Node
+node_modules/
+dist/
+.angular/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Java / Maven
+target/
+*.iml
+.idea/
+
+# Generated data
+data/generated/*
+!data/generated/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env

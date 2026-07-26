@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: StockFlow AI Core API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/dashboard/overview:
+    get:
+      operationId: getDashboardOverview
+      summary: Returns the Sprint 1 inventory dashboard overview
+      responses:
+        '200':
+          description: Dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardOverview'
+components:
+  schemas:
+    DashboardOverview:
+      type: object
+      required: [userName, userRole, asOf, kpis, riskTotal, riskBreakdown, topRisks, demandForecast, inventoryTrend, recommendations, networkMetrics, copilotMessages]
+      properties:
+        userName: { type: string }
+        userRole: { type: string }
+        asOf: { type: string }
+        kpis: { type: array, items: { type: object, additionalProperties: true } }
+        riskTotal: { type: integer }
+        riskBreakdown: { type: array, items: { type: object, additionalProperties: true } }
+        topRisks: { type: array, items: { type: object, additionalProperties: true } }
+        demandForecast: { type: object, additionalProperties: true }
+        inventoryTrend: { type: object, additionalProperties: true }
+        recommendations: { type: array, items: { type: object, additionalProperties: true } }
+        networkMetrics: { type: array, items: { type: object, additionalProperties: true } }
+        copilotMessages: { type: array, items: { type: object, additionalProperties: true } }
