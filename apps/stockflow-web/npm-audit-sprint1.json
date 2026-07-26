@@ -1,0 +1,240 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@angular-devkit/build-angular": {
+      "name": "@angular-devkit/build-angular",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "postcss",
+        "webpack-dev-server"
+      ],
+      "effects": [],
+      "range": "<=22.1.0-next.4",
+      "nodes": [
+        "node_modules/@angular-devkit/build-angular"
+      ],
+      "fixAvailable": false
+    },
+    "@angular/cli": {
+      "name": "@angular/cli",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "@modelcontextprotocol/sdk"
+      ],
+      "effects": [],
+      "range": "20.3.14 - 20.3.32 || >=21.0.5",
+      "nodes": [
+        "node_modules/@angular/cli"
+      ],
+      "fixAvailable": {
+        "name": "@angular/cli",
+        "version": "21.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@hono/node-server": {
+      "name": "@hono/node-server",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1124006,
+          "name": "@hono/node-server",
+          "dependency": "@hono/node-server",
+          "title": "Node.js Adapter for Hono: Path traversal in `serve-static` on Windows via encoded backslash (`%5C`)",
+          "url": "https://github.com/advisories/GHSA-frvp-7c67-39w9",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-22"
+          ],
+          "cvss": {
+            "score": 5.9,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "range": "<2.0.5"
+        }
+      ],
+      "effects": [
+        "@modelcontextprotocol/sdk"
+      ],
+      "range": "<2.0.5",
+      "nodes": [
+        "node_modules/@hono/node-server"
+      ],
+      "fixAvailable": {
+        "name": "@angular/cli",
+        "version": "21.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@modelcontextprotocol/sdk": {
+      "name": "@modelcontextprotocol/sdk",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@hono/node-server"
+      ],
+      "effects": [
+        "@angular/cli"
+      ],
+      "range": ">=1.25.0",
+      "nodes": [
+        "node_modules/@modelcontextprotocol/sdk"
+      ],
+      "fixAvailable": {
+        "name": "@angular/cli",
+        "version": "21.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "postcss": {
+      "name": "postcss",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1124288,
+          "name": "postcss",
+          "dependency": "postcss",
+          "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+          "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+          "severity": "high",
+          "cwe": [
+            "CWE-22"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "range": "<=8.5.17"
+        }
+      ],
+      "effects": [
+        "@angular-devkit/build-angular"
+      ],
+      "range": "<=8.5.17",
+      "nodes": [
+        "node_modules/postcss"
+      ],
+      "fixAvailable": false
+    },
+    "sockjs": {
+      "name": "sockjs",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "uuid"
+      ],
+      "effects": [
+        "webpack-dev-server"
+      ],
+      "range": ">=0.3.17",
+      "nodes": [
+        "node_modules/sockjs"
+      ],
+      "fixAvailable": false
+    },
+    "uuid": {
+      "name": "uuid",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1119441,
+          "name": "uuid",
+          "dependency": "uuid",
+          "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+          "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-787",
+            "CWE-1285"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N"
+          },
+          "range": "<11.1.1"
+        }
+      ],
+      "effects": [
+        "sockjs"
+      ],
+      "range": "<11.1.1",
+      "nodes": [
+        "node_modules/uuid"
+      ],
+      "fixAvailable": false
+    },
+    "webpack-dev-server": {
+      "name": "webpack-dev-server",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1123965,
+          "name": "webpack-dev-server",
+          "dependency": "webpack-dev-server",
+          "title": "webpack-dev-server vulnerable to cross-site request forgery via internal developer endpoints",
+          "url": "https://github.com/advisories/GHSA-f5vj-f2hx-8m93",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-352",
+            "CWE-749"
+          ],
+          "cvss": {
+            "score": 4.7,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:N/I:N/A:L"
+          },
+          "range": "<=5.2.5"
+        },
+        {
+          "source": 1123966,
+          "name": "webpack-dev-server",
+          "dependency": "webpack-dev-server",
+          "title": "webpack-dev-server vulnerable to denial of service via a malformed Host or Origin header",
+          "url": "https://github.com/advisories/GHSA-m28w-2pqf-7qgj",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-20",
+            "CWE-248"
+          ],
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+          },
+          "range": "<=5.2.5"
+        },
+        "sockjs"
+      ],
+      "effects": [
+        "@angular-devkit/build-angular"
+      ],
+      "range": "<=5.2.6",
+      "nodes": [
+        "node_modules/webpack-dev-server"
+      ],
+      "fixAvailable": false
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 6,
+      "high": 2,
+      "critical": 0,
+      "total": 8
+    },
+    "dependencies": {
+      "prod": 12,
+      "dev": 926,
+      "optional": 134,
+      "peer": 3,
+      "peerOptional": 0,
+      "total": 937
+    }
+  }
+}
