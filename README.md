@@ -899,4 +899,4 @@ Current prototype limitation
 
 Sprint 1 is a foundation package. The dashboard and service contracts are operational, but the core API still serves a controlled fixture rather than PostgreSQL data. Forecasting and optimisation are deterministic scaffolds rather than trained production models. The copilot response is scripted, and Action MCP creates no commercial transaction.
 
-These limitations are deliberate so the project can establish a stable, testable end-to-end foundation before persistence, production intelligence and approval-controlled execution are introduced."# stockflow-ai" 
+These limitations are deliberate so the project can establish a stable, testable end-to-end foundation before persistence, production intelligence and approval-controlled execution are introduced.
