@@ -1,16 +1,100 @@
-StockFlow AI — Sprint 1 Foundation (Fixed v2)
+StockFlow AI — Sprint 1 Foundation
 
-StockFlow AI is an ERP-neutral inventory intelligence, demand forecasting and stock optimisation platform for wholesalers and distributors. It is designed to identify stockout risk, near-expiry inventory, excess stock and working-capital blockage, then generate explainable recommendations for procurement, stock transfer and inventory action.
+ERP-neutral inventory intelligence, demand forecasting, and stock optimisation for wholesalers and distributors
 
-This repository contains the Sprint 1 Fixed v2 foundation: a working Angular dashboard, a Kotlin/Spring Boot core API, deterministic Python forecasting and optimisation services, three logical MCP servers, synthetic data generation and Windows launch scripts.
+StockFlow AI identifies stockout risk, near-expiry inventory, excess stock, and working-capital blockage. It generates explainable recommendations for procurement, inter-warehouse stock transfer, and inventory action.
 
-Release status: Sprint 1 foundation / prototypePackage label: Fixed v2Recommended Git tag: v0.1.0-sprint1
+This repository contains the Sprint 1 Fixed v2 foundation, including:
 
-What Sprint 1 delivers
+A working Angular dashboard
 
-Web dashboard
+A Kotlin and Spring Boot core API
 
-Responsive Angular dashboard
+Deterministic Python forecasting and optimisation services
+
+Three logical MCP servers
+
+Synthetic data generation and validation
+
+Windows launch and configuration scripts
+
+Release Information
+
+Item
+
+Value
+
+Release status
+
+Sprint 1 foundation / prototype
+
+Package label
+
+Fixed v2
+
+Recommended Git tag
+
+v0.1.0-sprint1
+
+Primary target users
+
+Wholesalers and distributors
+
+Supported verticals
+
+Pharmaceuticals, supermarkets, and merchandise
+
+Development environment
+
+Windows-first local development
+
+Table of Contents
+
+What Sprint 1 Delivers
+
+Fixed v2 Corrections
+
+Architecture
+
+Technology Stack
+
+Repository Structure
+
+Prerequisites
+
+Quick Start on Windows
+
+Run Components Individually
+
+MCP Servers
+
+Component Endpoints
+
+Synthetic Data
+
+Testing and Validation
+
+Environment Variables
+
+Troubleshooting
+
+Sprint Boundaries
+
+Git Workflow Recommendation
+
+Security and Governance
+
+Documentation
+
+Current Prototype Limitations
+
+What Sprint 1 Delivers
+
+Web Dashboard
+
+The Angular web application includes:
+
+Responsive dashboard layout
 
 Sidebar navigation and product shell
 
@@ -18,7 +102,7 @@ Inventory KPI cards
 
 Inventory-risk breakdown
 
-Top-risk list
+Top-risk inventory list
 
 Demand forecast chart
 
@@ -32,9 +116,11 @@ Sprint 1 copilot interaction panel
 
 Automatic fallback to bundled mock JSON when the core API is unavailable
 
-Kotlin core API
+Kotlin Core API
 
-Kotlin + Spring Boot application
+The core backend includes:
+
+Kotlin and Spring Boot application
 
 Dashboard overview REST endpoint
 
@@ -44,49 +130,79 @@ CORS configuration for the Angular development server
 
 Classpath-backed JSON fixture for Sprint 1
 
-Backend integration test using MockMvc
+Backend integration testing using MockMvc
 
-Python intelligence services
+Python Intelligence Services
 
-FastAPI forecasting service
+Forecasting Service
+
+FastAPI-based forecasting API
 
 Deterministic weekly seasonal baseline
 
-Confidence range for predicted demand
+Predicted-demand confidence range
 
-FastAPI optimisation service
+Lower and upper forecast bounds
+
+Optimisation Service
+
+FastAPI-based stock optimisation API
 
 Source safety-stock protection
 
 Destination-shortage constraint
 
-Transfer value, transport cost and expected benefit calculation
+Transfer-value calculation
 
-MCP layer
+Transport-cost calculation
 
-Data MCP: read-only access to the dashboard inventory summary
+Expected-benefit calculation
 
-Intelligence MCP: forecast and transfer recommendation tools
+Positive-net-benefit validation
 
-Action MCP: controlled transfer-proposal creation
+MCP Layer
 
-Streamable HTTP transport
+StockFlow AI includes three logical MCP servers:
 
-Action tools disabled by default
+Data MCP
 
-Human approval preserved as a non-negotiable boundary
+Provides read-only access to the dashboard inventory summary.
 
-Synthetic data
+Intelligence MCP
 
-Multi-tenant wholesaler/distributor data
+Provides forecasting and stock-transfer recommendation tools.
 
-Pharmaceutical, supermarket and merchandise verticals
+Action MCP
 
-Warehouses, retailers and SKUs
+Provides controlled transfer-proposal creation.
+
+The Action MCP server:
+
+Is disabled by default
+
+Creates draft proposals only
+
+Does not execute stock movement
+
+Does not create an ERP transaction
+
+Preserves human approval as a mandatory boundary
+
+Synthetic Data
+
+The synthetic-data foundation supports:
+
+Multiple tenants and business units
+
+Wholesaler and distributor operating models
+
+Pharmaceutical, supermarket, and merchandise verticals
+
+Warehouses, retailers, and SKUs
 
 Batch inventory and expiry dates
 
-Sales history
+Historical sales
 
 Open purchase orders
 
@@ -94,55 +210,61 @@ Warehouse transfer routes
 
 Deterministic generator configuration
 
-Validation report
+Validation reporting
 
-Fixed v2 corrections
+Fixed v2 Corrections
 
 Fixed v2 addresses the following Sprint 1 backend and Windows execution issues:
 
-Removed the Spring Boot 4/Jackson 2 ObjectMapper incompatibility.
+Removed the Spring Boot 4 and Jackson 2 ObjectMapper incompatibility
 
-Returns the dashboard fixture as an explicit application/json response.
+Returned the dashboard fixture as an explicit application/json response
 
-Removed the obsolete direct Jackson 2 Kotlin-module dependency.
+Removed the obsolete direct Jackson 2 Kotlin module dependency
 
-Added Maven discovery from PATH, %USERPROFILE%\Tools and C:\Tools.
+Added Maven discovery from:
 
-Targets Java 17 bytecode for compatibility with supported Java 17, 21 and 25 runtimes.
+PATH
 
-Added backend test execution before the Windows launcher starts the API.
+%USERPROFILE%\Tools
 
-Added individual Windows launchers so each service starts from its correct directory.
+C:\Tools
 
-See FIX_NOTES.md for the package-level fix summary.
+Configured Java 17 bytecode compatibility for Java 17, 21, and 25 runtimes
+
+Added backend test execution before the Windows launcher starts the API
+
+Added individual Windows launchers so every service starts from its correct directory
+
+See FIX_NOTES.md for the package-level correction summary.
 
 Architecture
 
 flowchart LR
-    USER[Inventory Manager] --> WEB[Angular Dashboard\n:4200]
-    WEB --> CORE[Kotlin Spring Boot Core API\n:8080]
-    WEB -. fallback .-> MOCK[Local Dashboard JSON]
+    USER[Inventory Manager] --> WEB[Angular Dashboard<br/>Port 4200]
+    WEB --> CORE[Kotlin Spring Boot Core API<br/>Port 8080]
+    WEB -. API unavailable .-> MOCK[Local Dashboard JSON]
 
-    MCPD[Data MCP\n:8201] --> CORE
-    MCPI[Intelligence MCP\n:8202] --> FC[Forecasting Service\n:8101]
-    MCPI --> OP[Optimisation Service\n:8102]
-    MCPA[Action MCP\n:8203] --> PROPOSAL[Draft Proposal Only]
+    MCPD[Data MCP<br/>Port 8201] --> CORE
+    MCPI[Intelligence MCP<br/>Port 8202] --> FC[Forecasting Service<br/>Port 8101]
+    MCPI --> OP[Optimisation Service<br/>Port 8102]
+    MCPA[Action MCP<br/>Port 8203] --> PROPOSAL[Draft Proposal Only]
 
     DATA[Synthetic CSV Data] --> DEMO[Prototype Demonstration]
 
-Sprint 1 runtime relationship
+Sprint 1 Runtime Relationship
 
 Angular UI
-   ├── Core API available  → use /api/v1/dashboard/overview
-   └── Core API unavailable → use local mock dashboard JSON
+├── Core API available   → /api/v1/dashboard/overview
+└── Core API unavailable → local mock dashboard JSON
 
 Data MCP          → Kotlin Core API
 Intelligence MCP  → Forecasting and Optimisation services
 Action MCP        → Controlled draft proposal only
 
-MCP is the AI-facing capability layer. It does not replace REST APIs, ERP integration, transaction processing or approval workflows.
+MCP is the AI-facing capability layer. It does not replace REST APIs, ERP integration, transaction processing, or approval workflows.
 
-Technology stack
+Technology Stack
 
 Layer
 
@@ -184,24 +306,38 @@ Sprint 1 data
 
 UTF-8 CSV and JSON fixtures
 
-PostgreSQL, Redis, production ML models, OR-Tools, authentication and persistent approval workflows are planned for later sprints.
+The following capabilities are planned for later sprints:
 
-Repository structure
+PostgreSQL
+
+Redis
+
+Production machine-learning models
+
+OR-Tools optimisation
+
+Authentication and authorisation
+
+Persistent approval workflows
+
+Controlled ERP execution
+
+Repository Structure
 
 stockflow-ai-sprint1/
 ├── apps/
-│   └── stockflow-web/                     Angular dashboard
+│   └── stockflow-web/                     # Angular dashboard
 ├── services/
-│   ├── stockflow-core-api/                Kotlin Spring Boot API
-│   ├── forecasting-service/               Python FastAPI forecast service
-│   └── optimisation-service/              Python FastAPI optimisation service
+│   ├── stockflow-core-api/                # Kotlin Spring Boot API
+│   ├── forecasting-service/               # Python FastAPI forecast service
+│   └── optimisation-service/              # Python FastAPI optimisation service
 ├── mcp/
-│   └── stockflow_mcp/                     Data, Intelligence and Action MCP
+│   └── stockflow_mcp/                     # Data, Intelligence, and Action MCP
 ├── contracts/
-│   └── dashboard-api.openapi.yaml         Sprint 1 API contract
+│   └── dashboard-api.openapi.yaml         # Sprint 1 API contract
 ├── data/
-│   ├── sample/                            Small reusable sample dataset
-│   ├── generated/                         Locally generated dataset
+│   ├── sample/                            # Small reusable sample dataset
+│   ├── generated/                         # Locally generated dataset
 │   ├── generator_config.yaml
 │   └── sample_config.yaml
 ├── docs/
@@ -231,7 +367,7 @@ Install and verify the following tools:
 
 Tool
 
-Recommended version
+Recommended Version
 
 Node.js
 
@@ -261,7 +397,9 @@ PyYAML
 
 Required by the synthetic-data generator
 
-Verify from Command Prompt:
+Verify the Development Environment
+
+Run the following commands from Command Prompt:
 
 node --version
 npm --version
@@ -274,23 +412,37 @@ Install PyYAML when it is not already available:
 
 python -m pip install pyyaml
 
-Maven discovery on Windows
+Maven Discovery on Windows
 
-The supplied scripts detect Maven in any of these locations:
+The supplied scripts detect Maven in any of the following locations:
 
 mvn available on PATH
+
 %USERPROFILE%\Tools\apache-maven-*\bin\mvn.cmd
+
 C:\Tools\apache-maven-*\bin\mvn.cmd
 
-If mvn is not on PATH, extract Maven under one of the supported Tools folders.
+When Maven is not available on PATH, extract it under one of these supported locations:
 
-Quick start on Windows
+%USERPROFILE%\Tools\apache-maven-3.9.x
 
-Option 1 — Run only the dashboard
+or:
 
-This is the quickest way to verify the UI. The dashboard will use the local fixture when the Kotlin API is not running.
+C:\Tools\apache-maven-3.9.x
 
-From the repository root:
+Then run:
+
+configure-maven-windows.cmd
+
+Quick Start on Windows
+
+Option 1 — Run Only the Dashboard
+
+This is the quickest way to verify the web interface.
+
+The dashboard automatically uses the local JSON fixture when the Kotlin API is unavailable.
+
+From the repository root, run:
 
 run-web-windows.cmd
 
@@ -298,49 +450,73 @@ Open:
 
 http://localhost:4200
 
-The first run automatically performs npm install when node_modules does not exist.
+The first run automatically executes npm install when node_modules does not exist.
 
-Option 2 — Run the complete Sprint 1 platform
+Option 2 — Run the Complete Sprint 1 Platform
 
-First verify that Node.js, npm, Java, Maven, Python, uv and PyYAML are available. Then run from the repository root:
+First verify that the following are available:
+
+Node.js
+
+npm
+
+Java
+
+Maven
+
+Python
+
+uv
+
+PyYAML
+
+Then run from the repository root:
 
 RUN_ALL_WINDOWS.cmd
 
 The launcher:
 
-Validates the required tools.
+Validates the required tools
 
-Detects Maven.
+Detects Maven
 
-Generates synthetic data.
+Generates synthetic data
 
-Validates the generated data.
+Validates the generated data
 
-Opens each component in a separate Command Prompt window.
+Opens every component in a separate Command Prompt window
 
-Starts Angular after the backend/service terminals have opened.
+Starts Angular after the backend and service terminals have opened
 
-Wait for each terminal to report that its service is running.
+Wait for every terminal to report that its service is running.
 
-Recommended first run sequence
+Recommended First-Run Sequence
 
 For easier troubleshooting, start the platform one component at a time:
 
-1. Angular dashboard
-2. Kotlin core API
-3. Forecasting service
-4. Optimisation service
-5. Data MCP
-6. Intelligence MCP
-7. Action MCP
+Angular dashboard
+
+Kotlin core API
+
+Forecasting service
+
+Optimisation service
+
+Data MCP
+
+Intelligence MCP
+
+Action MCP
 
 Use a separate Command Prompt window for every long-running service.
 
-Run components individually
+Run Components Individually
 
-All helper commands below must be run from the repository root.
+All helper commands in this section must be run from the repository root.
 
-Angular dashboard
+Angular Dashboard
+
+Run:
 
 run-web-windows.cmd
 
@@ -350,11 +526,11 @@ cd apps\stockflow-web
 npm install
 npm start
 
-Application:
+Application URL:
 
 http://localhost:4200
 
-The Angular service first requests:
+The Angular application first requests:
 
 /api/v1/dashboard/overview
 
@@ -362,7 +538,9 @@ When the backend is unavailable, it falls back to:
 
 src/assets/mock/dashboard-overview.json
 
-Kotlin core API
+Kotlin Core API
+
+Run:
 
 run-core-api-windows.cmd
 
@@ -388,7 +566,9 @@ Expected health response:
   "status": "UP"
 }
 
-Forecasting service
+Forecasting Service
+
+Run:
 
 run-forecasting-windows.cmd
 
@@ -412,9 +592,17 @@ Example request:
   "horizon_days": 30
 }
 
-The Sprint 1 service uses a deterministic weekly seasonal baseline and returns predicted demand with lower and upper bounds.
+The Sprint 1 service uses a deterministic weekly seasonal baseline and returns:
 
-Optimisation service
+Predicted demand
+
+Lower confidence bound
+
+Upper confidence bound
+
+Optimisation Service
+
+Run:
 
 run-optimisation-windows.cmd
 
@@ -443,19 +631,31 @@ Example request:
   "unit_value": 272.22
 }
 
-The service protects source safety stock, limits the transfer to the destination shortage and returns a transfer only when the estimated net benefit is positive.
+The optimisation service:
 
-MCP servers
+Protects source safety stock
 
-Start MCP only after its downstream services are running.
+Limits transfer quantity to destination shortage
+
+Calculates transfer value and transport cost
+
+Returns a recommendation only when the estimated net benefit is positive
+
+MCP Servers
+
+Start an MCP server only after its dependent downstream services are running.
 
 Data MCP
 
+Run:
+
 run-mcp-data-windows.cmd
+
+Endpoint:
 
 http://127.0.0.1:8201/mcp
 
-Exposed capability:
+Exposed capabilities:
 
 get_inventory_summary
 stockflow://dashboard/overview
@@ -466,7 +666,11 @@ Kotlin Core API → http://127.0.0.1:8080
 
 Intelligence MCP
 
+Run:
+
 run-mcp-intelligence-windows.cmd
+
+Endpoint:
 
 http://127.0.0.1:8202/mcp
 
@@ -482,30 +686,36 @@ Optimisation API → http://127.0.0.1:8102
 
 Action MCP
 
+Run:
+
 run-mcp-action-windows.cmd
+
+Endpoint:
 
 http://127.0.0.1:8203/mcp
 
-The action server is disabled by default:
+The Action MCP server is disabled by default:
 
 STOCKFLOW_ENABLE_ACTIONS=false
 
-To enable draft proposal creation for a controlled local demonstration:
+To enable controlled draft-proposal creation for a local demonstration:
 
 set STOCKFLOW_ENABLE_ACTIONS=true
 run-mcp-action-windows.cmd
 
-This creates a draft proposal only. It does not execute inventory movement or create an ERP transaction.
+Enabling Action MCP creates a draft proposal only. It does not move inventory, update stock balances, or create an ERP transaction.
 
 Test with MCP Inspector
 
-MCP endpoints are protocol endpoints, not normal browser pages.
+MCP endpoints are protocol endpoints and are not intended to be opened as standard browser pages.
+
+Start MCP Inspector:
 
 npx -y @modelcontextprotocol/inspector
 
 Connect using Streamable HTTP and select one endpoint at a time.
 
-Component endpoints
+Component Endpoints
 
 Component
 
@@ -573,29 +783,29 @@ Action MCP
 
 http://127.0.0.1:8203/mcp
 
-Synthetic data
+Synthetic Data
 
-Generate the full dataset
+Generate the Full Dataset
 
 Run from the repository root:
 
 python scripts\generate_synthetic_data.py --config data\generator_config.yaml --output data\generated
 
-Validate the generated dataset
+Validate the Generated Dataset
 
 python scripts\validate_synthetic_data.py --dataset data\generated
 
-Validate the repository structure
+Validate the Repository Structure
 
 python scripts\validate_project.py
 
-The generator uses a fixed seed so repeated runs are deterministic for the same configuration.
+The generator uses a fixed random seed. Repeated executions therefore produce deterministic output for the same configuration.
 
-Dataset model
+Dataset Model
 
 The Sprint 1 generator supports:
 
-3 tenants/business units
+3 tenants or business units
 
 10 warehouses
 
@@ -603,7 +813,11 @@ The Sprint 1 generator supports:
 
 100 SKUs
 
-Pharmaceutical, supermarket and merchandise categories
+Pharmaceutical categories
+
+Supermarket categories
+
+Merchandise categories
 
 Historical sales
 
@@ -615,23 +829,31 @@ Warehouse transfer routes
 
 Judge-facing Paracetamol stock-rebalancing scenario
 
-Generated files are written under data/generated/. Large generated outputs are intentionally excluded by .gitignore; the smaller data/sample/ dataset remains version-controlled.
+Generated files are written under:
 
-Testing and validation
+data/generated/
 
-Angular
+Large generated outputs are intentionally excluded through .gitignore.
+
+The smaller reusable sample dataset remains version-controlled under:
+
+data/sample/
+
+Testing and Validation
+
+Angular Build Validation
 
 cd apps\stockflow-web
 npm run build
 
-The current Sprint 1 package does not include a complete Angular unit-test specification, so npm test is not the primary validation command yet.
+The Sprint 1 package does not yet include a complete Angular unit-test specification. Therefore, npm test is not the primary Angular validation command for this release.
 
-Kotlin API
+Kotlin API Testing
 
 cd services\stockflow-core-api
 mvn clean test
 
-The integration test verifies that:
+The backend integration test verifies that:
 
 /api/v1/dashboard/overview returns HTTP 200
 
@@ -639,20 +861,29 @@ riskTotal is present
 
 Five KPI records are returned
 
-Python syntax
+Python Syntax Validation
 
-From the repository root:
+Run from the repository root:
 
 python -m compileall services mcp scripts
 
-API testing
+API Testing
 
-Use the generated Swagger pages:
+Use the generated Swagger interfaces:
 
-Forecasting:  http://localhost:8101/docs
-Optimisation: http://localhost:8102/docs
+Service
 
-Environment variables
+Swagger URL
+
+Forecasting
+
+http://localhost:8101/docs
+
+Optimisation
+
+http://localhost:8102/docs
+
+Environment Variables
 
 The supplied .env.example documents the local defaults:
 
@@ -661,7 +892,7 @@ STOCKFLOW_FORECAST_API_URL=http://127.0.0.1:8101
 STOCKFLOW_OPTIMISATION_API_URL=http://127.0.0.1:8102
 STOCKFLOW_ENABLE_ACTIONS=false
 
-Do not commit a real .env file containing secrets. .env is excluded through .gitignore.
+Do not commit a real .env file containing secrets. The .env file is excluded through .gitignore.
 
 Troubleshooting
 
@@ -680,7 +911,7 @@ npm start
 
 ModuleNotFoundError: No module named 'stockflow_forecasting'
 
-Cause: Uvicorn was executed from the repository root or outside the service environment.
+Cause: Uvicorn was executed from the repository root or outside the forecasting-service environment.
 
 Use:
 
@@ -698,13 +929,18 @@ Use:
 
 run-optimisation-windows.cmd
 
-or run uv sync and Uvicorn from services\optimisation-service.
+or run uv sync and Uvicorn from:
+
+services\optimisation-service
 
 'mvn' is not recognized
 
-Install/extract Maven into one of the supported directories:
+Install or extract Maven into one of the supported directories:
 
 %USERPROFILE%\Tools\apache-maven-3.9.x
+
+or:
+
 C:\Tools\apache-maven-3.9.x
 
 Then run:
@@ -712,31 +948,35 @@ Then run:
 configure-maven-windows.cmd
 run-core-api-windows.cmd
 
-Angular deprecation or npm audit warnings
+Angular Deprecation or npm Audit Warnings
 
-Dependency deprecation and audit messages do not necessarily prevent the development server from running. Review npm audit output before changing dependencies.
+Dependency deprecation and audit messages do not necessarily prevent the development server from running.
+
+Review the npm audit output before changing dependencies.
 
 Do not automatically run:
 
 npm audit fix --force
 
-on the Sprint 1 baseline, because forced updates can introduce breaking Angular changes. Apply dependency upgrades through a separate branch and validate the build.
+Forced upgrades can introduce breaking Angular changes. Apply dependency upgrades through a separate branch and validate the complete build.
 
 Terminate batch job (Y/N)?
 
 When stopping Angular:
 
-Press Ctrl+C.
+Press Ctrl+C
 
-Type Y only while the Terminate batch job (Y/N)? prompt is visible.
+Type Y only while the Terminate batch job (Y/N)? prompt is visible
 
-Press Enter.
+Press Enter
 
-When the normal command prompt has already returned, typing Y is treated as a command and produces 'y' is not recognized.
+When the normal command prompt has already returned, typing Y is treated as a command and produces:
 
-Port already in use
+'y' is not recognized
 
-Find the process using a port:
+Port Already in Use
+
+Find the process using the required port:
 
 netstat -ano | findstr :4200
 netstat -ano | findstr :8080
@@ -747,7 +987,7 @@ Stop the relevant process only after confirming its PID:
 
 taskkill /PID <PID> /F
 
-Sprint boundaries
+Sprint Boundaries
 
 Implemented in Sprint 1 Fixed v2
 
@@ -761,9 +1001,9 @@ Kotlin fixture-backed API
 
 Deterministic forecast scaffold
 
-Deterministic transfer recommendation scaffold
+Deterministic transfer-recommendation scaffold
 
-Data, Intelligence and Action MCP foundations
+Data, Intelligence, and Action MCP foundations
 
 Synthetic-data generation and validation
 
@@ -775,7 +1015,13 @@ PostgreSQL schema
 
 Flyway migrations
 
-Tenant, warehouse, SKU, batch and sales persistence
+Tenant persistence
+
+Warehouse persistence
+
+SKU persistence
+
+Batch and sales persistence
 
 CSV import pipeline
 
@@ -787,9 +1033,11 @@ Deferred to Sprint 3
 
 Model training and backtesting
 
-Forecast accuracy metrics
+Forecast-accuracy metrics
 
-Stockout and expiry risk models
+Stockout-risk models
+
+Expiry-risk models
 
 OR-Tools optimisation
 
@@ -797,7 +1045,7 @@ FEFO rebalancing
 
 Purchase-versus-transfer comparison
 
-Financial impact engine
+Financial-impact engine
 
 Deferred to Sprint 4
 
@@ -809,15 +1057,19 @@ LLM integration
 
 Tool-call trace and evidence display
 
-Prompt-injection and output controls
+Prompt-injection controls
+
+Output controls
 
 Deferred to Sprint 5
 
-Persistent transfer and purchase proposals
+Persistent transfer proposals
+
+Persistent purchase proposals
 
 Approval inbox
 
-Approve/reject workflow
+Approve and reject workflow
 
 Audit and outcome measurement
 
@@ -825,41 +1077,59 @@ Controlled ERP execution requests
 
 See docs/SPRINT_PLAN.md for the implementation sequence.
 
-Git workflow recommendation
+Git Workflow Recommendation
 
 Use the Fixed v2 package as the Sprint 1 baseline.
 
 main
-  └── protected release-ready code
+└── protected release-ready code
 
 develop or feature branches
-  ├── feat/sprint2-data-foundation
-  ├── feat/postgresql-persistence
-  ├── feat/csv-import
-  └── chore/dependency-updates
+├── feat/sprint2-data-foundation
+├── feat/postgresql-persistence
+├── feat/csv-import
+└── chore/dependency-updates
 
-Recommended baseline tag:
+Create the Sprint 1 Baseline Tag
 
 git tag -a v0.1.0-sprint1 -m "StockFlow AI Sprint 1 Fixed v2"
 git push origin v0.1.0-sprint1
 
-Use pull requests for dependency upgrades and later sprint development. Do not modify the Fixed v2 baseline directly after tagging it.
+Use pull requests for:
 
-Security and governance notes
+Dependency upgrades
 
-Action MCP is disabled by default.
+Sprint 2 development
 
-High-value actions must require human approval.
+Feature development
 
-The AI layer must not receive unrestricted database access.
+Configuration changes
 
-MCP tools must not directly alter inventory balances.
+Security changes
 
-Tenant scope must be enforced server-side when persistence is introduced.
+Do not modify the Fixed v2 baseline directly after tagging it.
 
-Secrets must never be committed to Git.
+Security and Governance
 
-Generated recommendations should retain evidence, assumptions and financial impact.
+The Sprint 1 foundation follows these mandatory controls:
+
+Action MCP is disabled by default
+
+High-value actions require human approval
+
+The AI layer must not receive unrestricted database access
+
+MCP tools must not directly alter inventory balances
+
+Tenant scope must be enforced server-side when persistence is introduced
+
+Secrets must never be committed to Git
+
+Recommendations must retain evidence, assumptions, and financial impact
+
+ERP transactions must not be executed directly by the LLM or MCP layer
+
+Production actions must be auditable and approval-controlled
 
 Documentation
 
@@ -895,8 +1165,34 @@ VALIDATION_RESULTS.json
 
 Package validation summary
 
-Current prototype limitation
+Current Prototype Limitations
 
-Sprint 1 is a foundation package. The dashboard and service contracts are operational, but the core API still serves a controlled fixture rather than PostgreSQL data. Forecasting and optimisation are deterministic scaffolds rather than trained production models. The copilot response is scripted, and Action MCP creates no commercial transaction.
+Sprint 1 is a foundation package.
 
-These limitations are deliberate so the project can establish a stable, testable end-to-end foundation before persistence, production intelligence and approval-controlled execution are introduced.
+The dashboard and service contracts are operational, but the following limitations remain deliberate:
+
+The core API serves a controlled fixture rather than PostgreSQL data
+
+Forecasting uses a deterministic scaffold rather than a trained production model
+
+Optimisation uses deterministic rules rather than a production optimisation engine
+
+The copilot response is scripted
+
+Action MCP does not create a commercial transaction
+
+Authentication and tenant isolation are not yet implemented
+
+Recommendations are not yet persisted
+
+Approval workflows are not yet persistent
+
+ERP execution is not enabled
+
+These boundaries allow StockFlow AI to establish a stable, testable, end-to-end foundation before adding persistence, production intelligence, secured AI orchestration, approval workflows, and controlled execution.
+
+Release Tag
+
+v0.1.0-sprint1
+
+Package: StockFlow AI — Sprint 1 FoundationRelease label: Fixed v2Status: Prototype foundation
