@@ -258,9 +258,9 @@ Angular UI
 ├── Core API available   → /api/v1/dashboard/overview
 └── Core API unavailable → local mock dashboard JSON
 
-Data MCP          → Kotlin Core API
-Intelligence MCP  → Forecasting and Optimisation services
-Action MCP        → Controlled draft proposal only
+Data MCP         → Kotlin Core API
+Intelligence MCP → Forecasting and Optimisation services
+Action MCP       → Controlled draft proposal only
 
 MCP is the AI-facing capability layer. It does not replace REST APIs, ERP integration, transaction processing, or approval workflows.
 
@@ -326,18 +326,18 @@ Repository Structure
 
 stockflow-ai-sprint1/
 ├── apps/
-│   └── stockflow-web/                     # Angular dashboard
+│   └── stockflow-web/                  # Angular dashboard
 ├── services/
-│   ├── stockflow-core-api/                # Kotlin Spring Boot API
-│   ├── forecasting-service/               # Python FastAPI forecast service
-│   └── optimisation-service/              # Python FastAPI optimisation service
+│   ├── stockflow-core-api/             # Kotlin Spring Boot API
+│   ├── forecasting-service/            # Python FastAPI forecast service
+│   └── optimisation-service/           # Python FastAPI optimisation service
 ├── mcp/
-│   └── stockflow_mcp/                     # Data, Intelligence, and Action MCP
+│   └── stockflow_mcp/                  # Data, Intelligence, and Action MCP
 ├── contracts/
-│   └── dashboard-api.openapi.yaml         # Sprint 1 API contract
+│   └── dashboard-api.openapi.yaml      # Sprint 1 API contract
 ├── data/
-│   ├── sample/                            # Small reusable sample dataset
-│   ├── generated/                         # Locally generated dataset
+│   ├── sample/                         # Small reusable sample dataset
+│   ├── generated/                      # Locally generated dataset
 │   ├── generator_config.yaml
 │   └── sample_config.yaml
 ├── docs/
@@ -985,7 +985,7 @@ netstat -ano | findstr :8102
 
 Stop the relevant process only after confirming its PID:
 
-taskkill /PID <PID> /F
+taskkill /PID /F
 
 Sprint Boundaries
 
@@ -1084,7 +1084,7 @@ Use the Fixed v2 package as the Sprint 1 baseline.
 main
 └── protected release-ready code
 
-develop or feature branches
+ develop or feature branches
 ├── feat/sprint2-data-foundation
 ├── feat/postgresql-persistence
 ├── feat/csv-import
@@ -1195,4 +1195,18 @@ Release Tag
 
 v0.1.0-sprint1
 
-Package: StockFlow AI — Sprint 1 FoundationRelease label: Fixed v2Status: Prototype foundation
+Item
+
+Value
+
+Package
+
+StockFlow AI — Sprint 1 Foundation
+
+Release label
+
+Fixed v2
+
+Status
+
+Prototype foundation
