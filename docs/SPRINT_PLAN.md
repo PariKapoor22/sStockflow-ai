@@ -53,3 +53,9 @@ StockFlow AI is built as one integrated product. The sprints are incremental ver
 - Human confirmation and approval workflow
 - Audit events and outcome measurement
 - No autonomous inventory or financial execution
+
+## Phase 2 implementation status
+
+- **Increment 1 complete:** PostgreSQL/Flyway persistence foundation for tenant, warehouse, product, SKU and batch inventory.
+- **Increment 2 implemented:** controlled tenant-scoped ZIP/CSV validation and import with job/error evidence and a Phase 2-ready synthetic foundation package.
+- **Next — Increment 3:** sales-history persistence, scalable batch import, demand aggregation and database-backed dashboard KPIs.

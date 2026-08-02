@@ -8,7 +8,10 @@ export class DashboardDataService {
   constructor(private readonly http: HttpClient) {}
 
   loadOverview(): Observable<DashboardOverview> {
-    return this.http.get<DashboardOverview>('/api/v1/dashboard/overview').pipe(
+    const tenantId = localStorage.getItem('stockflowTenantId') ?? 'TEN-ACME-PHARMA';
+    return this.http.get<DashboardOverview>('/api/v1/dashboard/overview', {
+      headers: { 'X-Tenant-ID': tenantId }
+    }).pipe(
       catchError(() => this.http.get<DashboardOverview>('/assets/mock/dashboard-overview.json'))
     );
   }

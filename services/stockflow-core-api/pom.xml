@@ -7,14 +7,19 @@
     <version>4.1.0</version>
     <relativePath/>
   </parent>
+
   <groupId>com.stockflow</groupId>
   <artifactId>stockflow-core-api</artifactId>
-  <version>0.1.0</version>
+  <version>0.4.0-SNAPSHOT</version>
   <name>stockflow-core-api</name>
+  <description>StockFlow AI core API and inventory intelligence, risk and dashboard APIs</description>
+
   <properties>
     <java.version>17</java.version>
     <kotlin.version>2.4.10</kotlin.version>
+    <kotlin.compiler.daemon>false</kotlin.compiler.daemon>
   </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -29,9 +34,27 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-reflect</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -42,7 +65,13 @@
       <artifactId>spring-boot-starter-webmvc-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
+
   <build>
     <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
     <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
