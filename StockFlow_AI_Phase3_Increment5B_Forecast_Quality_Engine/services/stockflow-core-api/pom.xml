@@ -10,9 +10,9 @@
 
   <groupId>com.stockflow</groupId>
   <artifactId>stockflow-core-api</artifactId>
-  <version>0.5.2-SNAPSHOT</version>
+  <version>0.5.1-SNAPSHOT</version>
   <name>stockflow-core-api</name>
-  <description>StockFlow AI core API with inventory intelligence, calibrated demand forecasting, diagnostics, inventory intelligence, risk and dashboard APIs</description>
+  <description>StockFlow AI core API with inventory intelligence, advanced statistical demand forecasting, forecast quality, risk and dashboard APIs</description>
 
   <properties>
     <java.version>17</java.version>
