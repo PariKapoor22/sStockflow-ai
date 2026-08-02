@@ -28,14 +28,6 @@
     </button>
   </aside>
 
-  <button
-    type="button"
-    class="mobile-sidebar-backdrop"
-    [class.visible]="!sidebarCollapsed"
-    aria-label="Close navigation menu"
-    (click)="sidebarCollapsed = true"
-  ></button>
-
   <main class="main-area">
     <header class="topbar">
       <button class="menu-button" (click)="toggleSidebar()">☰</button>

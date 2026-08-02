@@ -98,7 +98,7 @@ export class DashboardComponent implements OnInit {
   importError = '';
   copilotInput = '';
   globalSearch = '';
-  sidebarCollapsed = window.innerWidth <= 900;
+  sidebarCollapsed = false;
 
   @ViewChild('globalSearchInput') globalSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -274,10 +274,6 @@ export class DashboardComponent implements OnInit {
     this.activeView = view;
     this.pageError = '';
     this.importError = '';
-
-    if (window.innerWidth <= 900) {
-      this.sidebarCollapsed = true;
-    }
 
     if (view === 'dashboard' || view === 'recommendations') {
       if (!this.data) this.loadDashboard();
