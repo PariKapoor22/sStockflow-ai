@@ -24,3 +24,8 @@ Thumbs.db
 
 # Secrets
 .env
+apps/stockflow-web/node_modules/
+apps/stockflow-web/dist/
+apps/stockflow-web/.angular/
+apps/stockflow-web-backup-before-frontend-increment1/
+services/stockflow-core-api/target/
