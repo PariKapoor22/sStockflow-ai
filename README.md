@@ -1,216 +1,107 @@
 # StockFlow AI
 
-> Last updated: 2026-08-02
+> ERP-neutral inventory intelligence, demand forecasting, stock-risk detection, and explainable inventory planning for wholesalers and distributors.
 
-**AI-assisted inventory intelligence, demand analytics, stock-risk detection, controlled data imports, and action recommendations for wholesalers and distributors.**
-
-StockFlow AI is an ERP-neutral platform that helps inventory teams identify stockout exposure, near-expiry inventory, demand surges, excess stock, and inventory-data gaps using explainable analytics and deterministic business rules.
+StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-expiry inventory, excess stock, demand surges, and inventory-data gaps. It combines tenant-scoped operational data, deterministic inventory rules, statistical forecasting, model backtesting, and explainable diagnostics.
 
 ---
 
 ## Live deployment
 
-- **Frontend:** https://stockflow-ai-oveyj.pages.dev
-- **Backend API:** https://stockflow-core-api-100044030673.asia-southeast1.run.app
-- **Health check:** https://stockflow-core-api-100044030673.asia-southeast1.run.app/actuator/health
+| Component | URL | Current scope |
+|---|---|---|
+| Frontend | https://stockflow-ai-oveyj.pages.dev | Deployed application |
+| Backend API | https://stockflow-core-api-100044030673.asia-southeast1.run.app | Phase 2 cloud baseline |
+| Health check | https://stockflow-core-api-100044030673.asia-southeast1.run.app/actuator/health | Cloud API health |
 
-> The frontend is hosted on Cloudflare Pages, the Kotlin/Spring Boot API runs on Google Cloud Run, and PostgreSQL is hosted on Neon.
+> Phase 3 forecasting increments are verified locally. Deploy the latest backend and frontend builds before treating the cloud URLs as the Phase 3 release.
 
 ---
 
 ## Current release status
 
-### Phase 2 — Inventory Intelligence Platform
+**Current development stage:** Phase 3 — Forecasting  
+**Latest completed backend increment:** Increment 5B.1 — Forecast Calibration and Diagnostics  
+**Next planned increment:** Increment 5C — Forecast Operations and Governance
 
-| Increment | Scope | Status |
+| Phase / increment | Scope | Status |
 |---|---|---|
-| Increment 1 | PostgreSQL foundation and tenant-scoped master data | Complete |
-| Increment 2 | Controlled synthetic foundation-data import | Complete |
-| Increment 3 | Sales-history import and analytics | Complete |
-| Increment 4 | Inventory intelligence, risk engine, and live dashboard | Complete |
-| Frontend Increment 1 | Live intelligence workspace and navigation | Complete |
-| Frontend Increment 2 | Warehouses, products/SKUs, batch inventory, and data-import workspaces | Complete |
-| Frontend UX fixes | Functional topbar, dark-theme readability, hover contrast, responsive spacing, and mobile compatibility | Complete |
-| Production redeployment | Rebuild and redeploy latest frontend to Cloudflare Pages | Verify after each release |
-| Phase 3 | Forecasting, optimization, and AI-agent workflows | Planned |
+| Phase 1 | Product shell, initial services, synthetic-data foundation | Complete |
+| Phase 2 Increment 1 | PostgreSQL foundation and tenant-scoped master data | Complete |
+| Phase 2 Increment 2 | Controlled foundation-data import | Complete |
+| Phase 2 Increment 3 | Sales-history import and demand analytics | Complete |
+| Phase 2 Increment 4 | Inventory intelligence and risk engine | Complete |
+| Frontend Increment 1 | Live intelligence dashboard and navigation | Complete |
+| Frontend Increment 2 | Warehouses, products/SKUs, batches, and imports | Complete |
+| Frontend Increment 3 | Predictive-demand forecasting workspace | Complete locally |
+| Phase 3 Increment 5A | Forecasting foundation and backtesting | Complete |
+| Phase 3 Increment 5B | Forecast-quality engine and additional models | Complete |
+| Phase 3 Increment 5B.1 | Calibration, diagnostics, daily/weekly selection | Complete and verified |
+| Phase 3 Increment 5C | Forecast scheduling, retries, monitoring, governance | Next |
+| Increment 6 | Replenishment and transfer optimization | Planned |
+| Increment 7 | Gemini inventory agent and MCP orchestration | Planned |
 
 ---
 
-## Current capabilities
-
-### Dashboard
-
-- Live PostgreSQL-backed inventory KPIs
-- Inventory value
-- Operational stock-risk count
-- Inventory-data-gap count
-- Near-expiry value
-- Reserved and blocked inventory value
-- Demand-surge detection
-- Top operational risks
-- Explainable recommendation cards
-- Network metrics
-- Demand trend visualization
-- Inventory value trend
-- Dark and light themes
+## What the platform does
 
 ### Inventory intelligence
 
-- Calculates usable inventory from:
-  - Available quantity
-  - Reserved quantity
-  - Blocked quantity
-- Calculates inventory value
-- Calculates average daily demand
-- Calculates days of cover
-- Detects low-cover and safety-stock risks
+- Calculates available, reserved, blocked, and usable inventory
+- Calculates inventory value and days of cover
+- Detects stockout and safety-stock risk
 - Detects demand surges
-- Detects near-expiry and expired inventory
-- Detects excess and slow-moving stock
-- Produces explainable replenishment and transfer recommendations
+- Detects near-expiry and expired batches
+- Detects excess and slow-moving inventory
+- Separates operational inventory risk from data-quality gaps
+- Produces explainable risk and recommendation outputs
 
-### Correct data-quality classification
+### Demand analytics
 
-The risk engine distinguishes real operational risk from incomplete inventory data.
+- Imports tenant-scoped sales history
+- Tracks ordered, fulfilled, sold, returned, and lost-sales quantities
+- Calculates fulfilment rates
+- Produces warehouse- and SKU-level demand summaries
+- Provides demand trends and top-selling SKU analysis
+
+### Forecasting
+
+- Runs focused or tenant-wide forecasts
+- Supports 7-, 30-, and 90-day horizons
+- Performs rolling backtesting
+- Compares multiple statistical models
+- Selects daily or weekly aggregation by warehouse-SKU position
+- Classifies demand using ADI and CV²
+- Identifies smooth, erratic, intermittent, and lumpy demand
+- Calculates confidence, prediction bounds, and projected stockout dates
+- Stores model performance and diagnostic reason codes
+
+### Data imports
+
+- Supports `VALIDATE_ONLY` and `UPSERT`
+- Enforces tenant ownership
+- Stores import-job history
+- Stores accepted, rejected, and ignored row counts
+- Records file hashes
+- Provides row-level error evidence
+- Supports idempotent imports
+
+---
+
+## Important risk-classification rule
+
+Missing inventory data is not treated as a confirmed stockout.
 
 | Condition | Classification |
 |---|---|
-| Inventory record exists and usable quantity is zero | `STOCKOUT_RISK` |
-| Inventory exists but days of cover is below threshold | `STOCKOUT_RISK` |
-| Inventory exists below safety-stock target | `SAFETY_STOCK_BREACH` |
+| Inventory exists and usable quantity is zero | `STOCKOUT_RISK` |
+| Inventory exists but cover is below threshold | `STOCKOUT_RISK` |
+| Inventory is below the configured safety stock | `SAFETY_STOCK_BREACH` |
 | Demand exists but no inventory snapshot exists | `INVENTORY_DATA_GAP` |
 
-Missing inventory snapshots are not treated as confirmed stockouts.
-
-### Sales and demand analytics
-
-- Tenant-scoped sales-history import
-- Ordered, fulfilled, sold, returned, and lost-sales quantities
-- Fulfilment-rate calculation
-- Top-selling SKUs
-- Historical demand trends
-- Warehouse- and SKU-level demand summaries
-- Stockout-row and lost-sales analysis
-
-### Warehouses workspace
-
-- Warehouse count
-- Total configured capacity
-- Cold-chain readiness
-- Inventory-batch count
-- Usable quantity by warehouse
-- Inventory value by warehouse
-- Warehouse-specific batch inspection
-
-### Products and SKUs workspace
-
-- Product and SKU master details
-- Selling price and unit cost
-- Margin
-- Safety stock
-- Reorder multiple
-- Demand profile
-- Shelf-life configuration
-- FEFO support
-- Tenant-scoped filtering
-
-### Batch Inventory workspace
-
-- Batch-level inventory positions
-- Warehouse filtering
-- SKU filtering
-- Expiry filtering
-- Available quantity
-- Reserved quantity
-- Blocked quantity
-- Usable quantity
-- Inventory value
-- Snapshot-date visibility
-
-### Controlled Data Imports workspace
-
-- Foundation master-data import
-- Retailer and sales-history import
-- `VALIDATE_ONLY`
-- `UPSERT`
-- Strict validation
-- Tenant ownership validation
-- Import-job history
-- File hash recording
-- Accepted, rejected, and ignored row counts
-- Row-level error inspection
-- Idempotent import behavior
-
 ---
 
-## Frontend interaction and responsive updates
-
-The latest frontend includes functional controls for:
-
-- Notifications
-- Help and shortcuts
-- Theme switching
-- Profile menu
-- Demo-session reset
-- Global search focus using `Ctrl/⌘ + K`
-- Closing popovers using `Escape`
-- Closing popovers by clicking outside
-- Dark-mode table-hover contrast
-- Dark-mode import-form readability
-- Visible operational-risk and recommendation icons
-- Responsive warehouse-action button spacing
-- Readable disabled import actions
-
-### Mobile and tablet compatibility
-
-The dashboard is now optimized for common phone and tablet widths.
-
-- Sidebar becomes an off-canvas navigation drawer
-- Drawer closes after navigation
-- Tapping outside the drawer closes it
-- Header changes to a compact mobile layout
-- Search expands to full width
-- Tenant, notification, theme, and profile controls remain available
-- KPI cards use a compact two-column layout
-- Dashboard and analytics cards stack vertically
-- Risk and recommendation rows wrap correctly
-- Warehouse cards use a single-column layout
-- Filters resize and stack for smaller screens
-- Tables support horizontal touch scrolling
-- Data Imports becomes a single-column mobile form
-- Topbar popovers remain inside the mobile viewport
-
-Recommended responsive test sizes:
-
-```text
-360 × 800
-375 × 812
-390 × 844
-412 × 915
-768 × 1024
-```
-
-> Notification, help, and profile content are currently frontend-managed. Dedicated notification and user-profile backend APIs are planned for a later phase.
-
----
-
-## Multi-tenant sample data
-
-The platform currently includes three synthetic tenants:
-
-- `TEN-ACME-PHARMA`
-- `TEN-FRESH-MART`
-- `TEN-URBAN-TRADE`
-
-Every tenant-scoped business API requires:
-
-```http
-X-Tenant-ID: TEN-ACME-PHARMA
-```
-
----
-
-## Verified dataset
+## Verified synthetic dataset
 
 | Entity | Records |
 |---|---:|
@@ -222,7 +113,25 @@ X-Tenant-ID: TEN-ACME-PHARMA
 | Retailers | 50 |
 | Sales-history rows | 178,156 |
 
-### Verified Acme Pharma risk classification
+Configured tenants:
+
+```text
+TEN-ACME-PHARMA
+TEN-FRESH-MART
+TEN-URBAN-TRADE
+```
+
+Every tenant-scoped business API requires:
+
+```http
+X-Tenant-ID: TEN-ACME-PHARMA
+```
+
+---
+
+## Verified Phase 2 risk results
+
+Acme Pharma validation:
 
 | Classification | Count |
 |---|---:|
@@ -232,39 +141,192 @@ X-Tenant-ID: TEN-ACME-PHARMA
 | Inventory-data gaps | 117 |
 | Total alerts | 147 |
 
-Operational risks:
-
 ```text
-16 stock risks + 13 demand surges + 1 near-expiry alert = 30 operational alerts
+30 operational alerts
+117 data-quality alerts
 ```
 
-Data-quality alerts:
+---
+
+## Phase 3 forecasting models
+
+The current engine evaluates ten candidate models:
+
+1. Naive
+2. Moving Average
+3. Weighted Moving Average
+4. Seasonal Naive
+5. Simple Exponential Smoothing
+6. Holt Linear Trend
+7. Holt-Winters Additive
+8. Croston Classic
+9. Croston SBA
+10. TSB
+
+Forecast-quality metrics:
+
+- MAE
+- RMSE
+- MAPE
+- WAPE
+- sMAPE
+- MASE
+- RMSSE
+- Bias
+- Composite selection score
+
+---
+
+## Increment 5B.1 calibration capabilities
+
+Increment 5B.1 added:
+
+- Average Demand Interval
+- Coefficient of Variation Squared
+- Daily-versus-weekly forecast comparison
+- Croston Classic
+- TSB
+- MASE and RMSSE
+- Forecast eligibility status
+- Position-level diagnostic reason codes
+- Calibration summaries
+- Tenant-wide confidence distribution
+- Flyway migration `V012`
+
+Example diagnostic reason codes:
 
 ```text
-117 inventory-data gaps
+INTERMITTENT_DEMAND
+LUMPY_DEMAND
+HIGH_ZERO_DEMAND_RATIO
+HIGH_DEMAND_VARIABILITY
+OUTLIER_HEAVY_HISTORY
+NO_MEANINGFUL_SEASONALITY
+LOW_BACKTEST_ACCURACY
+WEEKLY_AGGREGATION_SELECTED
+DAILY_AGGREGATION_SELECTED
 ```
+
+---
+
+## Verified tenant-wide calibration result
+
+Validation scope:
+
+```text
+Tenant: TEN-ACME-PHARMA
+As-of date: 2026-06-30
+Forecast horizon: 7 days
+History window: 180 days
+```
+
+Execution:
+
+| Result | Value |
+|---|---:|
+| Positions requested | 148 |
+| Positions processed | 148 |
+| Positions failed | 0 |
+| Daily forecast values generated | 1,036 |
+| Eligible positions | 148 |
+| Ineligible positions | 0 |
+| Daily aggregation selected | 39 |
+| Weekly aggregation selected | 109 |
+| Projected stockouts | 7 |
+| Total forecast quantity | 47,797.16 |
+
+Calibration quality:
+
+| Metric | Before calibration | After calibration |
+|---|---:|---:|
+| Average WAPE | 105.60% | **48.67%** |
+| WAPE improvement | — | **56.93 percentage points** |
+| Average MASE | — | **0.58** |
+| Average RMSSE | — | **0.58** |
+| High-confidence positions | 0 | **28** |
+| Medium-confidence positions | 0 | **60** |
+| Low-confidence positions | 148 | **60** |
+
+Aggregation usage:
+
+| Aggregation | Positions |
+|---|---:|
+| Weekly | 109 |
+| Daily | 39 |
+
+Selected-model usage:
+
+| Model | Positions |
+|---|---:|
+| Croston SBA | 50 |
+| Croston Classic | 21 |
+| Naive | 17 |
+| Seasonal Naive | 17 |
+| Holt-Winters Additive | 13 |
+| Moving Average | 9 |
+| TSB | 9 |
+| Holt Linear Trend | 9 |
+| Weighted Moving Average | 2 |
+| Simple Exponential Smoothing | 1 |
+
+Demand-pattern usage:
+
+| Pattern | Positions |
+|---|---:|
+| Intermittent | 147 |
+| Lumpy | 1 |
+
+### Governance interpretation
+
+- High-confidence forecasts can support operational planning.
+- Medium-confidence forecasts require planner review.
+- Low-confidence forecasts remain advisory.
+- Forecasts must not automatically create purchase orders or transfers.
+- Downstream optimization must revalidate inventory, open orders, lead times, and approval policy.
 
 ---
 
 ## Architecture
 
 ```text
-Angular web application
-        |
-        v
-Cloudflare Pages
-        |
-        v
-Kotlin / Spring Boot API
-        |
-        v
-Google Cloud Run
-        |
-        v
-Neon PostgreSQL
+ERP / distributor systems / CSV imports
+                  |
+                  v
+        Kotlin Spring Boot API
+                  |
+        +---------+----------+
+        |                    |
+        v                    v
+ PostgreSQL data       Forecasting engine
+        |                    |
+        +---------+----------+
+                  |
+                  v
+       Risk and diagnostic APIs
+                  |
+                  v
+          Angular application
+                  |
+                  v
+     Planner review and approval
+                  |
+                  v
+ Future optimization and Gemini agent
 ```
 
-### Technology stack
+Deployment topology:
+
+```text
+Angular frontend  -> Cloudflare Pages
+Kotlin API        -> Google Cloud Run
+PostgreSQL        -> Neon
+Secrets           -> Google Secret Manager
+Source control    -> GitHub
+```
+
+---
+
+## Technology stack
 
 | Layer | Technology |
 |---|---|
@@ -272,13 +334,16 @@ Neon PostgreSQL
 | Backend | Kotlin, Spring Boot |
 | Database | PostgreSQL |
 | Database migrations | Flyway |
-| Persistence | Spring Data JPA and JdbcTemplate |
-| Build | Maven and npm |
+| Persistence | Spring Data JPA, JdbcTemplate |
+| Build | Maven, npm |
+| API contracts | REST, OpenAPI |
 | Frontend hosting | Cloudflare Pages |
 | Backend hosting | Google Cloud Run |
-| Database hosting | Neon PostgreSQL |
+| Cloud database | Neon PostgreSQL |
 | Secret storage | Google Secret Manager |
 | Source control | GitHub |
+| Future AI layer | Gemini on Google Cloud |
+| Future AI integration | MCP tools backed by StockFlow APIs |
 
 ---
 
@@ -289,14 +354,20 @@ stockflow-ai/
 ├── apps/
 │   └── stockflow-web/
 ├── services/
-│   └── stockflow-core-api/
+│   ├── stockflow-core-api/
+│   ├── forecasting-service/
+│   └── optimisation-service/
+├── mcp/
+├── contracts/
 ├── data/
-│   └── import/
+├── docs/
 ├── scripts/
-├── run-core-api-phase2-import-windows.cmd
-├── run-web-windows.cmd
+├── run-core-api-phase3-forecast-calibration-windows.cmd
+├── verify-forecast-calibration-api-windows.cmd
 └── README.md
 ```
+
+Some future folders may still be placeholders until their increments are implemented.
 
 ---
 
@@ -309,9 +380,19 @@ stockflow-ai/
 - Python 3
 - Git
 
+Verified local ports:
+
+| Service | Port |
+|---|---:|
+| Angular frontend | 4200 |
+| Spring Boot API | 8080 |
+| PostgreSQL | 5433 |
+
 ---
 
 ## Local database configuration
+
+Example local environment:
 
 ```text
 Host: localhost
@@ -320,39 +401,62 @@ Database: stockflow_phase2
 Username: stockflow_app
 ```
 
-Set the environment variables before starting the backend:
+Set credentials through environment variables:
 
 ```cmd
 set "STOCKFLOW_DB_URL=jdbc:postgresql://localhost:5433/stockflow_phase2"
 set "STOCKFLOW_DB_USERNAME=stockflow_app"
-set "STOCKFLOW_DB_PASSWORD=stockflow_dev"
+set "STOCKFLOW_DB_PASSWORD=<your-local-password>"
 ```
 
-Do not commit production passwords or connection strings containing passwords.
+Never commit production passwords or database URLs containing embedded credentials.
 
 ---
 
-## Run the backend locally
+## Run Increment 5B.1 locally
 
 From the repository root:
 
 ```cmd
-call run-core-api-phase2-import-windows.cmd
+cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4
+
+run-core-api-phase3-forecast-calibration-windows.cmd
 ```
 
-Run backend tests:
+Expected startup:
+
+```text
+Tomcat started on port 8080
+Started StockFlowApplicationKt
+```
+
+Health check:
 
 ```cmd
-cd services\stockflow-core-api
+curl http://localhost:8080/actuator/health
+```
+
+Run the calibration verification:
+
+```cmd
+verify-forecast-calibration-api-windows.cmd
+```
+
+---
+
+## Run backend tests
+
+```cmd
+cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4\services\stockflow-core-api
 
 "C:\Users\oveyj\Tools\apache-maven-3.9.16\bin\mvn.cmd" ^
   -Dkotlin.compiler.daemon=false clean test
 ```
 
-Current verified result:
+Current expected result:
 
 ```text
-Tests run: 10
+Tests run: 20
 Failures: 0
 Errors: 0
 BUILD SUCCESS
@@ -360,10 +464,11 @@ BUILD SUCCESS
 
 ---
 
-## Run the frontend locally
+## Run the frontend
 
 ```cmd
-cd apps\stockflow-web
+cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4\apps\stockflow-web
+
 npm install
 npm start
 ```
@@ -374,329 +479,282 @@ Open:
 http://localhost:4200
 ```
 
-### Test from a phone on the same Wi-Fi
-
-Start Angular so it listens on the local network:
+Build:
 
 ```cmd
-npm start -- --host 0.0.0.0
-```
-
-Alternative:
-
-```cmd
-npx ng serve --host 0.0.0.0 --port 4200
-```
-
-Find the laptop's Wi-Fi IPv4 address:
-
-```cmd
-ipconfig
-```
-
-Open the network URL on the phone:
-
-```text
-http://<laptop-ip-address>:4200
-```
-
-Example:
-
-```text
-http://192.168.1.25:4200
-```
-
-The laptop and phone must be on the same Wi-Fi network. Windows Firewall should allow Node.js on private networks.
-
-### Local API proxy
-
-For local development, `proxy.conf.json` can point `/api` to either:
-
-```text
-http://localhost:8080
-```
-
-or the deployed Cloud Run service:
-
-```text
-https://stockflow-core-api-100044030673.asia-southeast1.run.app
-```
-
-Example:
-
-```json
-{
-  "/api": {
-    "target": "https://stockflow-core-api-100044030673.asia-southeast1.run.app",
-    "secure": true,
-    "changeOrigin": true,
-    "logLevel": "debug"
-  }
-}
-```
-
----
-
-## Build the frontend
-
-```cmd
-cd apps\stockflow-web
-npm install
 npm run build
 ```
 
-Expected output directory:
-
-```text
-apps/stockflow-web/dist/stockflow-web/browser
-```
-
 ---
 
-## Deploy the frontend to Cloudflare Pages
+## Main APIs
 
-```cmd
-cd apps\stockflow-web
+### Health
 
-npx wrangler pages deploy dist\stockflow-web\browser ^
-  --project-name stockflow-ai-oveyj ^
-  --branch main ^
-  --commit-dirty=true
+```http
+GET /actuator/health
 ```
 
-Stable production URL:
+### Foundation and master data
 
-```text
-https://stockflow-ai-oveyj.pages.dev
+```http
+GET /api/v1/foundation/summary
+GET /api/v1/warehouses
+GET /api/v1/warehouses/{warehouseId}
+GET /api/v1/skus
+GET /api/v1/inventory/batches
 ```
 
-After deployment, hard-refresh the browser:
+### Imports
 
-```text
-Ctrl + Shift + R
+```http
+GET  /api/v1/imports
+GET  /api/v1/imports/{id}
+GET  /api/v1/imports/{id}/errors
+POST /api/v1/imports/synthetic-foundation
+POST /api/v1/imports/synthetic-sales
 ```
 
-Verify the production site in both light and dark themes and test at:
+### Demand analytics
 
-```text
-375 × 812
-390 × 844
-412 × 915
-768 × 1024
+```http
+GET /api/v1/analytics/demand/summary
+GET /api/v1/analytics/demand/skus
+GET /api/v1/analytics/demand/trend
 ```
 
----
+### Inventory risks
 
-## Deploy the backend to Google Cloud Run
-
-The backend is deployed from:
-
-```text
-services/stockflow-core-api
+```http
+GET /api/v1/risks/summary
+GET /api/v1/risks/inventory
 ```
 
-Required Google Cloud services:
+### Forecasting
 
-- Cloud Run
-- Cloud Build
-- Artifact Registry
-- Secret Manager
-
-Runtime identity:
-
-```text
-stockflow-runtime@stockflow-ai-oveyj-2026.iam.gserviceaccount.com
-```
-
-Secret name:
-
-```text
-stockflow-db-password
-```
-
-Production environment variables:
-
-```text
-SPRING_PROFILES_ACTIVE
-STOCKFLOW_DB_URL
-STOCKFLOW_DB_USERNAME
-STOCKFLOW_DB_PASSWORD
-STOCKFLOW_DB_POOL_SIZE
-STOCKFLOW_DB_MIN_IDLE
-STOCKFLOW_CORS_ALLOWED_ORIGINS
+```http
+POST /api/v1/forecasts/runs
+GET  /api/v1/forecasts/runs
+GET  /api/v1/forecasts/latest
+GET  /api/v1/forecasts/summary
+GET  /api/v1/forecasts/model-performance
+GET  /api/v1/forecasts/configuration
+PUT  /api/v1/forecasts/configuration
+GET  /api/v1/forecasts/accuracy-summary
+GET  /api/v1/forecasts/diagnostics
+GET  /api/v1/forecasts/diagnostics/{warehouseId}/{skuId}
+GET  /api/v1/forecasts/calibration-summary
 ```
 
 ---
 
 ## API examples
 
-### Health
+Create a tenant-wide seven-day forecast:
 
 ```cmd
-curl ^
-  https://stockflow-core-api-100044030673.asia-southeast1.run.app/actuator/health
+curl -i -X POST ^
+  -H "Content-Type: application/json" ^
+  -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
+  -d "{\"horizonDays\":7,\"historyDays\":180}" ^
+  "http://localhost:8080/api/v1/forecasts/runs"
 ```
 
-### Dashboard overview
+Read the calibration summary:
 
 ```cmd
 curl ^
   -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/dashboard/overview"
+  "http://localhost:8080/api/v1/forecasts/calibration-summary"
 ```
 
-### Sales summary
+Read the accuracy summary:
 
 ```cmd
 curl ^
   -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/analytics/sales/summary"
+  "http://localhost:8080/api/v1/forecasts/accuracy-summary"
 ```
 
-### Top-selling SKUs
+Read a position diagnostic:
 
 ```cmd
 curl ^
   -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/analytics/sales/top-skus?limit=10"
-```
-
-### Warehouses
-
-```cmd
-curl ^
-  -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/warehouses"
-```
-
-### SKUs
-
-```cmd
-curl ^
-  -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/skus"
-```
-
-### Batch inventory
-
-```cmd
-curl ^
-  -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/inventory/batches"
-```
-
-### Inventory risks
-
-```cmd
-curl ^
-  -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/risks/inventory?limit=20"
-```
-
-### Import history
-
-```cmd
-curl ^
-  -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "https://stockflow-core-api-100044030673.asia-southeast1.run.app/api/v1/imports"
+  "http://localhost:8080/api/v1/forecasts/diagnostics/WH-CHENNAI/SKU-PARA-650"
 ```
 
 ---
 
-## Security and operational controls
+## Frontend workspaces
 
-- Tenant ID is required for business APIs
-- Database password is stored in Google Secret Manager
-- Cloud Run uses a dedicated runtime service account
-- CORS is explicitly configured
-- Flyway controls database schema versions
-- Import jobs retain audit information
-- Production secrets are not committed to Git
-- Controlled imports support validation before upsert
-- Missing inventory snapshots are separated from operational risks
+- Dashboard
+- Inventory Intelligence
+- Warehouses
+- Products and SKUs
+- Batch Inventory
+- Data Imports
+- Predictive Demand Forecast
+- Forecast model comparison
+- Forecast run history
+- Forecast confidence and projected stockouts
+
+Frontend UX includes:
+
+- Dark and light themes
+- Responsive mobile navigation
+- Responsive filters and tables
+- Functional notification, help, and profile panels
+- Keyboard shortcuts
+- Toast messages
+- Improved dark-mode contrast
+
+Notification and user-profile data are currently frontend-managed.
 
 ---
 
-## Phase 3 roadmap
+## Current limitations
 
-### Increment 5 — Demand forecasting
+- The latest Phase 3 backend is not yet deployed to Cloud Run.
+- The predictive forecast frontend requires validation against the deployed Phase 3 API.
+- Sixty calibrated Acme Pharma positions remain low confidence.
+- Forecast operations are not yet scheduled.
+- Retry, cancellation, and failure-recovery workflows are not implemented.
+- Forecast accuracy degradation alerts are not implemented.
+- Replenishment and transfer optimization are not implemented.
+- Purchase orders and stock transfers are not created automatically.
+- Production authentication and authorization are not yet complete.
+- The Gemini agent is not yet implemented.
 
-- 7-day, 30-day, and 90-day forecasts
-- Forecasting by tenant, warehouse, and SKU
-- Moving average
-- Weighted moving average
-- Exponential smoothing
-- Seasonal models
-- Model-performance tracking
-- MAE, RMSE, MAPE, and forecast bias
-- Confidence intervals
-- Predicted stockout dates
+---
 
-### Increment 6 — Replenishment and transfer optimization
+## Next increment — Phase 3 Increment 5C
+
+Increment 5C will operationalize the forecasting engine.
+
+Planned capabilities:
+
+- Tenant-specific schedules
+- Daily and weekly forecast execution
+- Queued and scheduled runs
+- Run lifecycle management
+- Failed-position retry
+- Full-run retry
+- Run cancellation
+- Accuracy-performance history
+- Confidence movement
+- Model-selection history
+- Data-freshness alerts
+- Forecast-quality degradation alerts
+- Governance rules for downstream use
+
+Planned lifecycle:
+
+```text
+SCHEDULED
+QUEUED
+RUNNING
+COMPLETED
+PARTIALLY_COMPLETED
+FAILED
+RETRYING
+CANCELLED
+```
+
+---
+
+## Roadmap
+
+```text
+Completed: Phase 2 inventory intelligence
+Completed: Increment 5A forecasting foundation
+Completed: Increment 5B forecast-quality engine
+Completed: Increment 5B.1 calibration and diagnostics
+
+Next:      Increment 5C forecasting operations and governance
+Then:      Increment 6 replenishment and transfer optimization
+Then:      Increment 7 Gemini inventory agent and MCP integration
+```
+
+### Increment 6
+
+Planned:
 
 - Recommended purchase quantity
-- Reorder date
-- Safety-stock target
-- Inter-warehouse transfer recommendation
-- Source and destination warehouse
+- Recommended reorder date
+- Inter-warehouse transfer recommendations
+- Supplier-lead-time support
+- Open-purchase-order awareness
+- Reorder-multiple enforcement
 - Working-capital impact
-- Shortage avoided
-- Human approval and rejection workflow
+- Human approval workflow
 
-### Increment 7 — Gemini-powered AI agent
+### Increment 7
 
-- Natural-language explanations
-- Dashboard summaries
-- Inventory questions and answers
-- Supplier-email generation
-- Tool calling against StockFlow APIs
-- Human approval before execution
-- Complete decision and action audit trail
+Planned:
 
-The forecasting and optimization engines remain domain-specific and explainable. Gemini will be used as the conversational and orchestration layer, not as the source of numerical inventory decisions.
+- Gemini-powered inventory copilot
+- Natural-language inventory questions
+- Grounded tool calls
+- MCP or REST tool adapters
+- Forecast and recommendation explanations
+- Read-only mode by default
+- Human approval before write actions
+- Prompt and tool-call audit
+- No direct database access from the model
 
 ---
 
-## Known current limitations
+## Security and governance principles
 
-- Demand Forecast currently shows historical and deterministic trend data; predictive model execution is planned for Phase 3.
-- Notifications are frontend-managed.
-- User profile and preferences are frontend-managed.
-- Mobile layout is supported, but device-specific browser testing should be completed before each production release.
-- Authentication and authorization are not yet production-grade.
-- Recommendations are explainable but are not yet approval-driven executable workflows.
-- Purchase orders and warehouse transfers are not yet posted automatically.
+- Tenant ID on every business operation
+- No credentials committed to source control
+- Human approval for high-value actions
+- Read-only AI tools by default
+- Complete forecast and recommendation audit
+- Backend validation before execution
+- No direct LLM access to PostgreSQL
+- No autonomous financial or inventory posting
+- Deterministic services remain the source of numerical truth
 
 ---
 
 ## Git workflow
 
-Before committing:
+Review changes:
 
 ```cmd
 git status --short
-git diff --stat
 ```
 
-Generated folders should remain ignored:
-
-```text
-node_modules/
-dist/
-.angular/
-target/
-```
-
-Update and push:
+Stage:
 
 ```cmd
-git add README.md apps\stockflow-web
-git commit -m "docs: update mobile support frontend fixes and deployment guidance"
+git add README.md
+```
+
+Commit:
+
+```cmd
+git commit -m "docs: update README for forecast calibration increment"
+```
+
+Push:
+
+```cmd
 git push origin main
 ```
 
 ---
 
-## Project objective
+## Repository
 
-StockFlow AI aims to help wholesalers and distributors reduce stockouts, expiry losses, excess inventory, and working-capital blockage through explainable inventory intelligence, predictive forecasting, and human-governed AI actions.
+```text
+https://github.com/Web4everyone32/stockflow-ai.git
+```
+
+---
+
+## License
+
+Add the intended open-source or commercial license before public distribution.
