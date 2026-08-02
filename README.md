@@ -1,5 +1,7 @@
 # StockFlow AI
 
+> Last updated: 2026-08-02
+
 **AI-assisted inventory intelligence, demand analytics, stock-risk detection, controlled data imports, and action recommendations for wholesalers and distributors.**
 
 StockFlow AI is an ERP-neutral platform that helps inventory teams identify stockout exposure, near-expiry inventory, demand surges, excess stock, and inventory-data gaps using explainable analytics and deterministic business rules.
@@ -28,7 +30,7 @@ StockFlow AI is an ERP-neutral platform that helps inventory teams identify stoc
 | Increment 4 | Inventory intelligence, risk engine, and live dashboard | Complete |
 | Frontend Increment 1 | Live intelligence workspace and navigation | Complete |
 | Frontend Increment 2 | Warehouses, products/SKUs, batch inventory, and data-import workspaces | Complete |
-| Frontend UX fixes | Functional topbar, dark-theme readability, hover contrast, and responsive spacing | Complete |
+| Frontend UX fixes | Functional topbar, dark-theme readability, hover contrast, responsive spacing, and mobile compatibility | Complete |
 | Production redeployment | Rebuild and redeploy latest frontend to Cloudflare Pages | Verify after each release |
 | Phase 3 | Forecasting, optimization, and AI-agent workflows | Planned |
 
@@ -141,7 +143,7 @@ Missing inventory snapshots are not treated as confirmed stockouts.
 
 ---
 
-## Frontend interaction updates
+## Frontend interaction and responsive updates
 
 The latest frontend includes functional controls for:
 
@@ -156,8 +158,37 @@ The latest frontend includes functional controls for:
 - Dark-mode table-hover contrast
 - Dark-mode import-form readability
 - Visible operational-risk and recommendation icons
-- Responsive button spacing
+- Responsive warehouse-action button spacing
 - Readable disabled import actions
+
+### Mobile and tablet compatibility
+
+The dashboard is now optimized for common phone and tablet widths.
+
+- Sidebar becomes an off-canvas navigation drawer
+- Drawer closes after navigation
+- Tapping outside the drawer closes it
+- Header changes to a compact mobile layout
+- Search expands to full width
+- Tenant, notification, theme, and profile controls remain available
+- KPI cards use a compact two-column layout
+- Dashboard and analytics cards stack vertically
+- Risk and recommendation rows wrap correctly
+- Warehouse cards use a single-column layout
+- Filters resize and stack for smaller screens
+- Tables support horizontal touch scrolling
+- Data Imports becomes a single-column mobile form
+- Topbar popovers remain inside the mobile viewport
+
+Recommended responsive test sizes:
+
+```text
+360 × 800
+375 × 812
+390 × 844
+412 × 915
+768 × 1024
+```
 
 > Notification, help, and profile content are currently frontend-managed. Dedicated notification and user-profile backend APIs are planned for a later phase.
 
@@ -343,6 +374,40 @@ Open:
 http://localhost:4200
 ```
 
+### Test from a phone on the same Wi-Fi
+
+Start Angular so it listens on the local network:
+
+```cmd
+npm start -- --host 0.0.0.0
+```
+
+Alternative:
+
+```cmd
+npx ng serve --host 0.0.0.0 --port 4200
+```
+
+Find the laptop's Wi-Fi IPv4 address:
+
+```cmd
+ipconfig
+```
+
+Open the network URL on the phone:
+
+```text
+http://<laptop-ip-address>:4200
+```
+
+Example:
+
+```text
+http://192.168.1.25:4200
+```
+
+The laptop and phone must be on the same Wi-Fi network. Windows Firewall should allow Node.js on private networks.
+
 ### Local API proxy
 
 For local development, `proxy.conf.json` can point `/api` to either:
@@ -409,6 +474,15 @@ After deployment, hard-refresh the browser:
 
 ```text
 Ctrl + Shift + R
+```
+
+Verify the production site in both light and dark themes and test at:
+
+```text
+375 × 812
+390 × 844
+412 × 915
+768 × 1024
 ```
 
 ---
@@ -588,6 +662,7 @@ The forecasting and optimization engines remain domain-specific and explainable.
 - Demand Forecast currently shows historical and deterministic trend data; predictive model execution is planned for Phase 3.
 - Notifications are frontend-managed.
 - User profile and preferences are frontend-managed.
+- Mobile layout is supported, but device-specific browser testing should be completed before each production release.
 - Authentication and authorization are not yet production-grade.
 - Recommendations are explainable but are not yet approval-driven executable workflows.
 - Purchase orders and warehouse transfers are not yet posted automatically.
@@ -616,7 +691,7 @@ Update and push:
 
 ```cmd
 git add README.md apps\stockflow-web
-git commit -m "docs: update frontend workspaces deployment and phase roadmap"
+git commit -m "docs: update mobile support frontend fixes and deployment guidance"
 git push origin main
 ```
 
