@@ -10,7 +10,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 
 | Component | URL | Current scope |
 |---|---|---|
-| Frontend | https://stockflow-ai-oveyj.pages.dev | Deployed application |
+| Frontend | https://stockflow-ai-oveyj.pages.dev | Supabase-authenticated Angular application |
 | Backend API | https://stockflow-core-api-100044030673.asia-southeast1.run.app | Phase 2 cloud baseline |
 | Health check | https://stockflow-core-api-100044030673.asia-southeast1.run.app/actuator/health | Cloud API health |
 
@@ -34,6 +34,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Frontend Increment 1 | Live intelligence dashboard and navigation | Complete |
 | Frontend Increment 2 | Warehouses, products/SKUs, batches, and imports | Complete |
 | Frontend Increment 3 | Predictive-demand forecasting workspace | Complete locally |
+| Frontend authentication | Supabase login, signup, session recovery, sign-out, and password recovery | Complete and deployed |
 | Phase 3 Increment 5A | Forecasting foundation and backtesting | Complete |
 | Phase 3 Increment 5B | Forecast-quality engine and additional models | Complete |
 | Phase 3 Increment 5B.1 | Calibration, diagnostics, daily/weekly selection | Complete and verified |
@@ -85,6 +86,17 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 - Records file hashes
 - Provides row-level error evidence
 - Supports idempotent imports
+
+### Authentication
+
+- Uses Supabase Auth for email/password login and account creation
+- Restores browser sessions and refreshes access tokens automatically
+- Protects the Angular dashboard behind an authenticated session
+- Supports password-reset emails and secure password recovery
+- Displays the authenticated user's profile metadata and provides sign-out
+- Adds the Supabase user access token to backend API requests as `Authorization: Bearer <token>`
+
+The Angular authentication boundary is deployed. The backend must still validate the Supabase JWT and verify that the authenticated user is authorized for the requested `X-Tenant-ID` before production access control is complete.
 
 ---
 
@@ -308,6 +320,9 @@ ERP / distributor systems / CSV imports
           Angular application
                   |
                   v
+        Supabase authentication
+                  |
+                  v
      Planner review and approval
                   |
                   v
@@ -320,6 +335,7 @@ Deployment topology:
 Angular frontend  -> Cloudflare Pages
 Kotlin API        -> Google Cloud Run
 PostgreSQL        -> Neon
+Authentication    -> Supabase Auth
 Secrets           -> Google Secret Manager
 Source control    -> GitHub
 ```
@@ -331,6 +347,7 @@ Source control    -> GitHub
 | Layer | Technology |
 |---|---|
 | Frontend | Angular, TypeScript |
+| Authentication | Supabase Auth and `@supabase/supabase-js` |
 | Backend | Kotlin, Spring Boot |
 | Database | PostgreSQL |
 | Database migrations | Flyway |
@@ -473,6 +490,21 @@ npm install
 npm start
 ```
 
+Before starting the frontend, configure the browser-safe Supabase values in:
+
+```text
+apps/stockflow-web/src/assets/config/runtime-config.js
+```
+
+```javascript
+window.__stockflowConfig = {
+  supabaseUrl: 'https://your-project-ref.supabase.co',
+  supabasePublishableKey: 'sb_publishable_your_key'
+};
+```
+
+Use only a publishable key or legacy `anon` key in the browser. Never use a Supabase secret or `service_role` key. See [`apps/stockflow-web/SUPABASE_AUTH_SETUP.md`](apps/stockflow-web/SUPABASE_AUTH_SETUP.md) for redirect URL, email-provider, local testing, and deployment configuration.
+
 Open:
 
 ```text
@@ -609,7 +641,7 @@ Frontend UX includes:
 - Toast messages
 - Improved dark-mode contrast
 
-Notification and user-profile data are currently frontend-managed.
+Notifications remain frontend-managed. Signed-in user identity and session state come from Supabase Auth.
 
 ---
 
@@ -623,7 +655,8 @@ Notification and user-profile data are currently frontend-managed.
 - Forecast accuracy degradation alerts are not implemented.
 - Replenishment and transfer optimization are not implemented.
 - Purchase orders and stock transfers are not created automatically.
-- Production authentication and authorization are not yet complete.
+- Frontend authentication is deployed; backend Supabase JWT validation and authenticated tenant authorization are still required.
+- Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
 - The Gemini agent is not yet implemented.
 
 ---
@@ -708,7 +741,8 @@ Planned:
 ## Security and governance principles
 
 - Tenant ID on every business operation
-- No credentials committed to source control
+- No secret or `service_role` credentials committed to source control; the browser-safe Supabase publishable key is intentionally public
+- Supabase user JWT validation at the backend boundary before trusting authenticated requests
 - Human approval for high-value actions
 - Read-only AI tools by default
 - Complete forecast and recommendation audit
