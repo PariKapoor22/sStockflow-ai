@@ -21,11 +21,13 @@ export class AuthService implements OnDestroy {
 
   private readonly sessionState = signal<Session | null>(null);
   private readonly loadingState = signal(true);
+  private readonly passwordRecoveryState = signal(false);
   private readonly client?: SupabaseClient;
   private unsubscribe?: () => void;
 
   readonly session = this.sessionState.asReadonly();
   readonly loading = this.loadingState.asReadonly();
+  readonly passwordRecovery = this.passwordRecoveryState.asReadonly();
   readonly user = computed<User | null>(() => this.sessionState()?.user ?? null);
   readonly accessToken = computed(() => this.sessionState()?.access_token ?? null);
   readonly displayName = computed(() => {
@@ -52,7 +54,9 @@ export class AuthService implements OnDestroy {
     });
 
     const { data } = this.client.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
+      (event: AuthChangeEvent, session: Session | null) => {
+        if (event === 'PASSWORD_RECOVERY') this.passwordRecoveryState.set(true);
+        if (event === 'SIGNED_OUT') this.passwordRecoveryState.set(false);
         this.sessionState.set(session);
         this.loadingState.set(false);
       }
@@ -95,6 +99,24 @@ export class AuthService implements OnDestroy {
     if (!this.client) return null;
     const { error } = await this.client.auth.signOut();
     return this.authErrorMessage(error);
+  }
+
+  async requestPasswordReset(email: string): Promise<string | null> {
+    if (!this.client) return 'Supabase is not configured.';
+    const { error } = await this.client.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
+    return this.authErrorMessage(error);
+  }
+
+  async updatePassword(password: string): Promise<string | null> {
+    if (!this.client) return 'Supabase is not configured.';
+    const { error } = await this.client.auth.updateUser({ password });
+    return this.authErrorMessage(error);
+  }
+
+  finishPasswordRecovery(): void {
+    this.passwordRecoveryState.set(false);
   }
 
   ngOnDestroy(): void {
