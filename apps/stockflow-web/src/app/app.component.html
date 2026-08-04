@@ -1,0 +1,9 @@
+<div class="auth-loading" *ngIf="auth.loading(); else resolvedAuth">
+  <span></span>
+  <p>Restoring your secure session…</p>
+</div>
+
+<ng-template #resolvedAuth>
+  <sf-dashboard *ngIf="auth.session(); else login"></sf-dashboard>
+  <ng-template #login><sf-login></sf-login></ng-template>
+</ng-template>

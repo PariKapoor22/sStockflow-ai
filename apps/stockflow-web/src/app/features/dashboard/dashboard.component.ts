@@ -23,6 +23,7 @@ import {
   InventoryRiskSummary
 } from '../../core/models/intelligence.models';
 import { DashboardDataService } from '../../core/services/dashboard-data.service';
+import { AuthService } from '../../core/services/auth.service';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
 import { ImportDataService } from '../../core/services/import-data.service';
 import { IntelligenceDataService } from '../../core/services/intelligence-data.service';
@@ -257,6 +258,7 @@ export class DashboardComponent implements OnInit {
   ];
 
   constructor(
+    readonly auth: AuthService,
     private readonly dashboardData: DashboardDataService,
     private readonly intelligenceData: IntelligenceDataService,
     private readonly foundationData: FoundationDataService,
@@ -425,13 +427,27 @@ export class DashboardComponent implements OnInit {
   }
 
   profileInitials(): string {
-    const name = this.data?.userName || 'StockFlow User';
+    const name = this.auth.displayName();
     return name
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
       .map(part => part.charAt(0).toUpperCase())
       .join('') || 'SF';
+  }
+
+  profileName(): string {
+    return this.auth.displayName();
+  }
+
+  profileEmail(): string {
+    return this.auth.user()?.email ?? '';
+  }
+
+  async signOut(): Promise<void> {
+    this.closeTopbarPanels();
+    const error = await this.auth.signOut();
+    if (error) this.showTopbarToast(error);
   }
 
   openHelpDestination(view: ViewId): void {

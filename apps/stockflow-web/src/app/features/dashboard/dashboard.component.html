@@ -124,18 +124,18 @@
             (click)="toggleTopbarPanel('profile', $event)"
           >
             <span class="avatar">{{ profileInitials() }}</span>
-            <span class="profile-copy"><strong>{{ data?.userName || 'StockFlow User' }}</strong><small>{{ data?.userRole || 'Inventory Manager' }}</small></span>
+            <span class="profile-copy"><strong>{{ profileName() }}</strong><small>{{ profileEmail() || data?.userRole || 'Inventory Manager' }}</small></span>
             <span class="profile-chevron" [class.open]="activeTopbarPanel === 'profile'">⌄</span>
           </button>
 
           <section class="topbar-popover profile-popover" role="menu" aria-label="Profile menu" *ngIf="activeTopbarPanel === 'profile'">
             <div class="profile-summary">
               <span class="avatar large">{{ profileInitials() }}</span>
-              <div><strong>{{ data?.userName || 'StockFlow User' }}</strong><small>{{ data?.userRole || 'Inventory Manager' }}</small><em>{{ currentTenantLabel() }}</em></div>
+              <div><strong>{{ profileName() }}</strong><small>{{ profileEmail() || data?.userRole || 'Inventory Manager' }}</small><em>{{ currentTenantLabel() }}</em></div>
             </div>
             <button type="button" class="menu-row" (click)="selectView('dashboard')"><span>⌂</span><span><strong>My dashboard</strong><small>Return to the tenant overview</small></span></button>
             <button type="button" class="menu-row" (click)="selectView('settings')"><span>⚙</span><span><strong>Preferences</strong><small>Open the settings workspace</small></span></button>
-            <button type="button" class="menu-row danger" (click)="resetDemoSession()"><span>↻</span><span><strong>Reset demo session</strong><small>Restore the default tenant and filters</small></span></button>
+            <button type="button" class="menu-row danger" (click)="signOut()"><span>↪</span><span><strong>Sign out</strong><small>End this secure session</small></span></button>
           </section>
         </div>
       </div>
