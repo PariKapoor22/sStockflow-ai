@@ -125,9 +125,20 @@ export class AuthService implements OnDestroy {
 
   private authErrorMessage(error: AuthError | null): string | null {
     if (!error) return null;
-    if (error.status === 400) return 'The email or password is incorrect.';
-    if (error.status === 422) return 'Check the email address and password requirements.';
+    const message = error.message.toLowerCase();
+
+    if (message.includes('invalid login credentials')) return 'The email or password is incorrect.';
+    if (message.includes('email not confirmed')) return 'Confirm your email address before signing in.';
+    if (message.includes('user already registered')) return 'An account already exists for this email. Sign in or reset your password.';
+    if (message.includes('signup') && message.includes('disabled')) return 'New account creation is currently disabled.';
+    if (message.includes('email') && (message.includes('invalid') || message.includes('format'))) {
+      return 'Enter a valid email address, for example name@company.com.';
+    }
+    if (error.status === 422 || message.includes('weak password')) {
+      return 'Use a stronger password that meets the configured requirements.';
+    }
     if (error.status === 429) return 'Too many attempts. Wait a moment and try again.';
+    if (error.status === 400) return 'The authentication request could not be completed. Check your details and try again.';
     return error.message || 'Authentication failed. Please try again.';
   }
 }

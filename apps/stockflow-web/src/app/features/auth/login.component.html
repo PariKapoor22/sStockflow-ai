@@ -33,7 +33,7 @@
         </label>
         <label *ngIf="mode !== 'updatePassword'">
           <span>Work email</span>
-          <input name="email" type="email" [(ngModel)]="email" autocomplete="email" placeholder="you@company.com" [disabled]="submitting">
+          <input name="email" type="email" [(ngModel)]="email" autocomplete="email" placeholder="you@company.com" required [disabled]="submitting">
         </label>
         <label *ngIf="mode !== 'forgotPassword'">
           <span>{{ mode === 'updatePassword' ? 'New password' : 'Password' }}</span>

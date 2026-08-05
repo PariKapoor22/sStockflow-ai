@@ -63,6 +63,10 @@ export class LoginComponent {
       this.error = 'Enter your email address.';
       return;
     }
+    if (this.mode !== 'updatePassword' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.error = 'Enter a valid email address, for example name@company.com.';
+      return;
+    }
     if (this.mode !== 'forgotPassword' && !this.password) {
       this.error = 'Enter your password.';
       return;
