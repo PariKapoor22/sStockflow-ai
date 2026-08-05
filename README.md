@@ -778,10 +778,10 @@ Stage:
 git add README.md
 ```
 
-Commit:
+Create a signed commit:
 
 ```cmd
-git commit -m "docs: update README for forecast calibration increment"
+git commit -S -m "docs: update README for forecast calibration increment"
 ```
 
 Push:
@@ -797,6 +797,16 @@ git push origin main
 ```text
 https://github.com/Web4everyone32/stockflow-ai.git
 ```
+
+---
+
+## Creator and provenance
+
+**StockFlow AI is designed and engineered by Veyjval B.**
+
+Repository releases and important commits are cryptographically signed using a dedicated StockFlow AI signing key. Verification information and the public signing key are available in [OWNERSHIP.md](OWNERSHIP.md).
+
+Copyright © 2026 Veyjval B. All rights reserved.
 
 ---
 
