@@ -27,6 +27,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
 import { ImportDataService } from '../../core/services/import-data.service';
 import { IntelligenceDataService } from '../../core/services/intelligence-data.service';
+import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 
 type ViewId =
   | 'dashboard'
@@ -67,7 +68,7 @@ interface TopbarNotification {
 @Component({
   selector: 'sf-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
@@ -318,6 +319,11 @@ export class DashboardComponent implements OnInit {
 
     if (view === 'integrations') {
       this.loadImportWorkspace();
+      return;
+    }
+
+    if (this.activeOperationView()) {
+      return;
     }
   }
 
@@ -587,11 +593,21 @@ export class DashboardComponent implements OnInit {
       'inventory',
       'risks',
       'recommendations',
+      'transfers',
+      'purchase',
+      'orders',
+      'returns',
       'warehouses',
       'products',
       'batches',
       'integrations'
     ].includes(this.activeView);
+  }
+
+  activeOperationView(): OperationView | null {
+    return ['transfers', 'purchase', 'orders', 'returns'].includes(this.activeView)
+      ? this.activeView as OperationView
+      : null;
   }
 
   filteredWarehouses(): WarehouseView[] {

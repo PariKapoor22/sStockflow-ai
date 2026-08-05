@@ -1,0 +1,165 @@
+<section class="operations-page">
+  <header class="operations-heading">
+    <div>
+      <span class="eyebrow">{{ pageCopy.eyebrow }}</span>
+      <h1>{{ pageCopy.title }}</h1>
+      <p>{{ pageCopy.description }}</p>
+    </div>
+    <button type="button" class="primary-action" (click)="triggerPrimaryAction()"><span>＋</span>{{ pageCopy.action }}</button>
+  </header>
+
+  <div class="prototype-note">
+    <span>INTERACTIVE UI PREVIEW</span>
+    <p>Built for {{ tenantLabel }} with representative operational data. Approval actions update the screen locally; backend posting remains intentionally disconnected.</p>
+  </div>
+
+  <article class="filter-card">
+    <label><span>Status</span><select [(ngModel)]="statusFilter"><option value="ALL">All statuses</option><option *ngFor="let status of statuses()" [value]="status">{{ status }}</option></select></label>
+    <label><span>{{ view === 'purchase' ? 'Supplier' : 'Location' }}</span><select [(ngModel)]="locationFilter"><option value="ALL">All {{ view === 'purchase' ? 'suppliers' : 'locations' }}</option><option *ngFor="let location of locations()" [value]="location">{{ location }}</option></select></label>
+    <div class="filter-context"><span>Workspace search</span><strong>{{ searchQuery || 'No search applied' }}</strong></div>
+    <button type="button" class="clear-action" (click)="statusFilter = 'ALL'; locationFilter = 'ALL'">Clear filters</button>
+  </article>
+
+  <ng-container [ngSwitch]="view">
+    <ng-container *ngSwitchCase="'transfers'">
+      <section class="metric-grid">
+        <article><span>Recommended moves</span><strong>{{ transfers.length }}</strong><small>{{ transferCount('Awaiting approval') }} awaiting approval</small><i class="metric-icon indigo">⇄</i></article>
+        <article><span>Units rebalanced</span><strong>{{ transferUnits() | number }}</strong><small>Across {{ locations().length }} network nodes</small><i class="metric-icon blue">▦</i></article>
+        <article><span>Stockouts avoided</span><strong>3</strong><small>Estimated next 7 days</small><i class="metric-icon green">✓</i></article>
+        <article><span>CO₂ avoided</span><strong>{{ transferCo2Saved() | number:'1.1-1' }} kg</strong><small>Versus emergency procurement</small><i class="metric-icon teal">♻</i></article>
+      </section>
+
+      <section class="insight-grid">
+        <article class="panel route-panel">
+          <div class="panel-heading"><div><span>OPTIMIZED NETWORK</span><h2>Transfer route sequence</h2></div><span class="optimization-badge">12.6% fewer km</span></div>
+          <div class="route-line">
+            <div><i>01</i><strong>Chennai</strong><small>2 dispatches</small></div><span><em>347 km</em></span><div><i>02</i><strong>Bengaluru</strong><small>1 cross-dock</small></div><span><em>148 km</em></span><div><i>03</i><strong>Mysuru</strong><small>Final delivery</small></div>
+          </div>
+          <div class="route-footer"><span><strong>8h 35m</strong> planned transit</span><span><strong>92%</strong> vehicle utilization</span><span><strong>₹18.4K</strong> avoided expedite cost</span></div>
+        </article>
+        <article class="panel sustainability-panel">
+          <div class="panel-heading"><div><span>SUSTAINABILITY</span><h2>Network impact</h2></div><span class="leaf-mark">⌁</span></div>
+          <div class="impact-score"><strong>84</strong><span>/ 100<small>Eco-efficiency score</small></span></div>
+          <div class="impact-bars"><div><span>Route consolidation</span><i><b style="width:88%"></b></i><strong>88%</strong></div><div><span>Waste prevention</span><i><b style="width:74%"></b></i><strong>74%</strong></div><div><span>Load utilization</span><i><b style="width:92%"></b></i><strong>92%</strong></div></div>
+        </article>
+      </section>
+
+      <article class="panel table-panel">
+        <div class="panel-heading"><div><span>DECISION QUEUE</span><h2>Recommended transfers</h2><p>Ranked by service risk, available source stock and route efficiency.</p></div><span>{{ filteredTransfers().length }} records</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Transfer</th><th>Product</th><th>Route</th><th class="numeric">Quantity</th><th>Impact</th><th>ETA</th><th>Status</th><th></th></tr></thead><tbody>
+          <tr *ngFor="let item of filteredTransfers()">
+            <td><strong>{{ item.id }}</strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} priority</small></td>
+            <td><strong>{{ item.product }}</strong><small>{{ item.sku }} · {{ item.reason }}</small></td>
+            <td><strong>{{ item.from }} → {{ item.to }}</strong><small>{{ item.distanceKm }} km optimized lane</small></td>
+            <td class="numeric"><strong>{{ item.quantity | number }}</strong><small>units</small></td>
+            <td><strong class="positive-text">+{{ item.serviceLift }}% service</strong><small>{{ item.co2SavedKg }} kg CO₂ avoided</small></td>
+            <td><strong>{{ item.eta }}</strong><small>Route-aware estimate</small></td>
+            <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
+            <td><button type="button" class="row-action" [disabled]="item.status !== 'Awaiting approval'" (click)="approveTransfer(item)">{{ item.status === 'Awaiting approval' ? 'Review & approve' : 'View plan' }}</button></td>
+          </tr><tr *ngIf="!filteredTransfers().length"><td colspan="8" class="empty-row">No transfers match the current filters.</td></tr>
+        </tbody></table></div>
+      </article>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'purchase'">
+      <section class="metric-grid">
+        <article><span>Planned spend</span><strong>{{ purchasePlanValue() | currency:'INR':'symbol':'1.0-0' }}</strong><small>Across {{ purchasePlans.length }} recommendations</small><i class="metric-icon indigo">₹</i></article>
+        <article><span>Critical lines</span><strong>1</strong><small>Needs approval today</small><i class="metric-icon red">!</i></article>
+        <article><span>Average confidence</span><strong>89.8%</strong><small>Forecast-backed quantity</small><i class="metric-icon green">⌁</i></article>
+        <article><span>Cash protected</span><strong>₹82.6K</strong><small>Excess buying avoided</small><i class="metric-icon teal">◇</i></article>
+      </section>
+
+      <section class="insight-grid purchase-insights">
+        <article class="panel spend-panel">
+          <div class="panel-heading"><div><span>SPEND PHASING</span><h2>Recommended commitment window</h2></div><span class="optimization-badge">Next 14 days</span></div>
+          <div class="spend-bars"><div><span>Today</span><i><b style="height:42%"></b></i><strong>₹2.97L</strong></div><div><span>Week 1</span><i><b style="height:78%"></b></i><strong>₹46.7K</strong></div><div><span>Week 2</span><i><b style="height:58%"></b></i><strong>₹28.5K</strong></div><div><span>Deferred</span><i><b style="height:24%"></b></i><strong>₹12.3K</strong></div></div>
+        </article>
+        <article class="panel supplier-panel">
+          <div class="panel-heading"><div><span>SUPPLIER HEALTH</span><h2>Coverage and reliability</h2></div><span>4 active</span></div>
+          <div class="supplier-list"><div><i class="supplier-avatar">MA</i><span><strong>MedAxis Biologics</strong><small>98% OTIF · Cold chain</small></span><em>Preferred</em></div><div><i class="supplier-avatar">NC</i><span><strong>NovaCure Labs</strong><small>94% OTIF · 6 day lead</small></span><em>Stable</em></div><div><i class="supplier-avatar">AR</i><span><strong>Apex Remedies</strong><small>91% OTIF · Best cost</small></span><em>Review</em></div></div>
+        </article>
+      </section>
+
+      <article class="panel table-panel">
+        <div class="panel-heading"><div><span>PLANNING QUEUE</span><h2>Purchase recommendations</h2><p>Quantities respect demand confidence, lead time, cover and reorder multiples.</p></div><span>{{ filteredPurchasePlans().length }} records</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Plan</th><th>Product</th><th>Supplier</th><th class="numeric">Recommended qty</th><th class="numeric">Plan value</th><th>Need / cover</th><th>Confidence</th><th>Status</th><th></th></tr></thead><tbody>
+          <tr *ngFor="let item of filteredPurchasePlans()">
+            <td><strong>{{ item.id }}</strong><small><span [class]="'priority-dot ' + statusClass(item.risk)"></span>{{ item.risk }} risk</small></td>
+            <td><strong>{{ item.product }}</strong><small>{{ item.sku }}</small></td>
+            <td><strong>{{ item.supplier }}</strong><small>{{ item.leadTimeDays }} day lead time</small></td>
+            <td class="numeric"><strong>{{ item.quantity | number }}</strong><small>units</small></td>
+            <td class="numeric"><strong>{{ item.quantity * item.unitCost | currency:'INR':'symbol':'1.0-0' }}</strong><small>{{ item.unitCost | currency:'INR':'symbol':'1.2-2' }} / unit</small></td>
+            <td><strong>{{ item.needBy }}</strong><small>{{ item.coverDays }} days cover remaining</small></td>
+            <td><strong>{{ item.confidence }}%</strong><div class="mini-progress"><i [style.width.%]="item.confidence"></i></div></td>
+            <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
+            <td><button type="button" class="row-action" [disabled]="item.status === 'Approved'" (click)="approvePurchase(item)">{{ item.status === 'Approved' ? 'Approved' : 'Review plan' }}</button></td>
+          </tr><tr *ngIf="!filteredPurchasePlans().length"><td colspan="9" class="empty-row">No purchase plans match the current filters.</td></tr>
+        </tbody></table></div>
+      </article>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'orders'">
+      <section class="metric-grid">
+        <article><span>Open orders</span><strong>{{ orders.length }}</strong><small>{{ orderCount('On hold') }} requires attention</small><i class="metric-icon indigo">▤</i></article>
+        <article><span>Order value</span><strong>{{ orderValue() | currency:'INR':'symbol':'1.0-0' }}</strong><small>Current operational queue</small><i class="metric-icon blue">₹</i></article>
+        <article><span>Average fulfilment</span><strong>{{ averageFulfillment() | number:'1.0-0' }}%</strong><small>Allocated line quantity</small><i class="metric-icon green">✓</i></article>
+        <article><span>On-time promise</span><strong>96.4%</strong><small>Trailing 30-day OTIF</small><i class="metric-icon teal">◷</i></article>
+      </section>
+
+      <article class="panel fulfilment-board">
+        <div class="panel-heading"><div><span>LIVE FLOW</span><h2>Fulfilment pipeline</h2></div><span>Last synchronized 2 min ago</span></div>
+        <div class="stage-grid"><div><i>01</i><span><strong>{{ orderCount('Allocated') }}</strong><small>Allocated</small></span><em>Inventory secured</em></div><div><i>02</i><span><strong>{{ orderCount('Picking') }}</strong><small>Picking</small></span><em>Warehouse execution</em></div><div><i>03</i><span><strong>{{ orderCount('Ready to ship') }}</strong><small>Ready</small></span><em>Dispatch queue</em></div><div><i>04</i><span><strong>{{ orderCount('Shipped') }}</strong><small>Shipped</small></span><em>Carrier handoff</em></div></div>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-heading"><div><span>ORDER QUEUE</span><h2>Customer orders</h2><p>Promise-date, allocation and fulfilment visibility across every active warehouse.</p></div><span>{{ filteredOrders().length }} records</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Order</th><th>Customer</th><th>Fulfilment node</th><th class="numeric">Items</th><th class="numeric">Value</th><th>Promised</th><th>Fulfilment</th><th>Status</th><th></th></tr></thead><tbody>
+          <tr *ngFor="let item of filteredOrders()">
+            <td><strong>{{ item.id }}</strong><small>{{ item.channel }}</small></td>
+            <td><strong>{{ item.customer }}</strong><small>{{ item.city }}</small></td>
+            <td><strong>{{ item.warehouse }}</strong><small>Inventory allocation node</small></td>
+            <td class="numeric"><strong>{{ item.itemCount }}</strong><small>order lines</small></td>
+            <td class="numeric"><strong>{{ item.value | currency:'INR':'symbol':'1.0-0' }}</strong><small>net order value</small></td>
+            <td><strong>{{ item.promisedDate }}</strong><small>Customer commitment</small></td>
+            <td><strong>{{ item.fulfillment }}%</strong><div class="mini-progress"><i [style.width.%]="item.fulfillment" [class.warning]="item.fulfillment < 70"></i></div></td>
+            <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
+            <td><button type="button" class="row-action" [disabled]="item.status === 'Shipped'" (click)="advanceOrder(item)">{{ item.status === 'Shipped' ? 'Track order' : 'Advance' }}</button></td>
+          </tr><tr *ngIf="!filteredOrders().length"><td colspan="9" class="empty-row">No orders match the current filters.</td></tr>
+        </tbody></table></div>
+      </article>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'returns'">
+      <section class="metric-grid">
+        <article><span>Open returns</span><strong>3</strong><small>1 requires quality review</small><i class="metric-icon indigo">↶</i></article>
+        <article><span>Value at risk</span><strong>{{ returnValue() | currency:'INR':'symbol':'1.0-0' }}</strong><small>Across active cases</small><i class="metric-icon red">₹</i></article>
+        <article><span>Recovered value</span><strong>72%</strong><small>Returned to stock or claimed</small><i class="metric-icon green">♻</i></article>
+        <article><span>Cycle time</span><strong>1.8 days</strong><small>12% faster than last month</small><i class="metric-icon teal">◷</i></article>
+      </section>
+
+      <section class="insight-grid return-insights">
+        <article class="panel disposition-panel"><div class="panel-heading"><div><span>VALUE RECOVERY</span><h2>Disposition mix</h2></div><span>Last 30 days</span></div><div class="donut-small"><div><strong>72%</strong><small>Recovered</small></div></div><div class="disposition-legend"><span><i class="green"></i>Return to stock <strong>42%</strong></span><span><i class="blue"></i>Supplier claim <strong>30%</strong></span><span><i class="orange"></i>Inspection <strong>18%</strong></span><span><i class="red"></i>Write-off <strong>10%</strong></span></div></article>
+        <article class="panel quality-panel"><div class="panel-heading"><div><span>QUALITY SIGNALS</span><h2>Top return reasons</h2></div><span>24 cases</span></div><div class="reason-list"><div><span>Transit damage</span><i><b style="width:78%"></b></i><strong>9</strong></div><div><span>Short-dated stock</span><i><b style="width:52%"></b></i><strong>6</strong></div><div><span>Cold-chain excursion</span><i><b style="width:35%"></b></i><strong>4</strong></div><div><span>Order entry error</span><i><b style="width:26%"></b></i><strong>3</strong></div></div></article>
+      </section>
+
+      <article class="panel table-panel">
+        <div class="panel-heading"><div><span>RETURN QUEUE</span><h2>Return cases</h2><p>Quality, financial and disposition evidence in one review queue.</p></div><span>{{ filteredReturns().length }} records</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Return</th><th>Customer / order</th><th>Product</th><th class="numeric">Quantity</th><th>Reason</th><th>Disposition</th><th class="numeric">Value</th><th>Status</th><th></th></tr></thead><tbody>
+          <tr *ngFor="let item of filteredReturns()">
+            <td><strong>{{ item.id }}</strong><small>{{ item.receivedDate }} · {{ item.warehouse }}</small></td>
+            <td><strong>{{ item.customer }}</strong><small>{{ item.orderId }}</small></td>
+            <td><strong>{{ item.product }}</strong><small>Returned inventory line</small></td>
+            <td class="numeric"><strong>{{ item.quantity | number }}</strong><small>units</small></td>
+            <td><strong>{{ item.reason }}</strong><small>Reported by customer</small></td>
+            <td><strong>{{ item.disposition }}</strong><small>Recommended next step</small></td>
+            <td class="numeric"><strong>{{ item.value | currency:'INR':'symbol':'1.0-0' }}</strong><small>recoverable value</small></td>
+            <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
+            <td><button type="button" class="row-action" [disabled]="item.status === 'Closed'" (click)="approveReturn(item)">{{ item.status === 'Closed' ? 'View case' : 'Review case' }}</button></td>
+          </tr><tr *ngIf="!filteredReturns().length"><td colspan="9" class="empty-row">No returns match the current filters.</td></tr>
+        </tbody></table></div>
+      </article>
+    </ng-container>
+  </ng-container>
+
+  <div class="operation-toast" *ngIf="toastMessage" role="status" aria-live="polite">✓ {{ toastMessage }}</div>
+</section>

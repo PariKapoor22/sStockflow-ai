@@ -587,6 +587,13 @@
       </article>
     </section>
 
+    <sf-operations-workspace
+      *ngIf="activeOperationView() as operationView"
+      [view]="operationView"
+      [tenantLabel]="currentTenantLabel()"
+      [searchQuery]="globalSearch"
+    ></sf-operations-workspace>
+
     <section class="content workspace" *ngIf="!isImplementedView()">
       <div class="placeholder-page card">
         <div class="placeholder-icon">◫</div>

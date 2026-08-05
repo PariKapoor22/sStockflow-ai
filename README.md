@@ -35,6 +35,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Frontend Increment 2 | Warehouses, products/SKUs, batches, and imports | Complete |
 | Frontend Increment 3 | Predictive-demand forecasting workspace | Complete locally |
 | Frontend authentication | Supabase login, signup, session recovery, sign-out, and password recovery | Complete and deployed |
+| Frontend operations UX | Transfers, purchase planning, orders, returns, route and sustainability views | Complete interactive UI |
 | Phase 3 Increment 5A | Forecasting foundation and backtesting | Complete |
 | Phase 3 Increment 5B | Forecast-quality engine and additional models | Complete |
 | Phase 3 Increment 5B.1 | Calibration, diagnostics, daily/weekly selection | Complete and verified |
@@ -630,6 +631,10 @@ curl ^
 - Forecast model comparison
 - Forecast run history
 - Forecast confidence and projected stockouts
+- Smart Transfers with route optimization and sustainability impact
+- Purchase Planning with spend phasing and supplier health
+- Orders with fulfilment pipeline and allocation status
+- Returns with disposition, quality signals and value recovery
 
 Frontend UX includes:
 
@@ -640,6 +645,7 @@ Frontend UX includes:
 - Keyboard shortcuts
 - Toast messages
 - Improved dark-mode contrast
+- Responsive operations workspaces with interactive filters and local demo-state actions
 
 Notifications remain frontend-managed. Signed-in user identity and session state come from Supabase Auth.
 
@@ -653,7 +659,7 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Forecast operations are not yet scheduled.
 - Retry, cancellation, and failure-recovery workflows are not implemented.
 - Forecast accuracy degradation alerts are not implemented.
-- Replenishment and transfer optimization are not implemented.
+- Operations UI workspaces are implemented; optimization and transactional backend endpoints are not yet connected.
 - Purchase orders and stock transfers are not created automatically.
 - Frontend authentication is deployed; backend Supabase JWT validation and authenticated tenant authorization are still required.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
