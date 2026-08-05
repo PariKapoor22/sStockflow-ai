@@ -594,6 +594,13 @@
       [searchQuery]="globalSearch"
     ></sf-operations-workspace>
 
+    <sf-admin-workspace
+      *ngIf="activeAdminView() as adminView"
+      [view]="adminView"
+      [tenantLabel]="currentTenantLabel()"
+      [searchQuery]="globalSearch"
+    ></sf-admin-workspace>
+
     <section class="content workspace" *ngIf="!isImplementedView()">
       <div class="placeholder-page card">
         <div class="placeholder-icon">◫</div>

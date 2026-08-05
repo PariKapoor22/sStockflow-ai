@@ -36,6 +36,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Frontend Increment 3 | Predictive-demand forecasting workspace | Complete locally |
 | Frontend authentication | Supabase login, signup, session recovery, sign-out, and password recovery | Complete and deployed |
 | Frontend operations UX | Transfers, purchase planning, orders, returns, route and sustainability views | Complete interactive UI |
+| Frontend admin UX | Users and roles, settings, sustainability policy, security, and integration health | Complete interactive UI |
 | Phase 3 Increment 5A | Forecasting foundation and backtesting | Complete |
 | Phase 3 Increment 5B | Forecast-quality engine and additional models | Complete |
 | Phase 3 Increment 5B.1 | Calibration, diagnostics, daily/weekly selection | Complete and verified |
@@ -635,6 +636,8 @@ curl ^
 - Purchase Planning with spend phasing and supplier health
 - Orders with fulfilment pipeline and allocation status
 - Returns with disposition, quality signals and value recovery
+- Users & Roles with access scopes, permission profiles, MFA visibility, and member filters
+- Settings for organization defaults, planning policy, route objectives, sustainability targets, alerts, security, and integration health
 
 Frontend UX includes:
 
@@ -646,6 +649,7 @@ Frontend UX includes:
 - Toast messages
 - Improved dark-mode contrast
 - Responsive operations workspaces with interactive filters and local demo-state actions
+- Responsive admin workspaces with role controls, policy settings, and clearly labelled local demo-state actions
 
 Notifications remain frontend-managed. Signed-in user identity and session state come from Supabase Auth.
 
@@ -660,6 +664,7 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Retry, cancellation, and failure-recovery workflows are not implemented.
 - Forecast accuracy degradation alerts are not implemented.
 - Operations UI workspaces are implemented; optimization and transactional backend endpoints are not yet connected.
+- Users & Roles and Settings are implemented as interactive UI previews; secured admin APIs and settings persistence are not yet connected.
 - Purchase orders and stock transfers are not created automatically.
 - Frontend authentication is deployed; backend Supabase JWT validation and authenticated tenant authorization are still required.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.

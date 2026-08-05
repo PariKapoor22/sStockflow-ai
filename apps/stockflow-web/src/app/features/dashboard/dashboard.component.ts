@@ -27,6 +27,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
 import { ImportDataService } from '../../core/services/import-data.service';
 import { IntelligenceDataService } from '../../core/services/intelligence-data.service';
+import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 
 type ViewId =
@@ -68,7 +69,7 @@ interface TopbarNotification {
 @Component({
   selector: 'sf-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent],
+  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent, AdminWorkspaceComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
@@ -323,6 +324,10 @@ export class DashboardComponent implements OnInit {
     }
 
     if (this.activeOperationView()) {
+      return;
+    }
+
+    if (this.activeAdminView()) {
       return;
     }
   }
@@ -600,6 +605,8 @@ export class DashboardComponent implements OnInit {
       'warehouses',
       'products',
       'batches',
+      'users',
+      'settings',
       'integrations'
     ].includes(this.activeView);
   }
@@ -607,6 +614,12 @@ export class DashboardComponent implements OnInit {
   activeOperationView(): OperationView | null {
     return ['transfers', 'purchase', 'orders', 'returns'].includes(this.activeView)
       ? this.activeView as OperationView
+      : null;
+  }
+
+  activeAdminView(): AdminView | null {
+    return ['users', 'settings'].includes(this.activeView)
+      ? this.activeView as AdminView
       : null;
   }
 
