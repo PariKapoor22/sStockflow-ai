@@ -61,6 +61,120 @@
       </article>
     </ng-container>
 
+    <ng-container *ngSwitchCase="'routes'">
+      <section class="metric-grid">
+        <article><span>Active route plans</span><strong>{{ routePlans.length }}</strong><small>{{ filteredRoutes().length }} visible with current filters</small><i class="metric-icon indigo">◎</i></article>
+        <article><span>Distance avoided</span><strong>{{ totalRouteKmSaved() | number }} km</strong><small>Compared with direct baseline lanes</small><i class="metric-icon blue">↘</i></article>
+        <article><span>Average load factor</span><strong>{{ averageLoadUtilization() | number:'1.0-0' }}%</strong><small>Vehicle capacity utilization</small><i class="metric-icon green">▦</i></article>
+        <article><span>Estimated CO₂e avoided</span><strong>{{ routeCo2Saved() | number:'1.1-1' }} kg</strong><small>Subject to distance and vehicle assumptions</small><i class="metric-icon teal">♻</i></article>
+      </section>
+
+      <section class="route-design-grid">
+        <article class="panel route-map-panel">
+          <div class="panel-heading"><div><span>SELECTED PLAN · {{ selectedRoute().id }}</span><h2>{{ selectedRoute().lane }}</h2><p>Capacity-aware stop sequence and transfer consolidation preview</p></div><span class="optimization-badge">{{ selectedRoute().baselineKm - selectedRoute().optimizedKm }} km saved</span></div>
+          <div class="route-map-canvas">
+            <div class="map-chip"><i></i>Optimized sequence</div>
+            <div class="map-route">
+              <ng-container *ngFor="let stop of selectedRoute().stops; let index = index; let last = last">
+                <div class="map-stop" [class.destination]="last"><i>{{ index + 1 }}</i><span><strong>{{ stop }}</strong><small>{{ index === 0 ? 'Dispatch and load' : last ? 'Final receiving node' : 'Consolidation stop' }}</small></span></div>
+                <span class="map-connector" *ngIf="!last"><b></b><em>{{ index === 0 ? 'Priority lane' : 'Final leg' }}</em></span>
+              </ng-container>
+            </div>
+          </div>
+          <div class="route-summary-strip">
+            <span><small>Optimized distance</small><strong>{{ selectedRoute().optimizedKm }} km</strong></span>
+            <span><small>Planned duration</small><strong>{{ selectedRoute().duration }}</strong></span>
+            <span><small>Load utilization</small><strong>{{ selectedRoute().loadKg / selectedRoute().capacityKg | percent:'1.0-0' }}</strong></span>
+            <span><small>Estimated route cost</small><strong>{{ selectedRoute().costInr | currency:'INR':'symbol':'1.0-0' }}</strong></span>
+            <span><small>Estimated emissions</small><strong>{{ selectedRoute().co2Kg }} kg CO₂e</strong></span>
+          </div>
+        </article>
+
+        <aside class="panel optimization-control">
+          <div class="panel-heading"><div><span>OPTIMIZATION SETUP</span><h2>Planning constraints</h2><p>Change the ranking objective before generating plans.</p></div><i class="control-mark">⚙</i></div>
+          <div class="control-form">
+            <label><span>Optimization objective</span><select [(ngModel)]="routeObjective"><option>Balanced cost and carbon</option><option>Lowest transport cost</option><option>Lowest carbon impact</option><option>Fastest service recovery</option></select></label>
+            <label><span>Vehicle eligibility</span><select [(ngModel)]="vehicleType"><option>All eligible vehicles</option><option>Electric and CNG preferred</option><option>Cold-chain vehicles only</option><option>High-capacity fleet only</option></select></label>
+            <div class="constraint-list"><span><i>✓</i>Respect vehicle capacity</span><span><i>✓</i>Protect critical delivery priority</span><span><i>✓</i>Check cold-chain compatibility</span><span><i>✓</i>Keep human approval required</span></div>
+            <button type="button" class="optimize-button" (click)="optimizeRoutes()">Recalculate route candidates</button>
+            <small class="method-note">Prototype calculations use representative lanes. Production optimization requires live road, fleet and dispatch data.</small>
+          </div>
+        </aside>
+      </section>
+
+      <article class="panel table-panel">
+        <div class="panel-heading"><div><span>ROUTE DECISION QUEUE</span><h2>Ranked route candidates</h2><p>Compare baseline distance, capacity, cost, service priority and estimated carbon before approval.</p></div><span>{{ filteredRoutes().length }} routes</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Route</th><th>Lane / vehicle</th><th>Stops</th><th class="numeric">Distance</th><th>Utilization</th><th class="numeric">Cost</th><th>Carbon impact</th><th>Status</th><th></th></tr></thead><tbody>
+          <tr *ngFor="let item of filteredRoutes()" [class.selected-row]="item.id === selectedRouteId" (click)="selectRoute(item)">
+            <td><strong>{{ item.id }}</strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} service priority</small></td>
+            <td><strong>{{ item.lane }}</strong><small>{{ item.vehicle }}</small></td>
+            <td><strong>{{ item.stops.length }} planned stops</strong><small>Capacity-compatible sequence</small></td>
+            <td class="numeric"><strong>{{ item.optimizedKm }} km</strong><small>{{ item.baselineKm - item.optimizedKm }} km below baseline</small></td>
+            <td><strong>{{ item.loadKg / item.capacityKg | percent:'1.0-0' }}</strong><div class="mini-progress"><i [style.width.%]="item.loadKg / item.capacityKg * 100"></i></div></td>
+            <td class="numeric"><strong>{{ item.costInr | currency:'INR':'symbol':'1.0-0' }}</strong><small>estimated trip cost</small></td>
+            <td><strong class="positive-text">−{{ item.co2SavedKg }} kg CO₂e</strong><small>{{ item.co2Kg }} kg estimated trip total</small></td>
+            <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
+            <td><button type="button" class="row-action" [disabled]="item.status === 'Approved' || item.status === 'In transit'" (click)="$event.stopPropagation(); approveRoute(item)">{{ item.status === 'Approved' || item.status === 'In transit' ? 'View route' : 'Review & approve' }}</button></td>
+          </tr><tr *ngIf="!filteredRoutes().length"><td colspan="9" class="empty-row">No routes match the current filters.</td></tr>
+        </tbody></table></div>
+      </article>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'sustainability'">
+      <section class="metric-grid sustainability-metrics">
+        <article><span>Logistics emissions</span><strong>{{ totalEmissions() / 1000 | number:'1.2-2' }} tCO₂e</strong><small>Current reporting period estimate</small><i class="metric-icon indigo">CO₂</i></article>
+        <article><span>Emissions avoided</span><strong>{{ totalEmissionsAvoided() | number }} kg</strong><small>From consolidation and shorter routes</small><i class="metric-icon green">↓</i></article>
+        <article><span>Product waste avoided</span><strong>{{ totalWasteAvoided() / 1000 | number:'1.2-2' }} t</strong><small>Expiry-aware transfers and FEFO action</small><i class="metric-icon teal">♻</i></article>
+        <article><span>Carbon intensity</span><strong>{{ averageCarbonIntensity() | number:'1.3-3' }}</strong><small>kg CO₂e per vehicle-kilometre</small><i class="metric-icon blue">∿</i></article>
+      </section>
+
+      <section class="sustainability-grid">
+        <article class="panel emissions-trend-panel">
+          <div class="panel-heading"><div><span>EMISSIONS TREND</span><h2>Baseline versus optimized logistics</h2><p>Monthly estimates across transfer and delivery activity</p></div><span class="target-pill">18% reduction target</span></div>
+          <div class="trend-legend"><span><i class="baseline"></i>Baseline</span><span><i class="optimized"></i>Optimized</span></div>
+          <div class="emissions-chart" aria-label="Monthly baseline and optimized emissions chart">
+            <div><span><i class="baseline" style="height:78%"></i><i class="optimized" style="height:66%"></i></span><small>Mar</small></div>
+            <div><span><i class="baseline" style="height:84%"></i><i class="optimized" style="height:68%"></i></span><small>Apr</small></div>
+            <div><span><i class="baseline" style="height:76%"></i><i class="optimized" style="height:59%"></i></span><small>May</small></div>
+            <div><span><i class="baseline" style="height:88%"></i><i class="optimized" style="height:65%"></i></span><small>Jun</small></div>
+            <div><span><i class="baseline" style="height:82%"></i><i class="optimized" style="height:57%"></i></span><small>Jul</small></div>
+            <div class="current"><span><i class="baseline" style="height:75%"></i><i class="optimized" style="height:51%"></i></span><small>Aug</small></div>
+          </div>
+          <div class="chart-axis"><span>0</span><span>1 t</span><span>2 t</span><span>3 tCO₂e</span></div>
+        </article>
+
+        <article class="panel impact-breakdown-panel">
+          <div class="panel-heading"><div><span>AVOIDED IMPACT</span><h2>Where savings come from</h2></div><span>1.02 tCO₂e</span></div>
+          <div class="impact-breakdown-body">
+            <div class="impact-donut"><div><strong>1.02</strong><small>tCO₂e avoided</small></div></div>
+            <div class="impact-legend"><span><i class="route"></i><b>Route consolidation</b><strong>46%</strong></span><span><i class="transfer"></i><b>Stock transfers</b><strong>31%</strong></span><span><i class="vehicle"></i><b>Vehicle selection</b><strong>15%</strong></span><span><i class="waste"></i><b>Waste prevention</b><strong>8%</strong></span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="methodology-strip">
+        <div><i>ƒ</i><span><strong>Transparent estimation</strong><small>Trip CO₂e = optimized distance × vehicle emission factor. Avoided CO₂e = baseline estimate − optimized estimate.</small></span></div>
+        <div><i>✓</i><span><strong>Evidence retained</strong><small>Route, vehicle class, distance, factor version and approval status should be stored with every calculation.</small></span></div>
+        <div><i>!</i><span><strong>Estimate, not certification</strong><small>Values require verified fleet and fuel data before use in audited sustainability reporting.</small></span></div>
+      </section>
+
+      <article class="panel table-panel">
+        <div class="panel-heading"><div><span>LOCATION PERFORMANCE</span><h2>Warehouse sustainability scorecard</h2><p>Operational emissions and avoided product waste by fulfilment node.</p></div><span>{{ filteredSustainability().length }} locations</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Location</th><th class="numeric">Trips</th><th class="numeric">Distance</th><th class="numeric">Emissions</th><th class="numeric">Avoided</th><th class="numeric">Waste avoided</th><th>Carbon intensity</th><th>Performance</th></tr></thead><tbody>
+          <tr *ngFor="let item of filteredSustainability()">
+            <td><strong>{{ item.location }}</strong><small>{{ item.state }}</small></td>
+            <td class="numeric"><strong>{{ item.trips }}</strong><small>completed trips</small></td>
+            <td class="numeric"><strong>{{ item.distanceKm | number }} km</strong><small>optimized network distance</small></td>
+            <td class="numeric"><strong>{{ item.emissionsKg | number }} kg CO₂e</strong><small>estimated total</small></td>
+            <td class="numeric"><strong class="positive-text">−{{ item.emissionsAvoidedKg }} kg</strong><small>against baseline</small></td>
+            <td class="numeric"><strong>{{ item.wasteAvoidedKg }} kg</strong><small>expiry and damage prevention</small></td>
+            <td><strong>{{ item.intensity | number:'1.3-3' }} kg/km</strong><div class="mini-progress carbon-progress"><i [style.width.%]="item.intensity / 0.30 * 100"></i></div></td>
+            <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
+          </tr><tr *ngIf="!filteredSustainability().length"><td colspan="8" class="empty-row">No sustainability records match the current filters.</td></tr>
+        </tbody></table></div>
+      </article>
+    </ng-container>
+
     <ng-container *ngSwitchCase="'purchase'">
       <section class="metric-grid">
         <article><span>Planned spend</span><strong>{{ purchasePlanValue() | currency:'INR':'symbol':'1.0-0' }}</strong><small>Across {{ purchasePlans.length }} recommendations</small><i class="metric-icon indigo">₹</i></article>

@@ -12,7 +12,7 @@
 
   <div class="prototype-note">
     <span>UI PREVIEW</span>
-    <p>Representative admin data and local interactions are shown for product validation. User management and settings persistence need secured backend admin endpoints.</p>
+    <p>The finalized SIH team assignments are shown below. Role changes remain local until secured backend admin endpoints are connected.</p>
   </div>
 
   <ng-container *ngIf="view === 'users'">
@@ -36,12 +36,12 @@
         </div>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>User</th><th>Role</th><th>Access scope</th><th>Status</th><th>Security</th><th>Last active</th><th>Action</th></tr></thead>
+            <thead><tr><th>Team member</th><th>Primary work</th><th>Secondary work</th><th>Status</th><th>Security</th><th>Activity</th><th>Action</th></tr></thead>
             <tbody>
               <tr *ngFor="let user of filteredUsers()">
                 <td><div class="user-cell"><i>{{ user.initials }}</i><span><strong>{{ user.name }}</strong><small>{{ user.email }}</small></span></div></td>
-                <td><select class="role-select" [ngModel]="user.role" (ngModelChange)="changeRole(user, $event)"><option *ngFor="let role of userRoles()" [value]="role">{{ role }}</option></select></td>
-                <td><strong>{{ user.scope }}</strong></td>
+                <td><select class="role-select" [ngModel]="user.primaryWork" (ngModelChange)="changeRole(user, $event)"><option *ngFor="let role of userRoles()" [value]="role">{{ role }}</option></select></td>
+                <td><strong>{{ user.secondaryWork }}</strong></td>
                 <td><span [class]="'status-pill ' + statusClass(user.status)">{{ user.status }}</span></td>
                 <td><span [class.secure]="user.mfa" class="security-pill">{{ user.mfa ? 'MFA on' : 'MFA off' }}</span></td>
                 <td><span class="muted">{{ user.lastActive }}</span></td>
@@ -54,7 +54,7 @@
       </article>
 
       <aside class="panel role-panel">
-        <div class="panel-heading"><div><span>ROLE LIBRARY</span><h2>Permission sets</h2><p>Reusable access profiles</p></div></div>
+        <div class="panel-heading"><div><span>WORKSTREAM LIBRARY</span><h2>Team roles</h2><p>Finalized SIH responsibilities</p></div></div>
         <div class="role-list">
           <article *ngFor="let role of roles">
             <i [class]="role.tone">{{ role.name.charAt(0) }}</i>

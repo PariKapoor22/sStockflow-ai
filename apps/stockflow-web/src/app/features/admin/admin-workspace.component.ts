@@ -9,8 +9,8 @@ interface AdminUser {
   name: string;
   email: string;
   initials: string;
-  role: string;
-  scope: string;
+  primaryWork: string;
+  secondaryWork: string;
   status: 'Active' | 'Pending' | 'Suspended';
   lastActive: string;
   mfa: boolean;
@@ -62,20 +62,20 @@ export class AdminWorkspaceComponent implements OnChanges, OnDestroy {
   auditRetention = 365;
 
   users: AdminUser[] = [
-    { id: 1, name: 'Veyjval B', email: 'veyjval@stockflow.ai', initials: 'VB', role: 'Platform Admin', scope: 'All warehouses', status: 'Active', lastActive: 'Just now', mfa: true },
-    { id: 2, name: 'Ananya Rao', email: 'ananya.rao@stockflow.ai', initials: 'AR', role: 'Inventory Manager', scope: 'South region', status: 'Active', lastActive: '12 min ago', mfa: true },
-    { id: 3, name: 'Karthik Menon', email: 'karthik.m@stockflow.ai', initials: 'KM', role: 'Demand Planner', scope: 'Chennai, Bengaluru', status: 'Active', lastActive: '1 hr ago', mfa: false },
-    { id: 4, name: 'Priya Shah', email: 'priya.shah@stockflow.ai', initials: 'PS', role: 'Warehouse Operator', scope: 'Hyderabad Hub', status: 'Active', lastActive: 'Yesterday', mfa: true },
-    { id: 5, name: 'Rahul Iyer', email: 'rahul.iyer@stockflow.ai', initials: 'RI', role: 'Purchase Planner', scope: 'All warehouses', status: 'Pending', lastActive: 'Invite sent 2 days ago', mfa: false },
-    { id: 6, name: 'Meera Nair', email: 'meera.nair@stockflow.ai', initials: 'MN', role: 'Viewer', scope: 'Coimbatore West', status: 'Suspended', lastActive: '18 Jul 2026', mfa: false }
+    { id: 1, name: 'Veyjval', email: 'veyjval@stockflow.ai', initials: 'V', primaryWork: 'Software development', secondaryWork: 'Project Coordinator', status: 'Active', lastActive: 'Just now', mfa: true },
+    { id: 2, name: 'Arnab', email: 'arnab@stockflow.ai', initials: 'A', primaryWork: 'Mobile development', secondaryWork: 'Project Coordinator', status: 'Active', lastActive: 'Current sprint', mfa: true },
+    { id: 3, name: 'Shreyas', email: 'shreyas@stockflow.ai', initials: 'S', primaryWork: 'PPT presentation', secondaryWork: 'Software dev', status: 'Active', lastActive: 'Current sprint', mfa: false },
+    { id: 4, name: 'Pari', email: 'pari@stockflow.ai', initials: 'P', primaryWork: 'Presenter', secondaryWork: 'Research', status: 'Active', lastActive: 'Current sprint', mfa: true },
+    { id: 5, name: 'Thavanesh', email: 'thavanesh@stockflow.ai', initials: 'T', primaryWork: 'Presenter', secondaryWork: 'Research', status: 'Active', lastActive: 'Current sprint', mfa: false },
+    { id: 6, name: 'Dharmanshu', email: 'dharmanshu@stockflow.ai', initials: 'D', primaryWork: 'Database Engineer', secondaryWork: 'Assist developer', status: 'Active', lastActive: 'Current sprint', mfa: true }
   ];
 
   readonly roles: RoleDefinition[] = [
-    { name: 'Platform Admin', description: 'Full workspace and policy control', users: 1, tone: 'violet', permissions: ['All modules', 'User administration', 'Security settings'] },
-    { name: 'Inventory Manager', description: 'Network inventory and execution', users: 1, tone: 'blue', permissions: ['Inventory analytics', 'Transfers & returns', 'Data exports'] },
-    { name: 'Demand Planner', description: 'Forecast and replenishment planning', users: 1, tone: 'teal', permissions: ['Demand forecast', 'Purchase planning', 'Recommendations'] },
-    { name: 'Warehouse Operator', description: 'Location-scoped daily operations', users: 1, tone: 'orange', permissions: ['Orders', 'Batch inventory', 'Returns intake'] },
-    { name: 'Viewer', description: 'Read-only reporting access', users: 1, tone: 'slate', permissions: ['Dashboard', 'Analytics', 'Reports'] }
+    { name: 'Software development', description: 'Builds and integrates the StockFlow web platform', users: 1, tone: 'violet', permissions: ['Core application', 'Feature integration', 'Technical delivery'] },
+    { name: 'Mobile development', description: 'Owns the mobile experience and app integration', users: 1, tone: 'blue', permissions: ['Mobile UI', 'API integration', 'Device testing'] },
+    { name: 'PPT presentation', description: 'Creates the SIH pitch deck and product story', users: 1, tone: 'teal', permissions: ['Pitch deck', 'Demo narrative', 'Visual assets'] },
+    { name: 'Presenter', description: 'Presents the solution, research and impact', users: 2, tone: 'orange', permissions: ['Live pitch', 'Research', 'Jury Q&A'] },
+    { name: 'Database Engineer', description: 'Owns data design, integrity and developer support', users: 1, tone: 'slate', permissions: ['Database', 'Data security', 'Developer support'] }
   ];
 
   readonly settingsSections = [
@@ -108,7 +108,7 @@ export class AdminWorkspaceComponent implements OnChanges, OnDestroy {
   }
 
   userRoles(): string[] {
-    return [...new Set(this.users.map(user => user.role))].sort();
+    return [...new Set(this.users.map(user => user.primaryWork))].sort();
   }
 
   statuses(): string[] {
@@ -118,9 +118,9 @@ export class AdminWorkspaceComponent implements OnChanges, OnDestroy {
   filteredUsers(): AdminUser[] {
     const query = this.searchQuery.trim().toLowerCase();
     return this.users.filter(user => {
-      const matchesSearch = !query || [user.name, user.email, user.role, user.scope]
+      const matchesSearch = !query || [user.name, user.email, user.primaryWork, user.secondaryWork]
         .some(value => value.toLowerCase().includes(query));
-      const matchesRole = this.roleFilter === 'ALL' || user.role === this.roleFilter;
+      const matchesRole = this.roleFilter === 'ALL' || user.primaryWork === this.roleFilter;
       const matchesStatus = this.statusFilter === 'ALL' || user.status === this.statusFilter;
       return matchesSearch && matchesRole && matchesStatus;
     });
@@ -147,8 +147,8 @@ export class AdminWorkspaceComponent implements OnChanges, OnDestroy {
   }
 
   changeRole(user: AdminUser, role: string): void {
-    user.role = role;
-    this.showToast(`${user.name}'s role is staged as ${role}. Demo state only.`);
+    user.primaryWork = role;
+    this.showToast(`${user.name}'s primary work is staged as ${role}. Demo state only.`);
   }
 
   toggleUserStatus(user: AdminUser): void {

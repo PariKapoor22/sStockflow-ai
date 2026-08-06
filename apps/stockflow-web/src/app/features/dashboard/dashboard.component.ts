@@ -40,6 +40,8 @@ type ViewId =
   | 'purchase'
   | 'orders'
   | 'returns'
+  | 'routes'
+  | 'sustainability'
   | 'warehouses'
   | 'products'
   | 'batches'
@@ -236,6 +238,8 @@ export class DashboardComponent implements OnInit {
       title: 'OPERATIONS',
       items: [
         { label: 'Transfers', icon: '⇄', view: 'transfers' },
+        { label: 'Route Optimization', icon: '◎', view: 'routes' },
+        { label: 'Sustainability', icon: '♻', view: 'sustainability' },
         { label: 'Purchase Planning', icon: '🛒', view: 'purchase' },
         { label: 'Orders', icon: '▤', view: 'orders' },
         { label: 'Returns', icon: '↶', view: 'returns' }
@@ -570,6 +574,8 @@ export class DashboardComponent implements OnInit {
       purchase: 'Purchase Planning',
       orders: 'Orders',
       returns: 'Returns',
+      routes: 'Route Optimization',
+      sustainability: 'Carbon & Waste Impact',
       warehouses: 'Warehouses',
       products: 'Products & SKUs',
       batches: 'Batch Inventory',
@@ -602,6 +608,8 @@ export class DashboardComponent implements OnInit {
       'purchase',
       'orders',
       'returns',
+      'routes',
+      'sustainability',
       'warehouses',
       'products',
       'batches',
@@ -612,7 +620,7 @@ export class DashboardComponent implements OnInit {
   }
 
   activeOperationView(): OperationView | null {
-    return ['transfers', 'purchase', 'orders', 'returns'].includes(this.activeView)
+    return ['transfers', 'purchase', 'orders', 'returns', 'routes', 'sustainability'].includes(this.activeView)
       ? this.activeView as OperationView
       : null;
   }

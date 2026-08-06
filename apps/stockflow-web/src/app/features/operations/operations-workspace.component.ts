@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns';
+export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
 interface TransferPlan {
   id: string;
@@ -62,6 +62,35 @@ interface ReturnCase {
   status: string;
 }
 
+interface RoutePlan {
+  id: string;
+  lane: string;
+  stops: string[];
+  vehicle: string;
+  loadKg: number;
+  capacityKg: number;
+  baselineKm: number;
+  optimizedKm: number;
+  duration: string;
+  costInr: number;
+  co2Kg: number;
+  co2SavedKg: number;
+  priority: string;
+  status: string;
+}
+
+interface SustainabilityRecord {
+  location: string;
+  state: string;
+  trips: number;
+  distanceKm: number;
+  emissionsKg: number;
+  emissionsAvoidedKg: number;
+  wasteAvoidedKg: number;
+  intensity: number;
+  status: string;
+}
+
 @Component({
   selector: 'sf-operations-workspace',
   standalone: true,
@@ -76,6 +105,9 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
+  routeObjective = 'Balanced cost and carbon';
+  vehicleType = 'All eligible vehicles';
+  selectedRouteId = 'RTE-301';
   toastMessage = '';
   private toastTimer?: number;
 
@@ -108,6 +140,21 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
     { id: 'RET-3618', orderId: 'SO-10712', customer: 'City Health Mart', product: 'ORS Sachet 21 g', quantity: 120, reason: 'Order entry error', disposition: 'Return to stock', value: 1044, receivedDate: '03 Aug 2026', warehouse: 'Hyderabad Hub', status: 'Closed' }
   ];
 
+  routePlans: RoutePlan[] = [
+    { id: 'RTE-301', lane: 'Chennai → Bengaluru → Mysuru', stops: ['Chennai Central', 'Bengaluru North', 'Mysuru DC'], vehicle: '12T electric-assisted truck', loadKg: 10860, capacityKg: 12000, baselineKm: 612, optimizedKm: 495, duration: '8h 35m', costInr: 28400, co2Kg: 86.2, co2SavedKg: 31.8, priority: 'Critical', status: 'Ready for approval' },
+    { id: 'RTE-302', lane: 'Hyderabad → Chennai', stops: ['Hyderabad Hub', 'Nellore Cross-dock', 'Chennai Central'], vehicle: '16T diesel BS-VI truck', loadKg: 13120, capacityKg: 16000, baselineKm: 664, optimizedKm: 628, duration: '10h 20m', costInr: 36150, co2Kg: 142.6, co2SavedKg: 12.4, priority: 'High', status: 'Optimized' },
+    { id: 'RTE-303', lane: 'Chennai → Coimbatore', stops: ['Chennai Central', 'Salem Hub', 'Coimbatore West'], vehicle: '9T CNG truck', loadKg: 7960, capacityKg: 9000, baselineKm: 548, optimizedKm: 505, duration: '8h 05m', costInr: 23800, co2Kg: 73.4, co2SavedKg: 16.7, priority: 'High', status: 'Approved' },
+    { id: 'RTE-304', lane: 'Bengaluru → Mysuru', stops: ['Bengaluru North', 'Mandya Drop', 'Mysuru DC'], vehicle: '6T electric truck', loadKg: 5160, capacityKg: 6000, baselineKm: 171, optimizedKm: 148, duration: '3h 10m', costInr: 9400, co2Kg: 18.8, co2SavedKg: 14.2, priority: 'Medium', status: 'In transit' }
+  ];
+
+  sustainabilityRecords: SustainabilityRecord[] = [
+    { location: 'Chennai Central', state: 'Tamil Nadu', trips: 42, distanceKm: 8240, emissionsKg: 1840, emissionsAvoidedKg: 318, wasteAvoidedKg: 462, intensity: 0.223, status: 'On target' },
+    { location: 'Bengaluru North', state: 'Karnataka', trips: 36, distanceKm: 6910, emissionsKg: 1395, emissionsAvoidedKg: 284, wasteAvoidedKg: 386, intensity: 0.202, status: 'On target' },
+    { location: 'Hyderabad Hub', state: 'Telangana', trips: 31, distanceKm: 7550, emissionsKg: 1928, emissionsAvoidedKg: 172, wasteAvoidedKg: 318, intensity: 0.255, status: 'Needs attention' },
+    { location: 'Coimbatore West', state: 'Tamil Nadu', trips: 24, distanceKm: 3860, emissionsKg: 792, emissionsAvoidedKg: 146, wasteAvoidedKg: 274, intensity: 0.205, status: 'On target' },
+    { location: 'Mysuru DC', state: 'Karnataka', trips: 19, distanceKm: 2140, emissionsKg: 438, emissionsAvoidedKg: 96, wasteAvoidedKg: 181, intensity: 0.205, status: 'Improving' }
+  ];
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['view']) {
       this.statusFilter = 'ALL';
@@ -124,7 +171,9 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
       transfers: { eyebrow: 'NETWORK ORCHESTRATION', title: 'Smart Transfers', description: 'Rebalance inventory across warehouses with route-aware, low-carbon transfer recommendations.', action: 'Generate transfer plan' },
       purchase: { eyebrow: 'REPLENISHMENT CONTROL', title: 'Purchase Planning', description: 'Convert forecast signals into reviewable supplier plans while protecting cash and service levels.', action: 'Create purchase plan' },
       orders: { eyebrow: 'ORDER FULFILMENT', title: 'Orders', description: 'Prioritize, allocate and track customer orders across the distribution network.', action: 'Create order' },
-      returns: { eyebrow: 'REVERSE LOGISTICS', title: 'Returns', description: 'Triage returns quickly, protect quality and recover value through the right disposition path.', action: 'Register return' }
+      returns: { eyebrow: 'REVERSE LOGISTICS', title: 'Returns', description: 'Triage returns quickly, protect quality and recover value through the right disposition path.', action: 'Register return' },
+      routes: { eyebrow: 'LOGISTICS INTELLIGENCE', title: 'Route Optimization', description: 'Consolidate warehouse movements into capacity-aware routes ranked by service, cost, distance and estimated emissions.', action: 'Optimize routes' },
+      sustainability: { eyebrow: 'SUSTAINABILITY CONTROL', title: 'Carbon & Waste Impact', description: 'Track estimated logistics emissions, avoided kilometres and product-waste reduction with transparent calculation evidence.', action: 'Export impact report' }
     };
     return copy[this.view];
   }
@@ -132,6 +181,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
   locations(): string[] {
     const values = this.view === 'transfers'
       ? this.transfers.flatMap(item => [item.from, item.to])
+      : this.view === 'routes'
+        ? this.routePlans.flatMap(item => item.stops)
+        : this.view === 'sustainability'
+          ? this.sustainabilityRecords.map(item => item.location)
       : this.view === 'purchase'
         ? this.purchasePlans.map(item => item.supplier)
         : this.view === 'orders'
@@ -143,6 +196,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
   statuses(): string[] {
     const values = this.view === 'transfers'
       ? this.transfers.map(item => item.status)
+      : this.view === 'routes'
+        ? this.routePlans.map(item => item.status)
+        : this.view === 'sustainability'
+          ? this.sustainabilityRecords.map(item => item.status)
       : this.view === 'purchase'
         ? this.purchasePlans.map(item => item.status)
         : this.view === 'orders'
@@ -165,6 +222,51 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
 
   filteredReturns(): ReturnCase[] {
     return this.returns.filter(item => this.matches(item.status, [item.id, item.orderId, item.customer, item.product, item.reason, item.disposition], [item.warehouse]));
+  }
+
+  filteredRoutes(): RoutePlan[] {
+    return this.routePlans.filter(item => this.matches(item.status, [item.id, item.lane, item.vehicle, item.priority, ...item.stops], item.stops));
+  }
+
+  filteredSustainability(): SustainabilityRecord[] {
+    return this.sustainabilityRecords.filter(item => this.matches(item.status, [item.location, item.state, item.status], [item.location]));
+  }
+
+  selectedRoute(): RoutePlan {
+    return this.routePlans.find(item => item.id === this.selectedRouteId) ?? this.routePlans[0];
+  }
+
+  totalOptimizedKm(): number {
+    return this.routePlans.reduce((sum, item) => sum + item.optimizedKm, 0);
+  }
+
+  totalRouteKmSaved(): number {
+    return this.routePlans.reduce((sum, item) => sum + item.baselineKm - item.optimizedKm, 0);
+  }
+
+  averageLoadUtilization(): number {
+    return this.routePlans.reduce((sum, item) => sum + item.loadKg / item.capacityKg * 100, 0) / Math.max(this.routePlans.length, 1);
+  }
+
+  routeCo2Saved(): number {
+    return this.routePlans.reduce((sum, item) => sum + item.co2SavedKg, 0);
+  }
+
+  totalEmissions(): number {
+    return this.sustainabilityRecords.reduce((sum, item) => sum + item.emissionsKg, 0);
+  }
+
+  totalEmissionsAvoided(): number {
+    return this.sustainabilityRecords.reduce((sum, item) => sum + item.emissionsAvoidedKg, 0);
+  }
+
+  totalWasteAvoided(): number {
+    return this.sustainabilityRecords.reduce((sum, item) => sum + item.wasteAvoidedKg, 0);
+  }
+
+  averageCarbonIntensity(): number {
+    const distance = this.sustainabilityRecords.reduce((sum, item) => sum + item.distanceKm, 0);
+    return this.totalEmissions() / Math.max(distance, 1);
   }
 
   transferUnits(): number {
@@ -225,7 +327,32 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
     this.showToast(`${item.id} moved to ${item.status}. Demo state only.`);
   }
 
+  selectRoute(item: RoutePlan): void {
+    this.selectedRouteId = item.id;
+  }
+
+  optimizeRoutes(): void {
+    this.routePlans.forEach(item => {
+      if (item.status === 'Draft') item.status = 'Optimized';
+    });
+    this.showToast(`${this.routePlans.length} route candidates recalculated using ${this.routeObjective.toLowerCase()}. Demo data only.`);
+  }
+
+  approveRoute(item: RoutePlan): void {
+    if (item.status === 'Ready for approval' || item.status === 'Optimized') item.status = 'Approved';
+    this.selectedRouteId = item.id;
+    this.showToast(`${item.id} is staged as approved. Dispatch execution is not connected.`);
+  }
+
   triggerPrimaryAction(): void {
+    if (this.view === 'routes') {
+      this.optimizeRoutes();
+      return;
+    }
+    if (this.view === 'sustainability') {
+      this.showToast('Impact report preview prepared. Backend evidence export is not connected yet.');
+      return;
+    }
     this.showToast(`${this.pageCopy.action} opened as a UI preview. Backend submission is not connected yet.`);
   }
 
