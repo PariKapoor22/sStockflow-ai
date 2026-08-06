@@ -1,56 +1,78 @@
-import { Bell, Search, CircleUserRound } from "lucide-react";
+import {
+  Bell,
+  Search,
+  UserCircle2,
+} from "lucide-react";
 
 export default function Topbar() {
   return (
-    <header className="flex items-center justify-between bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
 
+      {/* Left */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-800">
-          Dashboard
+        <h1 className="text-2xl font-bold text-slate-800">
+          StockFlow AI Dashboard
         </h1>
 
-        <p className="text-slate-500 mt-1">
-          Welcome back! Here's your carbon footprint overview.
+        <p className="text-slate-500 text-sm mt-1">
+          AI-powered Inventory • Carbon Intelligence • Fleet Optimization
         </p>
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Right */}
+      <div className="flex items-center gap-5">
 
+        {/* Search */}
         <div className="relative">
 
           <Search
-            className="absolute left-3 top-3 text-slate-400"
             size={18}
+            className="absolute left-4 top-3.5 text-slate-400"
           />
 
           <input
             type="text"
             placeholder="Search..."
-            className="pl-10 pr-4 py-2 border border-slate-300 rounded-xl w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="
+              w-72
+              rounded-xl
+              border
+              border-slate-200
+              bg-slate-50
+              py-3
+              pl-11
+              pr-4
+              outline-none
+              focus:ring-2
+              focus:ring-emerald-500
+            "
           />
 
         </div>
 
-        <button className="relative p-3 rounded-xl bg-slate-100 hover:bg-slate-200 transition">
-
+        {/* Notification */}
+        <button className="w-12 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 transition flex items-center justify-center">
           <Bell size={20} />
-
-          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500"></span>
-
         </button>
 
+        {/* Profile */}
         <div className="flex items-center gap-3 bg-slate-100 rounded-xl px-4 py-2">
 
-          <CircleUserRound size={28} className="text-emerald-600" />
+          <UserCircle2
+            size={38}
+            className="text-slate-600"
+          />
 
           <div>
-            <p className="font-semibold text-sm">
+
+            <h2 className="font-semibold">
               Admin
-            </p>
+            </h2>
 
             <p className="text-xs text-slate-500">
-              Green Industries Ltd.
+              Sustainability Manager
             </p>
+
           </div>
 
         </div>
