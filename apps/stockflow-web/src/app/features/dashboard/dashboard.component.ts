@@ -102,8 +102,11 @@ export class DashboardComponent implements OnInit {
   pageError = '';
   importError = '';
   copilotInput = '';
+  isAssistantOpen = false;
   globalSearch = '';
-  sidebarCollapsed = window.innerWidth <= 900;
+  sidebarCollapsed = true;
+  isPillHovered = false;
+  private pillHoverTimeout?: any;
 
   @ViewChild('globalSearchInput') globalSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -223,42 +226,42 @@ export class DashboardComponent implements OnInit {
   readonly navGroups: { title: string; items: NavigationItem[] }[] = [
     {
       title: '',
-      items: [{ label: 'Dashboard', icon: '⌂', view: 'dashboard' }]
+      items: [{ label: 'Dashboard', icon: 'assets/nav-icons/icons8-home-48.png', view: 'dashboard' }]
     },
     {
       title: 'INTELLIGENCE',
       items: [
-        { label: 'Demand Forecast', icon: '▥', view: 'demand' },
-        { label: 'Inventory Analytics', icon: '⌁', view: 'inventory' },
-        { label: 'Risk & Alerts', icon: '△', view: 'risks' },
-        { label: 'Recommendations', icon: '▣', view: 'recommendations' }
+        { label: 'Demand Forecast', icon: 'assets/nav-icons/icons8-graph-50.png', view: 'demand' },
+        { label: 'Inventory Analytics', icon: 'assets/nav-icons/icons8-analysis-50.png', view: 'inventory' },
+        { label: 'Risk & Alerts', icon: 'assets/nav-icons/icons8-risk-30.png', view: 'risks' },
+        { label: 'Recommendations', icon: 'assets/nav-icons/icons8-recommendation-30.png', view: 'recommendations' }
       ]
     },
     {
       title: 'OPERATIONS',
       items: [
-        { label: 'Transfers', icon: '⇄', view: 'transfers' },
-        { label: 'Route Optimization', icon: '◎', view: 'routes' },
-        { label: 'Sustainability', icon: '♻', view: 'sustainability' },
-        { label: 'Purchase Planning', icon: '🛒', view: 'purchase' },
-        { label: 'Orders', icon: '▤', view: 'orders' },
-        { label: 'Returns', icon: '↶', view: 'returns' }
+        { label: 'Transfers', icon: 'assets/nav-icons/icons8-transfer-30.png', view: 'transfers' },
+        { label: 'Route Optimization', icon: 'assets/nav-icons/img.icons8.com.png', view: 'routes' },
+        { label: 'Sustainability', icon: 'assets/nav-icons/icons8-recycle-50.png', view: 'sustainability' },
+        { label: 'Purchase Planning', icon: 'assets/nav-icons/icons8-timeline-week-50.png', view: 'purchase' },
+        { label: 'Orders', icon: 'assets/nav-icons/icons8-product-30.png', view: 'orders' },
+        { label: 'Returns', icon: 'assets/nav-icons/icons8-return-box-64.png', view: 'returns' }
       ]
     },
     {
       title: 'INVENTORY',
       items: [
-        { label: 'Warehouses', icon: '⌂', view: 'warehouses' },
-        { label: 'Products & SKUs', icon: '◇', view: 'products' },
-        { label: 'Batches', icon: '▰', view: 'batches' }
+        { label: 'Warehouses', icon: 'assets/nav-icons/icons8-country-house-48.png', view: 'warehouses' },
+        { label: 'Products & SKUs', icon: 'assets/nav-icons/icons8-product-30.png', view: 'products' },
+        { label: 'Batches', icon: 'assets/nav-icons/icons8-inventory-30.png', view: 'batches' }
       ]
     },
     {
       title: 'ADMIN',
       items: [
-        { label: 'Users & Roles', icon: '♙', view: 'users' },
-        { label: 'Settings', icon: '⚙', view: 'settings' },
-        { label: 'Data Imports', icon: '⇩', view: 'integrations' }
+        { label: 'Users & Roles', icon: 'assets/nav-icons/icons8-user-30.png', view: 'users' },
+        { label: 'Settings', icon: 'assets/nav-icons/icons8-settings-50.png', view: 'settings' },
+        { label: 'Data Imports', icon: 'assets/nav-icons/icons8-data-protection-30.png', view: 'integrations' }
       ]
     }
   ];
@@ -282,6 +285,12 @@ export class DashboardComponent implements OnInit {
     this.activeView = view;
     this.pageError = '';
     this.importError = '';
+
+    this.isPillHovered = false;
+    if (this.pillHoverTimeout) {
+      clearTimeout(this.pillHoverTimeout);
+      this.pillHoverTimeout = undefined;
+    }
 
     if (window.innerWidth <= 900) {
       this.sidebarCollapsed = true;
@@ -501,6 +510,24 @@ export class DashboardComponent implements OnInit {
     this.closeTopbarPanels();
     this.onTenantChange();
     this.showTopbarToast('Demo session reset to Acme Pharma.');
+  }
+
+  toggleAssistant(): void {
+    this.isAssistantOpen = !this.isAssistantOpen;
+  }
+
+  onPillMouseEnter(): void {
+    this.isPillHovered = true;
+    if (this.pillHoverTimeout) {
+      clearTimeout(this.pillHoverTimeout);
+      this.pillHoverTimeout = undefined;
+    }
+  }
+
+  onPillMouseLeave(): void {
+    this.pillHoverTimeout = setTimeout(() => {
+      this.isPillHovered = false;
+    }, 5000);
   }
 
   sendCopilotMessage(): void {
