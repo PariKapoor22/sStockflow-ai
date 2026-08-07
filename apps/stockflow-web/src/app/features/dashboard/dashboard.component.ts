@@ -303,6 +303,7 @@ export class DashboardComponent implements OnInit {
     this.restoreNotificationState();
     this.applyThemePreference();
     this.loadDashboard();
+    this.loadDashboardWarehouses();
   }
 
   selectView(view: ViewId): void {
@@ -398,6 +399,7 @@ export class DashboardComponent implements OnInit {
         this.selectView(this.activeView);
       }
     });
+    this.loadDashboardWarehouses();
   }
 
   onDemandWindowChange(): void {
@@ -1112,6 +1114,28 @@ export class DashboardComponent implements OnInit {
         },
         error: () => this.error = 'The dashboard data could not be loaded.'
       });
+  }
+
+  private loadDashboardWarehouses(): void {
+    this.foundationData.warehouses().subscribe({
+      next: warehouses => {
+        this.foundationDataSource = 'LIVE API';
+        this.warehouses = this.applyPrototypePatches(
+          this.prototypeCollection('warehouses'),
+          warehouses,
+          item => item.warehouseId
+        );
+      },
+      error: () => {
+        const fallback = createPrototypeFoundationData(this.selectedTenant, this.currentTenantLabel());
+        this.foundationDataSource = 'DEMO FALLBACK';
+        this.warehouses = this.applyPrototypePatches(
+          this.prototypeCollection('warehouses'),
+          fallback.warehouses,
+          item => item.warehouseId
+        );
+      }
+    });
   }
 
   private loadDemandWorkspace(): void {
