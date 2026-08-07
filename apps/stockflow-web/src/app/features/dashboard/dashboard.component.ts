@@ -406,6 +406,10 @@ export class DashboardComponent implements OnInit {
     this.loadDemandWorkspace();
   }
 
+  onDashboardWarehouseChange(): void {
+    this.loadDashboard();
+  }
+
   applyRiskFilters(): void {
     this.pageLoading = true;
     this.pageError = '';
@@ -1105,7 +1109,7 @@ export class DashboardComponent implements OnInit {
   private loadDashboard(afterLoad?: () => void): void {
     this.loading = true;
     this.error = '';
-    this.dashboardData.loadOverview()
+    this.dashboardData.loadOverview(this.selectedWarehouseId)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: data => {

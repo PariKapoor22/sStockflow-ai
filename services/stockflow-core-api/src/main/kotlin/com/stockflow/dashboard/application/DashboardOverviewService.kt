@@ -16,10 +16,13 @@ class DashboardOverviewService(
     private val intelligenceQueryService: InventoryIntelligenceQueryService,
     private val jdbcTemplate: NamedParameterJdbcTemplate
 ) {
-    fun getOverview(tenantId: String): DashboardOverviewView {
+    fun getOverview(tenantId: String, warehouseId: String? = null): DashboardOverviewView {
         val riskSummary = inventoryRiskService.summary(tenantId)
+        val selectedWarehouseId = warehouseId?.trim()?.takeIf { it.isNotEmpty() }
         val risks = inventoryRiskService.risks(tenantId, null, null, 500)
+            .filter { selectedWarehouseId == null || it.warehouseId == selectedWarehouseId }
         val positions = intelligenceQueryService.inventoryPositions(tenantId, riskSummary.asOfDate)
+            .filter { selectedWarehouseId == null || it.warehouseId == selectedWarehouseId }
         val demandTrend = demandAnalyticsService.trend(tenantId, 16)
 
         val inventoryValue = positions.fold(BigDecimal.ZERO) { total, item -> total + item.inventoryValue }
@@ -31,11 +34,13 @@ class DashboardOverviewService(
             .filter { it.riskType == "EXCESS_INVENTORY" || it.riskType == "SLOW_MOVING" }
             .fold(BigDecimal.ZERO) { total, item -> total + item.inventoryValue }
 
-        val expiryCount = riskSummary.nearExpiryCount + riskSummary.expiredCount
-        val stockoutCount = riskSummary.stockoutRiskCount + riskSummary.safetyStockBreachCount
-        val excessCount = riskSummary.excessInventoryCount + riskSummary.slowMovingCount
-        val dataGapCount = riskSummary.inventoryDataGapCount
-        val operationalRiskCount = (riskSummary.totalRisks - dataGapCount).coerceAtLeast(0)
+        val totalRiskCount = risks.size
+        val expiryCount = risks.count { it.riskType == "NEAR_EXPIRY" || it.riskType == "EXPIRED_INVENTORY" }
+        val stockoutCount = risks.count { it.riskType == "STOCKOUT_RISK" || it.riskType == "SAFETY_STOCK_BREACH" }
+        val excessCount = risks.count { it.riskType == "EXCESS_INVENTORY" || it.riskType == "SLOW_MOVING" }
+        val demandSurgeCount = risks.count { it.riskType == "DEMAND_SURGE" }
+        val dataGapCount = risks.count { it.riskType == "INVENTORY_DATA_GAP" }
+        val operationalRiskCount = (totalRiskCount - dataGapCount).coerceAtLeast(0)
         val operationalRisks = risks.filter { it.riskType != "INVENTORY_DATA_GAP" }
 
         return DashboardOverviewView(
@@ -49,13 +54,13 @@ class DashboardOverviewService(
                 kpi("excess", "Excess / Slow Inventory", formatInr(excessValue), "${excessCount} risks", "days-of-cover rules", "down", if (excessCount > 0) "negative" else "positive", "↗", "linear-gradient(145deg,#18b967,#0ba750)"),
                 kpi("workingCapital", "Reserved / Blocked Value", formatInr(blockedValue), "Live", "current snapshot", "up", "neutral", "▤", "linear-gradient(145deg,#17b3ce,#0698b9)")
             ),
-            riskTotal = riskSummary.totalRisks,
+            riskTotal = totalRiskCount,
             riskBreakdown = listOf(
-                breakdown("Near Expiry", expiryCount, riskSummary.totalRisks, "#f5534b"),
-                breakdown("Stockout / Safety", stockoutCount, riskSummary.totalRisks, "#ff9a1f"),
-                breakdown("Excess / Slow Moving", excessCount, riskSummary.totalRisks, "#2f9af5"),
-                breakdown("Demand Surge", riskSummary.demandSurgeCount, riskSummary.totalRisks, "#1eb266"),
-                breakdown("Inventory Data Gaps", dataGapCount, riskSummary.totalRisks, "#6849e8")
+                breakdown("Near Expiry", expiryCount, totalRiskCount, "#f5534b"),
+                breakdown("Stockout / Safety", stockoutCount, totalRiskCount, "#ff9a1f"),
+                breakdown("Excess / Slow Moving", excessCount, totalRiskCount, "#2f9af5"),
+                breakdown("Demand Surge", demandSurgeCount, totalRiskCount, "#1eb266"),
+                breakdown("Inventory Data Gaps", dataGapCount, totalRiskCount, "#6849e8")
             ),
             topRisks = operationalRisks.take(6).map(::topRisk),
             demandForecast = DashboardChartSeriesView(

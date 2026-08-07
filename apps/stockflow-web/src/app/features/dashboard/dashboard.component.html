@@ -158,7 +158,7 @@
 
         <section class="dashboard-grid">
           <article class="card risk-overview">
-            <div class="card-header"><h2>Inventory Risk Overview</h2><div><select aria-label="Warehouse filter" [(ngModel)]="selectedWarehouseId"><option value="">All Warehouses</option><option *ngFor="let warehouse of warehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select><button>⋮</button></div></div>
+            <div class="card-header"><h2>Inventory Risk Overview</h2><div><select aria-label="Warehouse filter" [(ngModel)]="selectedWarehouseId" (ngModelChange)="onDashboardWarehouseChange()"><option value="">All Warehouses</option><option *ngFor="let warehouse of warehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select><button>⋮</button></div></div>
             <div class="risk-body">
               <div class="donut-wrap"><div class="donut" [style.background]="riskDonutStyle()"><div><strong>{{ dashboard.riskTotal }}</strong><span>Total Alerts</span></div></div></div>
               <div class="legend">
