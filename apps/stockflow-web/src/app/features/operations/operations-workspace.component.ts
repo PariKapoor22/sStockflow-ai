@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PrototypeStateService } from '../../core/services/prototype-state.service';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -98,10 +99,12 @@ interface SustainabilityRecord {
   templateUrl: './operations-workspace.component.html',
   styleUrl: './operations-workspace.component.css'
 })
-export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
+export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnInit {
   @Input({ required: true }) view: OperationView = 'transfers';
   @Input() tenantLabel = 'Selected tenant';
   @Input() searchQuery = '';
+
+  readonly prototype = inject(PrototypeStateService);
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
@@ -154,6 +157,17 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
     { location: 'Coimbatore West', state: 'Tamil Nadu', trips: 24, distanceKm: 3860, emissionsKg: 792, emissionsAvoidedKg: 146, wasteAvoidedKg: 274, intensity: 0.205, status: 'On target' },
     { location: 'Mysuru DC', state: 'Karnataka', trips: 19, distanceKm: 2140, emissionsKg: 438, emissionsAvoidedKg: 96, wasteAvoidedKg: 181, intensity: 0.205, status: 'Improving' }
   ];
+
+  ngOnInit(): void {
+    this.applyStoredPatches('transfers', this.transfers);
+    this.applyStoredPatches('purchasePlans', this.purchasePlans);
+    this.applyStoredPatches('orders', this.orders);
+    this.applyStoredPatches('returns', this.returns);
+    this.applyStoredPatches('routePlans', this.routePlans);
+    this.sustainabilityRecords.forEach(record => {
+      Object.assign(record, this.prototype.recordPatch<SustainabilityRecord>('sustainability', record.location));
+    });
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['view']) {
@@ -307,24 +321,48 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
 
   approveTransfer(item: TransferPlan): void {
     item.status = item.status === 'Awaiting approval' ? 'Approved' : item.status;
-    this.showToast(`${item.id} is staged as approved in this UI preview.`);
+    this.prototype.patchRecord('transfers', item.id, { status: item.status }, {
+      module: 'Smart Transfers',
+      title: `${item.id} approved`,
+      detail: `${item.quantity.toLocaleString()} units of ${item.product} can move from ${item.from} to ${item.to}.`,
+      tone: 'success'
+    });
+    this.showToast(`${item.id} approved and saved in this prototype.`);
   }
 
   approvePurchase(item: PurchasePlan): void {
     item.status = 'Approved';
-    this.showToast(`${item.id} is staged as approved in this UI preview.`);
+    this.prototype.patchRecord('purchasePlans', item.id, { status: item.status }, {
+      module: 'Purchase Planning',
+      title: `${item.id} approved`,
+      detail: `${item.quantity.toLocaleString()} units of ${item.product} approved for ${item.supplier}.`,
+      tone: 'success'
+    });
+    this.showToast(`${item.id} approved and saved in this prototype.`);
   }
 
   advanceOrder(item: CustomerOrder): void {
     const next: Record<string, string> = { Allocated: 'Picking', Picking: 'Ready to ship', 'Ready to ship': 'Shipped', 'On hold': 'Allocated' };
     item.status = next[item.status] ?? item.status;
     item.fulfillment = item.status === 'Shipped' || item.status === 'Ready to ship' ? 100 : Math.max(item.fulfillment, 72);
-    this.showToast(`${item.id} moved to ${item.status}. Demo state only.`);
+    this.prototype.patchRecord('orders', item.id, { status: item.status, fulfillment: item.fulfillment }, {
+      module: 'Orders',
+      title: `${item.id} moved to ${item.status}`,
+      detail: `${item.customer} is now ${item.fulfillment}% fulfilled from ${item.warehouse}.`,
+      tone: item.status === 'Shipped' ? 'success' : 'info'
+    });
+    this.showToast(`${item.id} moved to ${item.status} and was saved.`);
   }
 
   approveReturn(item: ReturnCase): void {
     item.status = item.status === 'Needs review' ? 'Approved' : 'Processing';
-    this.showToast(`${item.id} moved to ${item.status}. Demo state only.`);
+    this.prototype.patchRecord('returns', item.id, { status: item.status }, {
+      module: 'Returns',
+      title: `${item.id} moved to ${item.status}`,
+      detail: `${item.quantity} returned units of ${item.product} follow the ${item.disposition.toLowerCase()} path.`,
+      tone: 'info'
+    });
+    this.showToast(`${item.id} moved to ${item.status} and was saved.`);
   }
 
   selectRoute(item: RoutePlan): void {
@@ -335,13 +373,47 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
     this.routePlans.forEach(item => {
       if (item.status === 'Draft') item.status = 'Optimized';
     });
-    this.showToast(`${this.routePlans.length} route candidates recalculated using ${this.routeObjective.toLowerCase()}. Demo data only.`);
+    this.prototype.addActivity({
+      module: 'Route Optimization',
+      title: 'Route candidates recalculated',
+      detail: `${this.routePlans.length} routes ranked using ${this.routeObjective.toLowerCase()} and ${this.vehicleType.toLowerCase()}.`,
+      tone: 'info'
+    });
+    this.showToast(`${this.routePlans.length} route candidates recalculated and recorded.`);
   }
 
-  approveRoute(item: RoutePlan): void {
-    if (item.status === 'Ready for approval' || item.status === 'Optimized') item.status = 'Approved';
+  advanceRoute(item: RoutePlan): void {
+    const nextStatus: Record<string, string> = {
+      'Ready for approval': 'Approved',
+      Optimized: 'Approved',
+      Approved: 'In transit',
+      'In transit': 'Delivered'
+    };
+    const previousStatus = item.status;
+    item.status = nextStatus[item.status] ?? item.status;
     this.selectedRouteId = item.id;
-    this.showToast(`${item.id} is staged as approved. Dispatch execution is not connected.`);
+    this.prototype.patchRecord('routePlans', item.id, { status: item.status }, {
+      module: 'Route Optimization',
+      title: `${item.id} moved to ${item.status}`,
+      detail: `${item.lane} advanced from ${previousStatus.toLowerCase()} to ${item.status.toLowerCase()}.`,
+      tone: item.status === 'Delivered' ? 'success' : 'info'
+    });
+
+    if (item.status === 'Delivered' && previousStatus !== 'Delivered') {
+      this.applyDeliveredImpact(item);
+    }
+    this.showToast(`${item.id} moved to ${item.status}; related impact has been updated.`);
+  }
+
+  routeActionLabel(item: RoutePlan): string {
+    const labels: Record<string, string> = {
+      'Ready for approval': 'Review & approve',
+      Optimized: 'Review & approve',
+      Approved: 'Start dispatch',
+      'In transit': 'Mark delivered',
+      Delivered: 'Completed'
+    };
+    return labels[item.status] ?? 'View route';
   }
 
   triggerPrimaryAction(): void {
@@ -362,6 +434,29 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy {
     const matchesStatus = this.statusFilter === 'ALL' || status === this.statusFilter;
     const matchesLocation = this.locationFilter === 'ALL' || locations.includes(this.locationFilter);
     return matchesSearch && matchesStatus && matchesLocation;
+  }
+
+  private applyDeliveredImpact(item: RoutePlan): void {
+    const destination = item.stops[item.stops.length - 1];
+    const record = this.sustainabilityRecords.find(candidate => candidate.location === destination);
+    if (!record) return;
+    record.emissionsAvoidedKg = Math.round((record.emissionsAvoidedKg + item.co2SavedKg) * 10) / 10;
+    record.wasteAvoidedKg += Math.max(12, Math.round(item.loadKg * 0.004));
+    record.status = 'On target';
+    this.prototype.patchRecord('sustainability', record.location, {
+      emissionsAvoidedKg: record.emissionsAvoidedKg,
+      wasteAvoidedKg: record.wasteAvoidedKg,
+      status: record.status
+    }, {
+      module: 'Sustainability',
+      title: `${destination} impact updated`,
+      detail: `${item.co2SavedKg} kg CO₂e savings were realized when ${item.id} was delivered.`,
+      tone: 'success'
+    });
+  }
+
+  private applyStoredPatches<T extends { id: string }>(collection: string, records: T[]): void {
+    records.forEach(record => Object.assign(record, this.prototype.recordPatch<T>(collection, record.id)));
   }
 
   private showToast(message: string): void {

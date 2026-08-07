@@ -9,8 +9,9 @@
   </header>
 
   <div class="prototype-note">
-    <span>INTERACTIVE UI PREVIEW</span>
-    <p>Built for {{ tenantLabel }} with representative operational data. Approval actions update the screen locally; backend posting remains intentionally disconnected.</p>
+    <span>INTERACTIVE PROTOTYPE</span>
+    <p>Built for {{ tenantLabel }} with representative operational data. Changes are saved in this browser and remain after refresh.</p>
+    <div class="prototype-save-state"><i></i><strong>{{ prototype.changeCount() }} saved changes</strong><small *ngIf="prototype.lastUpdatedAt()">Updated {{ prototype.lastUpdatedAt() | date:'shortTime' }}</small></div>
   </div>
 
   <article class="filter-card">
@@ -48,7 +49,7 @@
         <div class="panel-heading"><div><span>DECISION QUEUE</span><h2>Recommended transfers</h2><p>Ranked by service risk, available source stock and route efficiency.</p></div><span>{{ filteredTransfers().length }} records</span></div>
         <div class="table-scroll"><table><thead><tr><th>Transfer</th><th>Product</th><th>Route</th><th class="numeric">Quantity</th><th>Impact</th><th>ETA</th><th>Status</th><th></th></tr></thead><tbody>
           <tr *ngFor="let item of filteredTransfers()">
-            <td><strong>{{ item.id }}</strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} priority</small></td>
+            <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('transfers', item.id)">Updated</em></strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} priority</small></td>
             <td><strong>{{ item.product }}</strong><small>{{ item.sku }} · {{ item.reason }}</small></td>
             <td><strong>{{ item.from }} → {{ item.to }}</strong><small>{{ item.distanceKm }} km optimized lane</small></td>
             <td class="numeric"><strong>{{ item.quantity | number }}</strong><small>units</small></td>
@@ -106,7 +107,7 @@
         <div class="panel-heading"><div><span>ROUTE DECISION QUEUE</span><h2>Ranked route candidates</h2><p>Compare baseline distance, capacity, cost, service priority and estimated carbon before approval.</p></div><span>{{ filteredRoutes().length }} routes</span></div>
         <div class="table-scroll"><table><thead><tr><th>Route</th><th>Lane / vehicle</th><th>Stops</th><th class="numeric">Distance</th><th>Utilization</th><th class="numeric">Cost</th><th>Carbon impact</th><th>Status</th><th></th></tr></thead><tbody>
           <tr *ngFor="let item of filteredRoutes()" [class.selected-row]="item.id === selectedRouteId" (click)="selectRoute(item)">
-            <td><strong>{{ item.id }}</strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} service priority</small></td>
+            <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('routePlans', item.id)">Updated</em></strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} service priority</small></td>
             <td><strong>{{ item.lane }}</strong><small>{{ item.vehicle }}</small></td>
             <td><strong>{{ item.stops.length }} planned stops</strong><small>Capacity-compatible sequence</small></td>
             <td class="numeric"><strong>{{ item.optimizedKm }} km</strong><small>{{ item.baselineKm - item.optimizedKm }} km below baseline</small></td>
@@ -114,7 +115,7 @@
             <td class="numeric"><strong>{{ item.costInr | currency:'INR':'symbol':'1.0-0' }}</strong><small>estimated trip cost</small></td>
             <td><strong class="positive-text">−{{ item.co2SavedKg }} kg CO₂e</strong><small>{{ item.co2Kg }} kg estimated trip total</small></td>
             <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
-            <td><button type="button" class="row-action" [disabled]="item.status === 'Approved' || item.status === 'In transit'" (click)="$event.stopPropagation(); approveRoute(item)">{{ item.status === 'Approved' || item.status === 'In transit' ? 'View route' : 'Review & approve' }}</button></td>
+            <td><button type="button" class="row-action" [disabled]="item.status === 'Delivered'" (click)="$event.stopPropagation(); advanceRoute(item)">{{ routeActionLabel(item) }}</button></td>
           </tr><tr *ngIf="!filteredRoutes().length"><td colspan="9" class="empty-row">No routes match the current filters.</td></tr>
         </tbody></table></div>
       </article>
@@ -162,7 +163,7 @@
         <div class="panel-heading"><div><span>LOCATION PERFORMANCE</span><h2>Warehouse sustainability scorecard</h2><p>Operational emissions and avoided product waste by fulfilment node.</p></div><span>{{ filteredSustainability().length }} locations</span></div>
         <div class="table-scroll"><table><thead><tr><th>Location</th><th class="numeric">Trips</th><th class="numeric">Distance</th><th class="numeric">Emissions</th><th class="numeric">Avoided</th><th class="numeric">Waste avoided</th><th>Carbon intensity</th><th>Performance</th></tr></thead><tbody>
           <tr *ngFor="let item of filteredSustainability()">
-            <td><strong>{{ item.location }}</strong><small>{{ item.state }}</small></td>
+            <td><strong>{{ item.location }} <em class="changed-marker" *ngIf="prototype.isChanged('sustainability', item.location)">Updated</em></strong><small>{{ item.state }}</small></td>
             <td class="numeric"><strong>{{ item.trips }}</strong><small>completed trips</small></td>
             <td class="numeric"><strong>{{ item.distanceKm | number }} km</strong><small>optimized network distance</small></td>
             <td class="numeric"><strong>{{ item.emissionsKg | number }} kg CO₂e</strong><small>estimated total</small></td>
@@ -198,7 +199,7 @@
         <div class="panel-heading"><div><span>PLANNING QUEUE</span><h2>Purchase recommendations</h2><p>Quantities respect demand confidence, lead time, cover and reorder multiples.</p></div><span>{{ filteredPurchasePlans().length }} records</span></div>
         <div class="table-scroll"><table><thead><tr><th>Plan</th><th>Product</th><th>Supplier</th><th class="numeric">Recommended qty</th><th class="numeric">Plan value</th><th>Need / cover</th><th>Confidence</th><th>Status</th><th></th></tr></thead><tbody>
           <tr *ngFor="let item of filteredPurchasePlans()">
-            <td><strong>{{ item.id }}</strong><small><span [class]="'priority-dot ' + statusClass(item.risk)"></span>{{ item.risk }} risk</small></td>
+            <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('purchasePlans', item.id)">Updated</em></strong><small><span [class]="'priority-dot ' + statusClass(item.risk)"></span>{{ item.risk }} risk</small></td>
             <td><strong>{{ item.product }}</strong><small>{{ item.sku }}</small></td>
             <td><strong>{{ item.supplier }}</strong><small>{{ item.leadTimeDays }} day lead time</small></td>
             <td class="numeric"><strong>{{ item.quantity | number }}</strong><small>units</small></td>
@@ -229,7 +230,7 @@
         <div class="panel-heading"><div><span>ORDER QUEUE</span><h2>Customer orders</h2><p>Promise-date, allocation and fulfilment visibility across every active warehouse.</p></div><span>{{ filteredOrders().length }} records</span></div>
         <div class="table-scroll"><table><thead><tr><th>Order</th><th>Customer</th><th>Fulfilment node</th><th class="numeric">Items</th><th class="numeric">Value</th><th>Promised</th><th>Fulfilment</th><th>Status</th><th></th></tr></thead><tbody>
           <tr *ngFor="let item of filteredOrders()">
-            <td><strong>{{ item.id }}</strong><small>{{ item.channel }}</small></td>
+            <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('orders', item.id)">Updated</em></strong><small>{{ item.channel }}</small></td>
             <td><strong>{{ item.customer }}</strong><small>{{ item.city }}</small></td>
             <td><strong>{{ item.warehouse }}</strong><small>Inventory allocation node</small></td>
             <td class="numeric"><strong>{{ item.itemCount }}</strong><small>order lines</small></td>
@@ -260,7 +261,7 @@
         <div class="panel-heading"><div><span>RETURN QUEUE</span><h2>Return cases</h2><p>Quality, financial and disposition evidence in one review queue.</p></div><span>{{ filteredReturns().length }} records</span></div>
         <div class="table-scroll"><table><thead><tr><th>Return</th><th>Customer / order</th><th>Product</th><th class="numeric">Quantity</th><th>Reason</th><th>Disposition</th><th class="numeric">Value</th><th>Status</th><th></th></tr></thead><tbody>
           <tr *ngFor="let item of filteredReturns()">
-            <td><strong>{{ item.id }}</strong><small>{{ item.receivedDate }} · {{ item.warehouse }}</small></td>
+            <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('returns', item.id)">Updated</em></strong><small>{{ item.receivedDate }} · {{ item.warehouse }}</small></td>
             <td><strong>{{ item.customer }}</strong><small>{{ item.orderId }}</small></td>
             <td><strong>{{ item.product }}</strong><small>Returned inventory line</small></td>
             <td class="numeric"><strong>{{ item.quantity | number }}</strong><small>units</small></td>

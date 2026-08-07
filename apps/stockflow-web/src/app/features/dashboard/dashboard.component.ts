@@ -3,6 +3,7 @@ import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 import { DashboardOverview } from '../../core/models/dashboard.models';
+import { createPrototypeFoundationData } from '../../core/data/prototype-foundation.data';
 import {
   BatchInventoryView,
   FoundationSummary,
@@ -27,6 +28,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
 import { ImportDataService } from '../../core/services/import-data.service';
 import { IntelligenceDataService } from '../../core/services/intelligence-data.service';
+import { PrototypeStateService } from '../../core/services/prototype-state.service';
 import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 
@@ -47,7 +49,8 @@ type ViewId =
   | 'batches'
   | 'users'
   | 'settings'
-  | 'integrations';
+  | 'integrations'
+  | 'activity';
 
 interface NavigationItem {
   label: string;
@@ -57,6 +60,7 @@ interface NavigationItem {
 
 type TopbarPanel = 'notifications' | 'help' | 'profile' | null;
 type NotificationTone = 'critical' | 'warning' | 'info' | 'success';
+type MasterDataEditor = 'warehouse' | 'sku' | 'batch' | null;
 
 interface TopbarNotification {
   id: number;
@@ -66,6 +70,14 @@ interface TopbarNotification {
   view: ViewId;
   tone: NotificationTone;
   read: boolean;
+}
+
+interface PrototypeRecommendationView {
+  title: string;
+  subtitle: string;
+  benefit: string;
+  tone: 'critical' | 'warning' | 'success';
+  target: 'batches' | 'routes';
 }
 
 @Component({
@@ -93,6 +105,11 @@ export class DashboardComponent implements OnInit {
   selectedImportJob?: ImportJobView;
   importResult?: ImportJobView;
   selectedImportFile?: File;
+  activeEditor: MasterDataEditor = null;
+  warehouseDraft?: WarehouseView;
+  skuDraft?: SkuView;
+  batchDraft?: BatchInventoryView;
+  editorError = '';
 
   activeView: ViewId = 'dashboard';
   loading = true;
@@ -100,6 +117,7 @@ export class DashboardComponent implements OnInit {
   importRunning = false;
   error = '';
   pageError = '';
+  pageNotice = '';
   importError = '';
   copilotInput = '';
   globalSearch = '';
@@ -125,6 +143,7 @@ export class DashboardComponent implements OnInit {
   selectedImportPackage: ImportPackageType = 'SYNTHETIC_FOUNDATION';
   selectedImportMode: ImportMode = 'VALIDATE_ONLY';
   strictImport = true;
+  foundationDataSource: 'LIVE API' | 'DEMO FALLBACK' = 'LIVE API';
 
   readonly tenants = [
     { id: 'TEN-ACME-PHARMA', label: 'Acme Pharma' },
@@ -256,6 +275,7 @@ export class DashboardComponent implements OnInit {
     {
       title: 'ADMIN',
       items: [
+        { label: 'Demo Activity', icon: '↻', view: 'activity' },
         { label: 'Users & Roles', icon: '♙', view: 'users' },
         { label: 'Settings', icon: '⚙', view: 'settings' },
         { label: 'Data Imports', icon: '⇩', view: 'integrations' }
@@ -268,7 +288,8 @@ export class DashboardComponent implements OnInit {
     private readonly dashboardData: DashboardDataService,
     private readonly intelligenceData: IntelligenceDataService,
     private readonly foundationData: FoundationDataService,
-    private readonly importData: ImportDataService
+    private readonly importData: ImportDataService,
+    readonly prototype: PrototypeStateService
   ) {}
 
   ngOnInit(): void {
@@ -281,6 +302,7 @@ export class DashboardComponent implements OnInit {
     this.closeTopbarPanels();
     this.activeView = view;
     this.pageError = '';
+    this.pageNotice = '';
     this.importError = '';
 
     if (window.innerWidth <= 900) {
@@ -289,6 +311,7 @@ export class DashboardComponent implements OnInit {
 
     if (view === 'dashboard' || view === 'recommendations') {
       if (!this.data) this.loadDashboard();
+      if (view === 'recommendations') this.loadPrototypeRecommendationData();
       return;
     }
 
@@ -337,6 +360,7 @@ export class DashboardComponent implements OnInit {
   }
 
   onTenantChange(): void {
+    this.cancelEditor();
     localStorage.setItem('stockflowTenantId', this.selectedTenant);
     this.data = undefined;
     this.riskSummary = undefined;
@@ -581,7 +605,8 @@ export class DashboardComponent implements OnInit {
       batches: 'Batch Inventory',
       users: 'Users & Roles',
       settings: 'Settings',
-      integrations: 'Data Imports'
+      integrations: 'Data Imports',
+      activity: 'Demo Activity'
     };
     return titles[this.activeView];
   }
@@ -615,7 +640,8 @@ export class DashboardComponent implements OnInit {
       'batches',
       'users',
       'settings',
-      'integrations'
+      'integrations',
+      'activity'
     ].includes(this.activeView);
   }
 
@@ -629,6 +655,186 @@ export class DashboardComponent implements OnInit {
     return ['users', 'settings'].includes(this.activeView)
       ? this.activeView as AdminView
       : null;
+  }
+
+  resetPrototype(): void {
+    const confirmed = window.confirm('Reset all locally saved prototype changes and restore the original demo data?');
+    if (!confirmed) return;
+    this.prototype.reset();
+    window.location.reload();
+  }
+
+  prototypeCollection(name: 'warehouses' | 'skus' | 'batches'): string {
+    return `${this.selectedTenant}:${name}`;
+  }
+
+  startWarehouseEdit(warehouse: WarehouseView): void {
+    this.activeEditor = 'warehouse';
+    this.warehouseDraft = { ...warehouse };
+    this.editorError = '';
+  }
+
+  startSkuEdit(sku: SkuView): void {
+    this.activeEditor = 'sku';
+    this.skuDraft = { ...sku };
+    this.editorError = '';
+  }
+
+  startBatchEdit(batch: BatchInventoryView): void {
+    this.activeEditor = 'batch';
+    this.batchDraft = { ...batch };
+    this.editorError = '';
+  }
+
+  cancelEditor(): void {
+    this.activeEditor = null;
+    this.warehouseDraft = undefined;
+    this.skuDraft = undefined;
+    this.batchDraft = undefined;
+    this.editorError = '';
+  }
+
+  saveWarehouseEdit(): void {
+    const draft = this.warehouseDraft;
+    if (!draft) return;
+    draft.warehouseName = draft.warehouseName.trim();
+    draft.city = draft.city.trim();
+    draft.state = draft.state.trim();
+    draft.capacityUnits = Number(draft.capacityUnits);
+    if (!draft.warehouseName || !draft.city || !draft.state || !Number.isFinite(draft.capacityUnits) || draft.capacityUnits <= 0) {
+      this.editorError = 'Enter a warehouse name, city, state and a capacity greater than zero.';
+      return;
+    }
+    const record = this.warehouses.find(item => item.warehouseId === draft.warehouseId);
+    if (record) Object.assign(record, draft);
+    this.prototype.patchRecord(this.prototypeCollection('warehouses'), draft.warehouseId, { ...draft }, {
+      module: 'Warehouses',
+      title: `${draft.warehouseName} updated`,
+      detail: `Capacity is ${draft.capacityUnits.toLocaleString()} units; cold-chain support is ${draft.coldChainAvailable ? 'enabled' : 'disabled'}.`,
+      tone: 'success'
+    });
+    this.showTopbarToast(`${draft.warehouseName} saved locally.`);
+    this.cancelEditor();
+  }
+
+  saveSkuEdit(): void {
+    const draft = this.skuDraft;
+    if (!draft) return;
+    draft.skuName = draft.skuName.trim();
+    draft.unitCost = Number(draft.unitCost);
+    draft.sellingPrice = Number(draft.sellingPrice);
+    draft.minimumSafetyStock = Number(draft.minimumSafetyStock);
+    draft.reorderMultiple = Number(draft.reorderMultiple);
+    draft.defaultShelfLifeDays = draft.defaultShelfLifeDays === null ? null : Number(draft.defaultShelfLifeDays);
+    const numericValues = [draft.unitCost, draft.sellingPrice, draft.minimumSafetyStock, draft.reorderMultiple];
+    if (!draft.skuName || numericValues.some(value => !Number.isFinite(value) || value < 0) || draft.reorderMultiple <= 0) {
+      this.editorError = 'Enter a name and valid non-negative pricing and stock values. Reorder multiple must exceed zero.';
+      return;
+    }
+    if (draft.defaultShelfLifeDays !== null && (!Number.isFinite(draft.defaultShelfLifeDays) || draft.defaultShelfLifeDays <= 0)) {
+      this.editorError = 'Shelf life must be empty or greater than zero days.';
+      return;
+    }
+    const record = this.skus.find(item => item.skuId === draft.skuId);
+    if (record) Object.assign(record, draft);
+    this.prototype.patchRecord(this.prototypeCollection('skus'), draft.skuId, { ...draft }, {
+      module: 'Products & SKUs',
+      title: `${draft.skuName} policy updated`,
+      detail: `Safety stock is ${draft.minimumSafetyStock.toLocaleString()} units with a reorder multiple of ${draft.reorderMultiple.toLocaleString()}.`,
+      tone: 'success'
+    });
+    this.showTopbarToast(`${draft.skuId} saved locally.`);
+    this.cancelEditor();
+  }
+
+  saveBatchEdit(): void {
+    const draft = this.batchDraft;
+    if (!draft) return;
+    draft.availableQuantity = Number(draft.availableQuantity);
+    draft.reservedQuantity = Number(draft.reservedQuantity);
+    draft.blockedQuantity = Number(draft.blockedQuantity);
+    const quantities = [draft.availableQuantity, draft.reservedQuantity, draft.blockedQuantity];
+    if (quantities.some(value => !Number.isFinite(value) || value < 0)) {
+      this.editorError = 'Inventory quantities must be valid numbers greater than or equal to zero.';
+      return;
+    }
+    if (draft.reservedQuantity + draft.blockedQuantity > draft.availableQuantity) {
+      this.editorError = 'Reserved plus blocked quantity cannot exceed available quantity.';
+      return;
+    }
+    draft.usableQuantity = draft.availableQuantity - draft.reservedQuantity - draft.blockedQuantity;
+    draft.storageConditionCode = draft.storageConditionCode.trim() || 'AMBIENT';
+    const record = this.batches.find(item => item.batchInventoryId === draft.batchInventoryId);
+    if (record) Object.assign(record, draft);
+    const risk = this.batchOperationalStatus(draft);
+    this.prototype.patchRecord(this.prototypeCollection('batches'), draft.batchInventoryId, { ...draft }, {
+      module: 'Batch Inventory',
+      title: `${draft.batchNumber} inventory adjusted`,
+      detail: `${draft.usableQuantity.toLocaleString()} usable units remain at ${draft.warehouseId}. Resulting signal: ${risk}.`,
+      tone: risk === 'Stockout' || risk === 'Expired' ? 'critical' : risk === 'Below safety stock' || risk === 'Near expiry' ? 'warning' : 'success'
+    });
+    this.showTopbarToast(`${draft.batchNumber} saved; totals and recommendations were recalculated.`);
+    this.cancelEditor();
+  }
+
+  prototypeChangedCount(collection: 'warehouses' | 'skus' | 'batches'): number {
+    const records = collection === 'warehouses' ? this.warehouses : collection === 'skus' ? this.skus : this.batches;
+    const idOf = (record: WarehouseView | SkuView | BatchInventoryView): string => {
+      if ('warehouseId' in record && !('batchInventoryId' in record)) return record.warehouseId;
+      if ('skuId' in record && !('batchInventoryId' in record)) return record.skuId;
+      return (record as BatchInventoryView).batchInventoryId;
+    };
+    return records.filter(record => this.prototype.isChanged(this.prototypeCollection(collection), idOf(record))).length;
+  }
+
+  batchOperationalStatus(batch: BatchInventoryView): string {
+    const expiryStatus = this.batchStatus(batch);
+    if (expiryStatus === 'Expired' || expiryStatus === 'Near expiry') return expiryStatus;
+    if (batch.usableQuantity <= 0) return 'Stockout';
+    const safetyStock = this.skus.find(item => item.skuId === batch.skuId)?.minimumSafetyStock ?? 0;
+    if (batch.usableQuantity < safetyStock) return 'Below safety stock';
+    return 'Healthy';
+  }
+
+  operationalStatusClass(batch: BatchInventoryView): string {
+    return this.batchOperationalStatus(batch).toLowerCase().replaceAll(' ', '-');
+  }
+
+  prototypeRecommendations(): PrototypeRecommendationView[] {
+    const recommendations: PrototypeRecommendationView[] = [];
+    for (const batch of this.batches) {
+      if (!this.prototype.isChanged(this.prototypeCollection('batches'), batch.batchInventoryId)) continue;
+      const sku = this.skus.find(item => item.skuId === batch.skuId);
+      const status = this.batchOperationalStatus(batch);
+      if (status === 'Stockout' || status === 'Below safety stock') {
+        const target = sku?.minimumSafetyStock ?? 0;
+        const gap = Math.max(target - batch.usableQuantity, sku?.reorderMultiple ?? 1);
+        recommendations.push({
+          title: `Replenish ${sku?.skuName ?? batch.skuId}`,
+          subtitle: `${batch.warehouseId} has ${batch.usableQuantity.toLocaleString()} usable units against ${target.toLocaleString()} safety stock.`,
+          benefit: `${gap.toLocaleString()} unit gap`,
+          tone: status === 'Stockout' ? 'critical' : 'warning',
+          target: 'batches'
+        });
+      } else if (status === 'Expired' || status === 'Near expiry') {
+        recommendations.push({
+          title: `${status === 'Expired' ? 'Block' : 'Reallocate'} batch ${batch.batchNumber}`,
+          subtitle: `${batch.usableQuantity.toLocaleString()} units at ${batch.warehouseId} require ${status === 'Expired' ? 'quality control' : 'FEFO transfer review'}.`,
+          benefit: `${this.daysToExpiry(batch) ?? 0} days`,
+          tone: status === 'Expired' ? 'critical' : 'warning',
+          target: status === 'Expired' ? 'batches' : 'routes'
+        });
+      } else {
+        recommendations.push({
+          title: `${batch.batchNumber} returned to healthy cover`,
+          subtitle: `${batch.usableQuantity.toLocaleString()} usable units now satisfy the configured inventory policy at ${batch.warehouseId}.`,
+          benefit: 'Risk reduced',
+          tone: 'success',
+          target: 'batches'
+        });
+      }
+    }
+    return recommendations.slice(0, 6);
   }
 
   filteredWarehouses(): WarehouseView[] {
@@ -905,6 +1111,7 @@ export class DashboardComponent implements OnInit {
   loadWarehouseWorkspace(): void {
     this.pageLoading = true;
     this.pageError = '';
+    this.pageNotice = '';
     forkJoin({
       summary: this.foundationData.summary(),
       warehouses: this.foundationData.warehouses(),
@@ -912,33 +1119,37 @@ export class DashboardComponent implements OnInit {
     }).pipe(finalize(() => this.pageLoading = false))
       .subscribe({
         next: result => {
+          this.foundationDataSource = 'LIVE API';
           this.foundationSummary = result.summary;
-          this.warehouses = result.warehouses;
-          this.batches = result.batches;
+          this.warehouses = this.applyPrototypePatches(this.prototypeCollection('warehouses'), result.warehouses, item => item.warehouseId);
+          this.batches = this.applyPrototypePatches(this.prototypeCollection('batches'), result.batches, item => item.batchInventoryId);
         },
-        error: () => this.pageError = 'Warehouse master data could not be loaded from the API.'
+        error: () => this.usePrototypeFoundationFallback('warehouses')
       });
   }
 
   loadProductWorkspace(): void {
     this.pageLoading = true;
     this.pageError = '';
+    this.pageNotice = '';
     forkJoin({
       summary: this.foundationData.summary(),
       skus: this.foundationData.skus()
     }).pipe(finalize(() => this.pageLoading = false))
       .subscribe({
         next: result => {
+          this.foundationDataSource = 'LIVE API';
           this.foundationSummary = result.summary;
-          this.skus = result.skus;
+          this.skus = this.applyPrototypePatches(this.prototypeCollection('skus'), result.skus, item => item.skuId);
         },
-        error: () => this.pageError = 'Product and SKU data could not be loaded from the API.'
+        error: () => this.usePrototypeFoundationFallback('products')
       });
   }
 
   loadBatchWorkspace(): void {
     this.pageLoading = true;
     this.pageError = '';
+    this.pageNotice = '';
     forkJoin({
       summary: this.foundationData.summary(),
       warehouses: this.foundationData.warehouses(),
@@ -947,12 +1158,13 @@ export class DashboardComponent implements OnInit {
     }).pipe(finalize(() => this.pageLoading = false))
       .subscribe({
         next: result => {
+          this.foundationDataSource = 'LIVE API';
           this.foundationSummary = result.summary;
-          this.warehouses = result.warehouses;
-          this.skus = result.skus;
-          this.batches = result.batches;
+          this.warehouses = this.applyPrototypePatches(this.prototypeCollection('warehouses'), result.warehouses, item => item.warehouseId);
+          this.skus = this.applyPrototypePatches(this.prototypeCollection('skus'), result.skus, item => item.skuId);
+          this.batches = this.applyPrototypePatches(this.prototypeCollection('batches'), result.batches, item => item.batchInventoryId);
         },
-        error: () => this.pageError = 'Batch inventory could not be loaded from the API.'
+        error: () => this.usePrototypeFoundationFallback('batches')
       });
   }
 
@@ -965,5 +1177,35 @@ export class DashboardComponent implements OnInit {
         next: jobs => this.importJobs = jobs,
         error: () => this.pageError = 'Import history could not be loaded from the API.'
       });
+  }
+
+  private loadPrototypeRecommendationData(): void {
+    forkJoin({
+      skus: this.foundationData.skus(),
+      batches: this.foundationData.batches()
+    }).subscribe({
+      next: result => {
+        this.skus = this.applyPrototypePatches(this.prototypeCollection('skus'), result.skus, item => item.skuId);
+        this.batches = this.applyPrototypePatches(this.prototypeCollection('batches'), result.batches, item => item.batchInventoryId);
+      },
+      error: () => this.usePrototypeFoundationFallback('recommendations')
+    });
+  }
+
+  private usePrototypeFoundationFallback(scope: 'warehouses' | 'products' | 'batches' | 'recommendations'): void {
+    const fallback = createPrototypeFoundationData(this.selectedTenant, this.currentTenantLabel());
+    this.foundationDataSource = 'DEMO FALLBACK';
+    this.foundationSummary = fallback.summary;
+    this.warehouses = this.applyPrototypePatches(this.prototypeCollection('warehouses'), fallback.warehouses, item => item.warehouseId);
+    this.skus = this.applyPrototypePatches(this.prototypeCollection('skus'), fallback.skus, item => item.skuId);
+    this.batches = this.applyPrototypePatches(this.prototypeCollection('batches'), fallback.batches, item => item.batchInventoryId);
+    this.pageError = '';
+    if (scope !== 'recommendations') {
+      this.pageNotice = 'The live API is unavailable, so StockFlow switched to the presentation-safe demo dataset. Your saved changes still work normally.';
+    }
+  }
+
+  private applyPrototypePatches<T extends object>(collection: string, records: T[], id: (record: T) => string): T[] {
+    return records.map(record => ({ ...record, ...this.prototype.recordPatch<T>(collection, id(record)) }));
   }
 }
