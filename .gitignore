@@ -22,11 +22,31 @@ data/generated/*
 .DS_Store
 Thumbs.db
 
-# Secrets
+# Secrets and sensitive files
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.cer
+*.crt
+*.p12
+*.pfx
+secrets.json
+credentials.json
+supabase*.json
+auth.json
+*.log
+npm-debug.log*
+
+# Specific app folders
 apps/stockflow-web/node_modules/
 apps/stockflow-web/dist/
 apps/stockflow-web/.angular/
 apps/stockflow-web-backup-before-frontend-increment1/
-services/stockflow-core-api/target/
 apps/stockflow-web-backup-before-frontend-increment2/
+services/stockflow-core-api/target/
+
+# Local Environment Binaries (JDK, Postgres, etc.)
+local-env/

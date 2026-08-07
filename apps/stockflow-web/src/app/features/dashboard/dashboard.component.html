@@ -16,7 +16,10 @@
           class="nav-item"
           [class.active]="activeView === item.view"
           (click)="selectView(item.view)">
-          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-icon">
+            <img *ngIf="item.icon.includes('.png')" [src]="item.icon" alt="" />
+            <ng-container *ngIf="!item.icon.includes('.png')">{{ item.icon }}</ng-container>
+          </span>
           <span class="nav-label">{{ item.label }}</span>
         </button>
       </section>
@@ -37,14 +40,11 @@
   ></button>
 
   <main class="main-area">
-    <header class="topbar">
-      <button class="menu-button" (click)="toggleSidebar()">☰</button>
-      <div class="global-search">
-        <span>⌕</span>
-        <input #globalSearchInput aria-label="Global search" [(ngModel)]="globalSearch" placeholder="Search current workspace...">
-        <kbd>⌘K</kbd>
-      </div>
-      <div class="top-actions" (click)="$event.stopPropagation()">
+    <div class="top-actions-pill" 
+         [class.auto-hide]="activeView !== 'dashboard' && !isPillHovered" 
+         (mouseenter)="onPillMouseEnter()"
+         (mouseleave)="onPillMouseLeave()"
+         (click)="$event.stopPropagation()">
         <label class="tenant-picker">
           <span>Tenant</span>
           <select [(ngModel)]="selectedTenant" (ngModelChange)="onTenantChange()">
@@ -61,7 +61,7 @@
             [attr.aria-expanded]="activeTopbarPanel === 'notifications'"
             (click)="toggleTopbarPanel('notifications', $event)"
           >
-            ♧
+            <img src="assets/nav-icons/icons8-notification-24.png" alt="Notifications" />
             <b *ngIf="unreadNotificationCount() > 0">{{ unreadNotificationCount() }}</b>
           </button>
 
@@ -139,7 +139,6 @@
           </section>
         </div>
       </div>
-    </header>
 
     <div class="topbar-toast" *ngIf="topbarToast" role="status" aria-live="polite">{{ topbarToast }}</div>
 
@@ -147,7 +146,6 @@
       <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
         <div class="welcome-row">
           <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! <span>👋</span></h1><p>Here’s what’s happening with your inventory today.</p></div>
-          <button class="ask-ai">✦ <span>Ask StockFlow AI</span></button>
         </div>
 
         <section class="kpi-grid">
@@ -180,18 +178,7 @@
             </div>
           </article>
 
-          <aside class="card copilot-panel">
-            <div class="card-header"><h2><span class="sparkle">✦</span> StockFlow AI Assistant</h2><button>⋮</button></div>
-            <div class="messages">
-              <div *ngFor="let message of dashboard.copilotMessages" class="message" [class.user]="message.role === 'user'">
-                <div>{{ message.text }}</div><small>{{ message.timestamp }}</small>
-              </div>
-            </div>
-            <form class="copilot-input" (ngSubmit)="sendCopilotMessage()">
-              <input [(ngModel)]="copilotInput" name="copilotInput" placeholder="Ask anything about inventory...">
-              <button type="submit">➤</button>
-            </form>
-          </aside>
+
 
           <article class="card chart-card demand-card">
             <div class="card-header"><h2>Demand Forecast <small>(Current deterministic baseline)</small></h2><a (click)="selectView('demand')">View Full Forecast</a></div>
@@ -703,6 +690,25 @@
         <button class="secondary-button" (click)="selectView('dashboard')">Return to dashboard</button>
       </div>
     </section>
+    <!-- Floating AI Assistant -->
+    <button class="floating-assistant-btn" (click)="toggleAssistant()" *ngIf="!isAssistantOpen" aria-label="Open AI Assistant">
+      <span class="sparkle">✦</span>
+    </button>
+    <aside class="card floating-copilot-panel" *ngIf="isAssistantOpen">
+      <div class="card-header">
+        <h2><span class="sparkle">✦</span> StockFlow AI Assistant</h2>
+        <button (click)="toggleAssistant()" class="close-assistant-btn" aria-label="Close Assistant">✕</button>
+      </div>
+      <div class="messages">
+        <div *ngFor="let message of data?.copilotMessages || []" class="message" [class.user]="message.role === 'user'">
+          <div>{{ message.text }}</div><small>{{ message.timestamp }}</small>
+        </div>
+      </div>
+      <form class="copilot-input" (ngSubmit)="sendCopilotMessage()">
+        <input [(ngModel)]="copilotInput" name="copilotInput" placeholder="Ask anything about inventory...">
+        <button type="submit">➤</button>
+      </form>
+    </aside>
   </main>
 </div>
 

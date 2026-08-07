@@ -20,3 +20,12 @@
 .auth-loading p { margin: 0; font-size: 14px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.welcome-animation-container {
+  width: 100vw;
+  height: 100vh;
+  background: #09090f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
