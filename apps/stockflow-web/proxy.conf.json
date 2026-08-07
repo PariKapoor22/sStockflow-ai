@@ -1,4 +1,10 @@
 {
+  "/api/v1/copilot": {
+    "target": "http://127.0.0.1:8300",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
   "/api": {
     "target": "https://stockflow-core-api-100044030673.asia-southeast1.run.app",
     "secure": true,

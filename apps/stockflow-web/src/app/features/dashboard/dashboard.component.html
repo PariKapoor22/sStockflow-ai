@@ -16,7 +16,10 @@
           class="nav-item"
           [class.active]="activeView === item.view"
           (click)="selectView(item.view)">
-          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-icon">
+            <img *ngIf="item.icon.includes('.png')" [src]="item.icon" alt="" />
+            <ng-container *ngIf="!item.icon.includes('.png')">{{ item.icon }}</ng-container>
+          </span>
           <span class="nav-label">{{ item.label }}</span>
         </button>
       </section>
@@ -37,14 +40,11 @@
   ></button>
 
   <main class="main-area">
-    <header class="topbar">
-      <button class="menu-button" (click)="toggleSidebar()">☰</button>
-      <div class="global-search">
-        <span>⌕</span>
-        <input #globalSearchInput aria-label="Global search" [(ngModel)]="globalSearch" placeholder="Search current workspace...">
-        <kbd>⌘K</kbd>
-      </div>
-      <div class="top-actions" (click)="$event.stopPropagation()">
+    <div class="top-actions-pill" 
+         [class.auto-hide]="activeView !== 'dashboard' && !isPillHovered" 
+         (mouseenter)="onPillMouseEnter()"
+         (mouseleave)="onPillMouseLeave()"
+         (click)="$event.stopPropagation()">
         <label class="tenant-picker">
           <span>Tenant</span>
           <select [(ngModel)]="selectedTenant" (ngModelChange)="onTenantChange()">
@@ -61,7 +61,7 @@
             [attr.aria-expanded]="activeTopbarPanel === 'notifications'"
             (click)="toggleTopbarPanel('notifications', $event)"
           >
-            ♧
+            <img src="assets/nav-icons/icons8-notification-24.png" alt="Notifications" />
             <b *ngIf="unreadNotificationCount() > 0">{{ unreadNotificationCount() }}</b>
           </button>
 
@@ -139,7 +139,6 @@
           </section>
         </div>
       </div>
-    </header>
 
     <div class="topbar-toast" *ngIf="topbarToast" role="status" aria-live="polite">{{ topbarToast }}</div>
 
@@ -147,7 +146,7 @@
       <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
         <div class="welcome-row">
           <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! <span>👋</span></h1><p>Here’s what’s happening with your inventory today.</p></div>
-          <button class="ask-ai">✦ <span>Ask StockFlow AI</span></button>
+          <button type="button" class="ask-ai" (click)="toggleCopilot($event)">✦ <span>Ask StockFlow AI</span></button>
         </div>
 
         <section class="kpi-grid">
@@ -180,18 +179,7 @@
             </div>
           </article>
 
-          <aside class="card copilot-panel">
-            <div class="card-header"><h2><span class="sparkle">✦</span> StockFlow AI Assistant</h2><button>⋮</button></div>
-            <div class="messages">
-              <div *ngFor="let message of dashboard.copilotMessages" class="message" [class.user]="message.role === 'user'">
-                <div>{{ message.text }}</div><small>{{ message.timestamp }}</small>
-              </div>
-            </div>
-            <form class="copilot-input" (ngSubmit)="sendCopilotMessage()">
-              <input [(ngModel)]="copilotInput" name="copilotInput" placeholder="Ask anything about inventory...">
-              <button type="submit">➤</button>
-            </form>
-          </aside>
+
 
           <article class="card chart-card demand-card">
             <div class="card-header"><h2>Demand Forecast <small>(Current deterministic baseline)</small></h2><a (click)="selectView('demand')">View Full Forecast</a></div>
@@ -361,6 +349,12 @@
 
     <section class="content workspace" *ngIf="activeView === 'recommendations'">
       <div class="page-heading"><div><span class="eyebrow">INTELLIGENCE</span><h1>Recommendations</h1><p>Deterministic recommendations generated from current operational inventory risks.</p></div><span class="live-badge">PHASE 2 RULE ENGINE</span></div>
+      <section class="prototype-recommendations" *ngIf="prototypeRecommendations().length">
+        <div class="prototype-recommendation-heading"><div><span>LIVE PROTOTYPE</span><h2>Recommendations generated from your saved changes</h2><p>These update immediately when batch quantities, expiry dates or SKU safety-stock policies change.</p></div><strong>{{ prototypeRecommendations().length }} new signals</strong></div>
+        <article *ngFor="let recommendation of prototypeRecommendations()" [class]="'card prototype-recommendation ' + recommendation.tone">
+          <i></i><div><span>Updated-data recommendation</span><h3>{{ recommendation.title }}</h3><p>{{ recommendation.subtitle }}</p></div><strong>{{ recommendation.benefit }}</strong><button type="button" class="secondary-button" (click)="selectView(recommendation.target)">{{ recommendation.target === 'routes' ? 'Plan route' : 'Review inventory' }}</button>
+        </article>
+      </section>
       <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
         <section class="recommendation-workspace">
           <article *ngFor="let recommendation of dashboard.recommendations; let i = index" class="card recommendation-detail">
@@ -377,15 +371,16 @@
     <section class="content workspace" *ngIf="activeView === 'warehouses'">
       <div class="page-heading">
         <div><span class="eyebrow">INVENTORY MASTER</span><h1>Warehouses</h1><p>Live warehouse capacity, cold-chain readiness and inventory footprint for the selected tenant.</p></div>
-        <button class="secondary-button" (click)="loadWarehouseWorkspace()">⟳ Refresh</button>
+        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadWarehouseWorkspace()">⟳ Refresh</button></div>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading warehouse master data…</span></div>
       <div class="error-banner" *ngIf="pageError">{{ pageError }}</div>
+      <div class="prototype-info-banner" *ngIf="pageNotice">{{ pageNotice }}</div>
 
       <ng-container *ngIf="foundationSummary as foundation">
         <section class="metric-grid four">
-          <article class="metric-card"><span>Warehouses</span><strong>{{ foundation.warehouseCount }}</strong><small>{{ warehouseCityCount() }} operating cities</small></article>
+          <article class="metric-card"><span>Warehouses</span><strong>{{ foundation.warehouseCount }}</strong><small>{{ warehouseCityCount() }} operating cities · {{ prototypeChangedCount('warehouses') }} updated</small></article>
           <article class="metric-card"><span>Total capacity</span><strong>{{ totalWarehouseCapacity() | number }}</strong><small>Configured capacity units</small></article>
           <article class="metric-card"><span>Cold-chain enabled</span><strong>{{ coldChainWarehouseCount() }}</strong><small>{{ warehouses.length - coldChainWarehouseCount() }} standard warehouses</small></article>
           <article class="metric-card"><span>Inventory batches</span><strong>{{ foundation.batchCount }}</strong><small>Latest snapshot positions</small></article>
@@ -395,8 +390,8 @@
           <article *ngFor="let warehouse of filteredWarehouses()" class="card warehouse-card">
             <div class="warehouse-card-header">
               <div class="warehouse-symbol">⌂</div>
-              <div><span>{{ warehouse.warehouseId }}</span><h2>{{ warehouse.warehouseName }}</h2><p>{{ warehouse.city }}, {{ warehouse.state }}, {{ warehouse.country }}</p></div>
-              <span class="cold-chain-pill" [class.active]="warehouse.coldChainAvailable">{{ warehouse.coldChainAvailable ? 'Cold chain' : 'Standard' }}</span>
+              <div><span>{{ warehouse.warehouseId }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('warehouses'), warehouse.warehouseId)">Updated</em></span><h2>{{ warehouse.warehouseName }}</h2><p>{{ warehouse.city }}, {{ warehouse.state }}, {{ warehouse.country }}</p></div>
+              <div class="warehouse-card-actions"><span class="cold-chain-pill" [class.active]="warehouse.coldChainAvailable">{{ warehouse.coldChainAvailable ? 'Cold chain' : 'Standard' }}</span><button type="button" class="record-edit-button" (click)="startWarehouseEdit(warehouse)">Edit</button></div>
             </div>
             <div class="warehouse-stat-grid">
               <div><span>Capacity</span><strong>{{ warehouse.capacityUnits | number }}</strong></div>
@@ -421,16 +416,17 @@
     <section class="content workspace" *ngIf="activeView === 'products'">
       <div class="page-heading">
         <div><span class="eyebrow">INVENTORY MASTER</span><h1>Products & SKUs</h1><p>Commercial, replenishment, shelf-life and FEFO settings from the live SKU master.</p></div>
-        <button class="secondary-button" (click)="loadProductWorkspace()">⟳ Refresh</button>
+        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadProductWorkspace()">⟳ Refresh</button></div>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading product and SKU data…</span></div>
       <div class="error-banner" *ngIf="pageError">{{ pageError }}</div>
+      <div class="prototype-info-banner" *ngIf="pageNotice">{{ pageNotice }}</div>
 
       <ng-container *ngIf="foundationSummary as foundation">
         <section class="metric-grid four">
           <article class="metric-card"><span>Products</span><strong>{{ foundation.productCount }}</strong><small>Parent product records</small></article>
-          <article class="metric-card"><span>SKUs</span><strong>{{ foundation.skuCount }}</strong><small>{{ filteredSkus().length }} shown by filters</small></article>
+          <article class="metric-card"><span>SKUs</span><strong>{{ foundation.skuCount }}</strong><small>{{ filteredSkus().length }} shown · {{ prototypeChangedCount('skus') }} updated</small></article>
           <article class="metric-card"><span>FEFO controlled</span><strong>{{ fefoSkuCount() }}</strong><small>Shelf-life managed SKUs</small></article>
           <article class="metric-card"><span>Average gross margin</span><strong>{{ averageSkuMarginPercent() | number:'1.1-1' }}%</strong><small>Based on list price and unit cost</small></article>
         </section>
@@ -445,10 +441,10 @@
         <article class="card data-table-card">
           <div class="table-scroll">
             <table class="sku-table">
-              <thead><tr><th>SKU</th><th>Product</th><th>Demand profile</th><th>Inventory policy</th><th class="numeric">Unit cost</th><th class="numeric">Selling price</th><th class="numeric">Margin</th><th>Shelf life</th></tr></thead>
+              <thead><tr><th>SKU</th><th>Product</th><th>Demand profile</th><th>Inventory policy</th><th class="numeric">Unit cost</th><th class="numeric">Selling price</th><th class="numeric">Margin</th><th>Shelf life</th><th></th></tr></thead>
               <tbody>
                 <tr *ngFor="let sku of filteredSkus()">
-                  <td><strong>{{ sku.skuName }}</strong><small>{{ sku.skuId }} · {{ sku.baseUom }}</small></td>
+                  <td><strong>{{ sku.skuName }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('skus'), sku.skuId)">Updated</em></strong><small>{{ sku.skuId }} · {{ sku.baseUom }}</small></td>
                   <td><strong>{{ sku.productId }}</strong><small>{{ sku.currency }}</small></td>
                   <td><span class="profile-pill">{{ sku.demandProfile }}</span></td>
                   <td><strong>{{ sku.minimumSafetyStock | number }} safety stock</strong><small>Reorder multiple: {{ sku.reorderMultiple | number }}</small></td>
@@ -456,8 +452,9 @@
                   <td class="numeric">{{ sku.sellingPrice | currency:sku.currency:'symbol':'1.2-2' }}</td>
                   <td class="numeric"><strong>{{ skuMarginPercent(sku) | number:'1.1-1' }}%</strong></td>
                   <td><strong>{{ sku.defaultShelfLifeDays === null ? 'Not configured' : sku.defaultShelfLifeDays + ' days' }}</strong><small>{{ sku.fefoRequired ? 'FEFO required' : 'Standard issue policy' }}</small></td>
+                  <td><button type="button" class="record-edit-button" (click)="startSkuEdit(sku)">Edit</button></td>
                 </tr>
-                <tr *ngIf="!filteredSkus().length"><td colspan="8" class="empty-row">No SKUs match the selected filters.</td></tr>
+                <tr *ngIf="!filteredSkus().length"><td colspan="9" class="empty-row">No SKUs match the selected filters.</td></tr>
               </tbody>
             </table>
           </div>
@@ -468,11 +465,12 @@
     <section class="content workspace" *ngIf="activeView === 'batches'">
       <div class="page-heading">
         <div><span class="eyebrow">INVENTORY EXECUTION</span><h1>Batch Inventory</h1><p>Inspect usable, reserved, blocked and expiry-sensitive stock by warehouse and SKU.</p></div>
-        <button class="secondary-button" (click)="loadBatchWorkspace()">⟳ Refresh</button>
+        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadBatchWorkspace()">⟳ Refresh</button></div>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading batch inventory…</span></div>
       <div class="error-banner" *ngIf="pageError">{{ pageError }}</div>
+      <div class="prototype-info-banner" *ngIf="pageNotice">{{ pageNotice }}</div>
 
       <ng-container *ngIf="foundationSummary">
         <article class="card filter-bar batch-filter-bar">
@@ -484,7 +482,7 @@
         </article>
 
         <section class="metric-grid five">
-          <article class="metric-card"><span>Usable quantity</span><strong>{{ totalBatchUsableQuantity() | number }}</strong><small>Available after reservations and blocks</small></article>
+          <article class="metric-card"><span>Usable quantity</span><strong>{{ totalBatchUsableQuantity() | number }}</strong><small>After reservations and blocks · {{ prototypeChangedCount('batches') }} updated</small></article>
           <article class="metric-card"><span>Reserved quantity</span><strong>{{ totalBatchReservedQuantity() | number }}</strong><small>Allocated inventory</small></article>
           <article class="metric-card warning"><span>Blocked quantity</span><strong>{{ totalBatchBlockedQuantity() | number }}</strong><small>Quality or operational hold</small></article>
           <article class="metric-card critical"><span>Expiry attention</span><strong>{{ expiringBatchCount() }}</strong><small>Expired or within 60 days</small></article>
@@ -494,11 +492,11 @@
         <article class="card data-table-card">
           <div class="table-scroll">
             <table class="batch-table">
-              <thead><tr><th>Status</th><th>Batch</th><th>SKU</th><th>Warehouse</th><th class="numeric">Available</th><th class="numeric">Reserved</th><th class="numeric">Blocked</th><th class="numeric">Usable</th><th>Expiry</th><th>Storage / movement</th></tr></thead>
+              <thead><tr><th>Status</th><th>Batch</th><th>SKU</th><th>Warehouse</th><th class="numeric">Available</th><th class="numeric">Reserved</th><th class="numeric">Blocked</th><th class="numeric">Usable</th><th>Expiry</th><th>Storage / movement</th><th></th></tr></thead>
               <tbody>
                 <tr *ngFor="let batch of filteredBatches()">
-                  <td><span [class]="'batch-status ' + batchStatusClass(batch)">{{ batchStatus(batch) }}</span></td>
-                  <td><strong>{{ batch.batchNumber }}</strong><small>Snapshot: {{ batch.snapshotDate }}</small></td>
+                  <td><span [class]="'batch-status ' + operationalStatusClass(batch)">{{ batchOperationalStatus(batch) }}</span></td>
+                  <td><strong>{{ batch.batchNumber }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('batches'), batch.batchInventoryId)">Updated</em></strong><small>Snapshot: {{ batch.snapshotDate }}</small></td>
                   <td><strong>{{ batch.skuId }}</strong><small>{{ batch.unitCost | currency:batch.currency:'symbol':'1.2-2' }} per unit</small></td>
                   <td><strong>{{ batch.warehouseId }}</strong><small>{{ batch.storageConditionCode }}</small></td>
                   <td class="numeric">{{ batch.availableQuantity | number }}</td>
@@ -507,8 +505,9 @@
                   <td class="numeric"><strong>{{ batch.usableQuantity | number }}</strong></td>
                   <td><strong>{{ batch.expiryDate || 'Not applicable' }}</strong><small>{{ daysToExpiry(batch) === null ? 'No shelf-life control' : (daysToExpiry(batch) | number) + ' days from snapshot' }}</small></td>
                   <td><strong>{{ batch.storageConditionCode }}</strong><small>{{ batch.lastMovementAt ? ('Last movement: ' + (batch.lastMovementAt | date:'medium')) : 'No movement timestamp' }}</small></td>
+                  <td><button type="button" class="record-edit-button" (click)="startBatchEdit(batch)">Adjust</button></td>
                 </tr>
-                <tr *ngIf="!filteredBatches().length"><td colspan="10" class="empty-row">No batch inventory matches the selected filters.</td></tr>
+                <tr *ngIf="!filteredBatches().length"><td colspan="11" class="empty-row">No batch inventory matches the selected filters.</td></tr>
               </tbody>
             </table>
           </div>
@@ -587,6 +586,88 @@
       </article>
     </section>
 
+    <div class="master-editor-backdrop" *ngIf="activeEditor" (click)="cancelEditor()">
+      <aside class="master-editor" role="dialog" aria-modal="true" aria-label="Edit prototype record" (click)="$event.stopPropagation()">
+        <header><div><span>PROTOTYPE EDITOR</span><h2>{{ activeEditor === 'warehouse' ? 'Edit warehouse' : activeEditor === 'sku' ? 'Edit SKU policy' : 'Adjust batch inventory' }}</h2><p>Changes are validated, saved in this browser and reflected across related prototype screens.</p></div><button type="button" (click)="cancelEditor()" aria-label="Close editor">×</button></header>
+
+        <form *ngIf="activeEditor === 'warehouse' && warehouseDraft as draft" class="master-editor-form" (ngSubmit)="saveWarehouseEdit()">
+          <div class="editor-id"><span>Warehouse ID</span><strong>{{ draft.warehouseId }}</strong></div>
+          <label class="full"><span>Warehouse name</span><input name="warehouseName" [(ngModel)]="draft.warehouseName" required></label>
+          <label><span>City</span><input name="warehouseCity" [(ngModel)]="draft.city" required></label>
+          <label><span>State</span><input name="warehouseState" [(ngModel)]="draft.state" required></label>
+          <label class="full"><span>Capacity units</span><input name="warehouseCapacity" type="number" min="1" step="1" [(ngModel)]="draft.capacityUnits" required></label>
+          <label class="editor-checkbox full"><input name="warehouseColdChain" type="checkbox" [(ngModel)]="draft.coldChainAvailable"><i></i><span><strong>Cold-chain capable</strong><small>Allow temperature-controlled inventory and routes.</small></span></label>
+          <p class="editor-error" *ngIf="editorError">{{ editorError }}</p>
+          <footer><button type="button" class="secondary-button" (click)="cancelEditor()">Cancel</button><button type="submit" class="primary-button">Save warehouse</button></footer>
+        </form>
+
+        <form *ngIf="activeEditor === 'sku' && skuDraft as draft" class="master-editor-form" (ngSubmit)="saveSkuEdit()">
+          <div class="editor-id"><span>SKU ID</span><strong>{{ draft.skuId }}</strong></div>
+          <label class="full"><span>SKU name</span><input name="skuName" [(ngModel)]="draft.skuName" required></label>
+          <label><span>Unit cost</span><input name="skuUnitCost" type="number" min="0" step="0.01" [(ngModel)]="draft.unitCost"></label>
+          <label><span>Selling price</span><input name="skuSellingPrice" type="number" min="0" step="0.01" [(ngModel)]="draft.sellingPrice"></label>
+          <label><span>Minimum safety stock</span><input name="skuSafetyStock" type="number" min="0" step="1" [(ngModel)]="draft.minimumSafetyStock"></label>
+          <label><span>Reorder multiple</span><input name="skuReorderMultiple" type="number" min="1" step="1" [(ngModel)]="draft.reorderMultiple"></label>
+          <label><span>Demand profile</span><select name="skuDemandProfile" [(ngModel)]="draft.demandProfile"><option>STABLE</option><option>TRENDING</option><option>SEASONAL</option><option>INTERMITTENT</option><option>LUMPY</option></select></label>
+          <label><span>Shelf life days</span><input name="skuShelfLife" type="number" min="1" step="1" [(ngModel)]="draft.defaultShelfLifeDays" placeholder="Not configured"></label>
+          <label class="editor-checkbox full"><input name="skuFefo" type="checkbox" [(ngModel)]="draft.fefoRequired"><i></i><span><strong>Require FEFO allocation</strong><small>Issue the earliest-expiring eligible batch first.</small></span></label>
+          <p class="editor-error" *ngIf="editorError">{{ editorError }}</p>
+          <footer><button type="button" class="secondary-button" (click)="cancelEditor()">Cancel</button><button type="submit" class="primary-button">Save SKU policy</button></footer>
+        </form>
+
+        <form *ngIf="activeEditor === 'batch' && batchDraft as draft" class="master-editor-form" (ngSubmit)="saveBatchEdit()">
+          <div class="editor-id"><span>Batch</span><strong>{{ draft.batchNumber }} · {{ draft.skuId }}</strong></div>
+          <div class="editor-context full"><span>{{ draft.warehouseId }}</span><small>Current calculated signal: {{ batchOperationalStatus(draft) }}</small></div>
+          <label><span>Available quantity</span><input name="batchAvailable" type="number" min="0" step="1" [(ngModel)]="draft.availableQuantity"></label>
+          <label><span>Reserved quantity</span><input name="batchReserved" type="number" min="0" step="1" [(ngModel)]="draft.reservedQuantity"></label>
+          <label><span>Blocked quantity</span><input name="batchBlocked" type="number" min="0" step="1" [(ngModel)]="draft.blockedQuantity"></label>
+          <label><span>Calculated usable</span><input [value]="draft.availableQuantity - draft.reservedQuantity - draft.blockedQuantity" disabled></label>
+          <label><span>Expiry date</span><input name="batchExpiry" type="date" [(ngModel)]="draft.expiryDate"></label>
+          <label><span>Storage condition</span><select name="batchStorage" [(ngModel)]="draft.storageConditionCode"><option>AMBIENT</option><option>COOL</option><option>COLD_CHAIN_2_8C</option><option>FROZEN</option></select></label>
+          <p class="editor-error" *ngIf="editorError">{{ editorError }}</p>
+          <footer><button type="button" class="secondary-button" (click)="cancelEditor()">Cancel</button><button type="submit" class="primary-button">Save adjustment</button></footer>
+        </form>
+      </aside>
+    </div>
+
+    <section class="content workspace prototype-activity-page" *ngIf="activeView === 'activity'">
+      <header class="activity-heading">
+        <div><span class="eyebrow">PRESENTATION CONTROL</span><h1>Demo Activity</h1><p>Every prototype decision is saved in this browser and recorded here, so the complete user journey remains visible across screens and refreshes.</p></div>
+        <button type="button" class="reset-demo-button" (click)="resetPrototype()">Reset demo data</button>
+      </header>
+
+      <section class="activity-metrics">
+        <article class="card"><span>Saved changes</span><strong>{{ prototype.changeCount() }}</strong><small>Updated records and settings</small></article>
+        <article class="card"><span>Recorded actions</span><strong>{{ prototype.activities().length }}</strong><small>Newest actions appear first</small></article>
+        <article class="card"><span>Persistence</span><strong>Browser</strong><small>Survives navigation and refresh</small></article>
+        <article class="card"><span>Last updated</span><strong>{{ prototype.lastUpdatedAt() ? (prototype.lastUpdatedAt() | date:'shortTime') : 'Not yet' }}</strong><small>{{ prototype.lastUpdatedAt() ? (prototype.lastUpdatedAt() | date:'mediumDate') : 'Start the guided flow' }}</small></article>
+      </section>
+
+      <section class="activity-layout">
+        <article class="card activity-timeline">
+          <div class="workspace-card-header"><div><h2>Change history</h2><p>Auditable presentation evidence for local prototype actions.</p></div><span>{{ prototype.activities().length }} events</span></div>
+          <div class="activity-list" *ngIf="prototype.activities().length; else noPrototypeActivity">
+            <article *ngFor="let activity of prototype.activities()" [class]="'activity-entry ' + activity.tone">
+              <i></i>
+              <div><span>{{ activity.module }}</span><strong>{{ activity.title }}</strong><p>{{ activity.detail }}</p></div>
+              <time>{{ activity.timestamp | date:'short' }}</time>
+            </article>
+          </div>
+          <ng-template #noPrototypeActivity><div class="empty-activity"><i>↻</i><strong>No demo changes yet</strong><p>Follow the presentation journey to create an auditable sequence of decisions.</p></div></ng-template>
+        </article>
+
+        <aside class="card presentation-flow">
+          <div class="workspace-card-header"><div><h2>Guided user journey</h2><p>Use this sequence during the prototype presentation.</p></div></div>
+          <button type="button" (click)="selectView('risks')"><i>01</i><span><strong>Identify risk</strong><small>Show a stockout or expiry alert.</small></span><b>›</b></button>
+          <button type="button" (click)="selectView('transfers')"><i>02</i><span><strong>Approve transfer</strong><small>Choose an explainable stock movement.</small></span><b>›</b></button>
+          <button type="button" (click)="selectView('routes')"><i>03</i><span><strong>Optimize and dispatch</strong><small>Advance a route through approval and delivery.</small></span><b>›</b></button>
+          <button type="button" (click)="selectView('sustainability')"><i>04</i><span><strong>Verify impact</strong><small>Show updated emissions and waste savings.</small></span><b>›</b></button>
+          <button type="button" (click)="selectView('activity')"><i>05</i><span><strong>Show audit trail</strong><small>Return here to prove every change was retained.</small></span><b>✓</b></button>
+          <div class="flow-note"><strong>Prototype behavior</strong><p>This workflow uses deterministic demo data and browser storage. The same screens can later connect to secured backend APIs without changing the presentation flow.</p></div>
+        </aside>
+      </section>
+    </section>
+
     <sf-operations-workspace
       *ngIf="activeOperationView() as operationView"
       [view]="operationView"
@@ -612,6 +693,55 @@
     </section>
   </main>
 </div>
+
+<button
+  type="button"
+  class="copilot-launcher"
+  [class.open]="copilotOpen"
+  [attr.aria-expanded]="copilotOpen"
+  aria-label="Open StockFlow Copilot"
+  (click)="toggleCopilot($event)"
+>
+  <span class="copilot-launcher__glow"></span>
+  <span class="copilot-launcher__mark">✦</span>
+</button>
+
+<section
+  *ngIf="copilotOpen"
+  class="copilot-popover"
+  role="dialog"
+  aria-modal="false"
+  aria-label="StockFlow Copilot"
+  (click)="$event.stopPropagation()"
+>
+  <header class="copilot-popover__header">
+    <div class="copilot-popover__identity">
+      <span class="copilot-popover__logo">✦</span>
+      <div><strong>StockFlow Copilot</strong><small>Grounded inventory intelligence</small></div>
+    </div>
+    <button type="button" class="copilot-popover__close" aria-label="Close StockFlow Copilot" (click)="closeCopilot($event)">×</button>
+  </header>
+
+  <div class="copilot-popover__status"><span></span> Read-only · tenant-scoped answers</div>
+
+  <div class="copilot-popover__messages" #copilotMessages role="log" aria-live="polite">
+    <div *ngFor="let message of data?.copilotMessages" class="message" [class.user]="message.role === 'user'">
+      <div>{{ message.text }}</div><small>{{ message.timestamp }}</small>
+    </div>
+    <div class="copilot-typing" *ngIf="copilotLoading"><span></span><span></span><span></span> Checking StockFlow data…</div>
+  </div>
+
+  <div class="copilot-suggestions" *ngIf="!copilotLoading && (data?.copilotMessages?.length ?? 0) < 3">
+    <button type="button" (click)="useCopilotSuggestion('Which inventory is at the highest expiry risk?')">Highest expiry risk</button>
+    <button type="button" (click)="useCopilotSuggestion('Which medicines may stock out this week?')">Stockout risks</button>
+    <button type="button" (click)="useCopilotSuggestion('Where is excess stock available for transfer?')">Transfer options</button>
+  </div>
+
+  <form class="copilot-popover__input" (ngSubmit)="sendCopilotMessage()">
+    <input [(ngModel)]="copilotInput" name="copilotInput" autocomplete="off" placeholder="Ask about inventory, expiry or routes…" [disabled]="copilotLoading">
+    <button type="submit" aria-label="Send message" [disabled]="copilotLoading || !copilotInput.trim()">➤</button>
+  </form>
+</section>
 
 <ng-template #dashboardLoadingState>
   <div class="loading-state"><div class="spinner"></div><p *ngIf="!error">Loading StockFlow data…</p><p *ngIf="error">{{ error }}</p></div>

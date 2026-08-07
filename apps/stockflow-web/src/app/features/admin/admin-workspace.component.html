@@ -11,8 +11,9 @@
   </header>
 
   <div class="prototype-note">
-    <span>UI PREVIEW</span>
-    <p>The finalized SIH team assignments are shown below. Role changes remain local until secured backend admin endpoints are connected.</p>
+    <span>INTERACTIVE PROTOTYPE</span>
+    <p>Role and setting changes are saved in this browser until the secured backend admin APIs are connected.</p>
+    <div class="prototype-save-state"><i></i><strong>{{ prototype.changeCount() }} saved changes</strong><small *ngIf="prototype.lastUpdatedAt()">Updated {{ prototype.lastUpdatedAt() | date:'shortTime' }}</small></div>
   </div>
 
   <ng-container *ngIf="view === 'users'">
@@ -39,7 +40,7 @@
             <thead><tr><th>Team member</th><th>Primary work</th><th>Secondary work</th><th>Status</th><th>Security</th><th>Activity</th><th>Action</th></tr></thead>
             <tbody>
               <tr *ngFor="let user of filteredUsers()">
-                <td><div class="user-cell"><i>{{ user.initials }}</i><span><strong>{{ user.name }}</strong><small>{{ user.email }}</small></span></div></td>
+                <td><div class="user-cell"><i>{{ user.initials }}</i><span><strong>{{ user.name }} <em class="changed-marker" *ngIf="prototype.isChanged('users', user.id.toString())">Updated</em></strong><small>{{ user.email }}</small></span></div></td>
                 <td><select class="role-select" [ngModel]="user.primaryWork" (ngModelChange)="changeRole(user, $event)"><option *ngFor="let role of userRoles()" [value]="role">{{ role }}</option></select></td>
                 <td><strong>{{ user.secondaryWork }}</strong></td>
                 <td><span [class]="'status-pill ' + statusClass(user.status)">{{ user.status }}</span></td>

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PrototypeStateService } from '../../core/services/prototype-state.service';
 
 export type AdminView = 'users' | 'settings';
 
@@ -31,10 +32,12 @@ interface RoleDefinition {
   templateUrl: './admin-workspace.component.html',
   styleUrl: './admin-workspace.component.css'
 })
-export class AdminWorkspaceComponent implements OnChanges, OnDestroy {
+export class AdminWorkspaceComponent implements OnChanges, OnDestroy, OnInit {
   @Input({ required: true }) view: AdminView = 'users';
   @Input() tenantLabel = 'Selected tenant';
   @Input() searchQuery = '';
+
+  readonly prototype = inject(PrototypeStateService);
 
   roleFilter = 'ALL';
   statusFilter = 'ALL';
@@ -86,6 +89,32 @@ export class AdminWorkspaceComponent implements OnChanges, OnDestroy {
     { id: 'security', label: 'Security', icon: 'L' },
     { id: 'integrations', label: 'Integrations', icon: 'I' }
   ];
+
+  ngOnInit(): void {
+    this.users.forEach(user => {
+      Object.assign(user, this.prototype.recordPatch<AdminUser>('users', String(user.id)));
+    });
+    Object.assign(this, this.prototype.settingsSnapshot<{
+      organizationName: string;
+      timezone: string;
+      currency: string;
+      dateFormat: string;
+      forecastHorizon: number;
+      safetyStockDays: number;
+      approvalThreshold: number;
+      routeObjective: string;
+      co2Target: number;
+      wasteTarget: number;
+      vehicleUtilization: number;
+      riskAlerts: boolean;
+      purchaseApprovals: boolean;
+      transferApprovals: boolean;
+      dailyDigest: boolean;
+      mfaRequired: boolean;
+      sessionTimeout: number;
+      auditRetention: number;
+    }>());
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['tenantLabel'] && (!this.organizationName || changes['tenantLabel'].firstChange)) {
@@ -143,21 +172,64 @@ export class AdminWorkspaceComponent implements OnChanges, OnDestroy {
   }
 
   inviteUser(): void {
-    this.showToast('Invite flow opened as a UI preview. No invitation was sent.');
+    this.prototype.addActivity({
+      module: 'Users & Roles',
+      title: 'Invite flow opened',
+      detail: 'The prototype recorded the action without sending an external invitation.',
+      tone: 'info'
+    });
+    this.showToast('Invite flow recorded. No external invitation was sent.');
   }
 
   changeRole(user: AdminUser, role: string): void {
     user.primaryWork = role;
-    this.showToast(`${user.name}'s primary work is staged as ${role}. Demo state only.`);
+    this.prototype.patchRecord('users', String(user.id), { primaryWork: role }, {
+      module: 'Users & Roles',
+      title: `${user.name}'s role updated`,
+      detail: `Primary work changed to ${role}. The change is saved in this browser.`,
+      tone: 'success'
+    });
+    this.showToast(`${user.name}'s role was updated and saved.`);
   }
 
   toggleUserStatus(user: AdminUser): void {
     user.status = user.status === 'Active' ? 'Suspended' : 'Active';
-    this.showToast(`${user.name} is staged as ${user.status}. Demo state only.`);
+    this.prototype.patchRecord('users', String(user.id), { status: user.status }, {
+      module: 'Users & Roles',
+      title: `${user.name} is now ${user.status}`,
+      detail: `Workspace access status was changed and retained for the prototype.`,
+      tone: user.status === 'Active' ? 'success' : 'warning'
+    });
+    this.showToast(`${user.name} is now ${user.status}; the change was saved.`);
   }
 
   saveSettings(): void {
-    this.showToast('Settings saved in this UI preview. Backend persistence is not connected yet.');
+    this.prototype.saveSettings({
+      organizationName: this.organizationName,
+      timezone: this.timezone,
+      currency: this.currency,
+      dateFormat: this.dateFormat,
+      forecastHorizon: this.forecastHorizon,
+      safetyStockDays: this.safetyStockDays,
+      approvalThreshold: this.approvalThreshold,
+      routeObjective: this.routeObjective,
+      co2Target: this.co2Target,
+      wasteTarget: this.wasteTarget,
+      vehicleUtilization: this.vehicleUtilization,
+      riskAlerts: this.riskAlerts,
+      purchaseApprovals: this.purchaseApprovals,
+      transferApprovals: this.transferApprovals,
+      dailyDigest: this.dailyDigest,
+      mfaRequired: this.mfaRequired,
+      sessionTimeout: this.sessionTimeout,
+      auditRetention: this.auditRetention
+    }, {
+      module: 'Settings',
+      title: 'Workspace settings saved',
+      detail: `Planning, sustainability and security preferences for ${this.organizationName} were saved locally.`,
+      tone: 'success'
+    });
+    this.showToast('Settings saved and will remain after refresh.');
   }
 
   selectSettingsSection(section: string): void {
