@@ -813,3 +813,5 @@ Copyright © 2026 Veyjval B. All rights reserved.
 ## License
 
 Add the intended open-source or commercial license before public distribution.
+#   S t o c k f l o w - a i .  
+ 
