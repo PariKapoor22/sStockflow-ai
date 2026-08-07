@@ -39,6 +39,8 @@ supabase*.json
 auth.json
 *.log
 npm-debug.log*
+*.egg-info/
+tools/reports/
 
 # Specific app folders
 apps/stockflow-web/node_modules/

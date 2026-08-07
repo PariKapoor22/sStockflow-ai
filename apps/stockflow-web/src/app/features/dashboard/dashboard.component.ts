@@ -29,6 +29,7 @@ import { FoundationDataService } from '../../core/services/foundation-data.servi
 import { ImportDataService } from '../../core/services/import-data.service';
 import { IntelligenceDataService } from '../../core/services/intelligence-data.service';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
+import { CopilotService } from '../../core/services/copilot.service';
 import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 
@@ -120,7 +121,9 @@ export class DashboardComponent implements OnInit {
   pageNotice = '';
   importError = '';
   copilotInput = '';
-  isAssistantOpen = false;
+  copilotOpen = false;
+  copilotLoading = false;
+  private readonly copilotConversationId = `stockflow-${crypto.randomUUID?.() ?? Date.now()}`;
   globalSearch = '';
   sidebarCollapsed = true;
   isPillHovered = false;
@@ -292,7 +295,8 @@ export class DashboardComponent implements OnInit {
     private readonly intelligenceData: IntelligenceDataService,
     private readonly foundationData: FoundationDataService,
     private readonly importData: ImportDataService,
-    readonly prototype: PrototypeStateService
+    readonly prototype: PrototypeStateService,
+    private readonly copilot: CopilotService
   ) {}
 
   ngOnInit(): void {
@@ -425,6 +429,7 @@ export class DashboardComponent implements OnInit {
   onDocumentKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       this.closeTopbarPanels();
+      this.closeCopilot();
       return;
     }
 
@@ -536,10 +541,6 @@ export class DashboardComponent implements OnInit {
     this.showTopbarToast('Demo session reset to Acme Pharma.');
   }
 
-  toggleAssistant(): void {
-    this.isAssistantOpen = !this.isAssistantOpen;
-  }
-
   onPillMouseEnter(): void {
     this.isPillHovered = true;
     if (this.pillHoverTimeout) {
@@ -554,16 +555,46 @@ export class DashboardComponent implements OnInit {
     }, 5000);
   }
 
+  toggleCopilot(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.copilotOpen = !this.copilotOpen;
+    if (this.copilotOpen) this.closeTopbarPanels();
+  }
+
+  closeCopilot(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.copilotOpen = false;
+  }
+
+  useCopilotSuggestion(message: string): void {
+    this.copilotInput = message;
+    this.sendCopilotMessage();
+  }
+
   sendCopilotMessage(): void {
     const message = this.copilotInput.trim();
-    if (!message || !this.data) return;
+    if (!message || !this.data || this.copilotLoading) return;
     this.data.copilotMessages.push({ role: 'user', text: message, timestamp: 'Now' });
-    this.data.copilotMessages.push({
-      role: 'assistant',
-      text: 'The live AI agent is planned for Phase 3. This frontend currently uses verified dashboard, demand, risk and master-data APIs.',
-      timestamp: 'Now'
-    });
     this.copilotInput = '';
+    this.copilotLoading = true;
+    this.copilot.chat({
+      conversationId: this.copilotConversationId,
+      message,
+      currentWorkspace: this.activeView,
+      selectedWarehouseId: this.selectedWarehouseId || undefined,
+      selectedSkuId: this.selectedSkuId || undefined
+    }).pipe(finalize(() => this.copilotLoading = false)).subscribe({
+      next: response => this.data?.copilotMessages.push({
+        role: 'assistant',
+        text: response.answer,
+        timestamp: response.evidence?.[0]?.freshness === 'CURRENT' ? 'Just now · verified' : 'Just now'
+      }),
+      error: () => this.data?.copilotMessages.push({
+        role: 'assistant',
+        text: 'I could not reach the Copilot Host. Start the read-only Copilot service on port 8300, then try again. No inventory value was inferred.',
+        timestamp: 'Connection issue'
+      })
+    });
   }
 
   polyline(values: number[], width = 360, height = 160, padding = 12): string {
