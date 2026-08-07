@@ -591,7 +591,7 @@ export class DashboardComponent implements OnInit {
       }),
       error: () => this.data?.copilotMessages.push({
         role: 'assistant',
-        text: 'I could not reach the Copilot Host. Start the read-only Copilot service on port 8300, then try again. No inventory value was inferred.',
+        text: 'I could not reach the StockFlow Copilot service. Please check your connection and try again. No inventory value was inferred.',
         timestamp: 'Connection issue'
       })
     });

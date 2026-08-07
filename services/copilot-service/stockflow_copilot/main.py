@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import json
 import logging
+import os
 import re
 import csv
 from pathlib import Path
@@ -11,14 +12,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from google import genai
 from google.genai import types
 from .auth import get_auth_context
-from .config import AUTH_DISABLED_FOR_LOCAL, ENABLE_ACTIONS, GEMINI_API_KEY, GEMINI_MODEL, MCP_SERVERS
+from .config import ALLOWED_ORIGINS, AUTH_DISABLED_FOR_LOCAL, ENABLE_ACTIONS, GEMINI_API_KEY, GEMINI_MODEL, MCP_SERVERS
 from .mcp_client import MCPHub
 from .models import ChatRequest, ChatResponse, Evidence
 from .prompts import SYSTEM_INSTRUCTION
 
 hub = MCPHub(MCP_SERVERS)
 logger = logging.getLogger("stockflow-copilot")
-CSV_DIR = Path(__file__).resolve().parents[3] / "data" / "chatbot"
+CSV_DIR = Path(os.getenv(
+    "STOCKFLOW_CHATBOT_DATA_DIR",
+    Path(__file__).resolve().parents[3] / "data" / "chatbot",
+))
 
 
 def _local_csv_rows(filename: str) -> list[dict[str, str]]:
@@ -376,7 +380,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="StockFlow Copilot Host", version="0.1.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:4200", "http://127.0.0.1:4200"], allow_credentials=True, allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"])
+app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=True, allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"])
 
 
 @app.get("/health")
