@@ -7,3 +7,10 @@ const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname
  * Deployed builds call the public Cloud Run API.
  */
 export const API_BASE_URL = isLocalHost ? '' : CLOUD_RUN_API;
+
+/**
+ * The Copilot Host is a separate service. Leave this empty when a reverse
+ * proxy exposes it at the same origin; set window.STOCKFLOW_COPILOT_API_URL
+ * for a separately hosted Copilot service.
+ */
+export const COPILOT_API_BASE_URL = (window as typeof window & { STOCKFLOW_COPILOT_API_URL?: string }).STOCKFLOW_COPILOT_API_URL ?? '';

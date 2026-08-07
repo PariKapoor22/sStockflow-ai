@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>StockFlow Copilot Acceptance Test</title>
+</head><body>
+<h1>StockFlow Copilot Acceptance Test</h1><p>Generated 08/07/2026 10:55:03</p>
+<table>
+<colgroup><col/><col/><col/><col/><col/><col/><col/><col/></colgroup>
+<tr><th>Category</th><th>Question</th><th>Status</th><th>AnswerType</th><th>Tools</th><th>Answer</th><th>Check</th><th>Seconds</th></tr>
+<tr><td>Basic inventory</td><td>How many products are currently available across all warehouses?</td><td>PASS</td><td>GROUNDED_EXPLANATION</td><td>search_products</td><td>The data provided does not contain information about the current availability of products across warehouses. It only lists product descriptions.</td><td>Answer returned</td><td>3.5</td></tr>
+<tr><td>Basic inventory</td><td>Show the current stock of Paracetamol 650 mg.</td><td>PASS</td><td>GROUNDED_EXPLANATION</td><td>get_current_inventory</td><td>The current stock data for &quot;Paracetamol 650 mg&quot; is unavailable. The provided data includes &quot;Crocin&quot; (generic name: Paracetamol) and &quot;Combiflam&quot; (generic name: Ibuprofen+Paracetamol), but does not specify the 650 mg strength for any Paracetamol product. This is read-only current StockFlow data.</td><td>Answer returned</td><td>5.4</td></tr>
+<tr><td>Basic inventory</td><td>Which warehouses have Paracetamol 650 mg?</td><td>PASS</td><td>GROUNDED_EXPLANATION</td><td>search_locations</td><td>The provided data does not contain information about products or inventory. Therefore, I cannot tell you which warehouses have Paracetamol 650 mg. This data is read-only current StockFlow data.</td><td>Answer returned</td><td>2.5</td></tr>
+<tr><td>Basic inventory</td><td>Show all batches available in the Chennai warehouse.</td><td>PASS</td><td>GROUNDED_EXPLANATION</td><td>search_locations</td><td>The city &#39;Chennai&#39; is not present in the authorized data for TEN-ACME-PHARMA. Therefore, I cannot show batches available in the Chennai warehouse.</td><td>Answer returned</td><td>5.3</td></tr>
+<tr><td>Basic inventory</td><td>Which warehouse has the highest inventory value?</td><td>PASS</td><td>GROUNDED_EXPLANATION</td><td>search_locations</td><td>The data provided does not contain information about inventory value for any warehouse. Therefore, I cannot determine which warehouse has the highest inventory value. The data is unavailable.</td><td>Answer returned</td><td>3.4</td></tr>
+</table>
+</body></html>

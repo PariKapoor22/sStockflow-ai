@@ -1,0 +1,52 @@
+﻿[
+    {
+        "Category":  "Basic inventory",
+        "Question":  "How many products are currently available across all warehouses?",
+        "Status":  "PASS",
+        "AnswerType":  "GROUNDED_EXPLANATION",
+        "Tools":  "search_products",
+        "Answer":  "The data provided does not contain information about the current availability of products across warehouses. It only lists product descriptions.",
+        "Check":  "Answer returned",
+        "Seconds":  3.5
+    },
+    {
+        "Category":  "Basic inventory",
+        "Question":  "Show the current stock of Paracetamol 650 mg.",
+        "Status":  "PASS",
+        "AnswerType":  "GROUNDED_EXPLANATION",
+        "Tools":  "get_current_inventory",
+        "Answer":  "The current stock data for \"Paracetamol 650 mg\" is unavailable. The provided data includes \"Crocin\" (generic name: Paracetamol) and \"Combiflam\" (generic name: Ibuprofen+Paracetamol), but does not specify the 650 mg strength for any Paracetamol product. This is read-only current StockFlow data.",
+        "Check":  "Answer returned",
+        "Seconds":  5.4
+    },
+    {
+        "Category":  "Basic inventory",
+        "Question":  "Which warehouses have Paracetamol 650 mg?",
+        "Status":  "PASS",
+        "AnswerType":  "GROUNDED_EXPLANATION",
+        "Tools":  "search_locations",
+        "Answer":  "The provided data does not contain information about products or inventory. Therefore, I cannot tell you which warehouses have Paracetamol 650 mg. This data is read-only current StockFlow data.",
+        "Check":  "Answer returned",
+        "Seconds":  2.5
+    },
+    {
+        "Category":  "Basic inventory",
+        "Question":  "Show all batches available in the Chennai warehouse.",
+        "Status":  "PASS",
+        "AnswerType":  "GROUNDED_EXPLANATION",
+        "Tools":  "search_locations",
+        "Answer":  "The city \u0027Chennai\u0027 is not present in the authorized data for TEN-ACME-PHARMA. Therefore, I cannot show batches available in the Chennai warehouse.",
+        "Check":  "Answer returned",
+        "Seconds":  5.3
+    },
+    {
+        "Category":  "Basic inventory",
+        "Question":  "Which warehouse has the highest inventory value?",
+        "Status":  "PASS",
+        "AnswerType":  "GROUNDED_EXPLANATION",
+        "Tools":  "search_locations",
+        "Answer":  "The data provided does not contain information about inventory value for any warehouse. Therefore, I cannot determine which warehouse has the highest inventory value. The data is unavailable.",
+        "Check":  "Answer returned",
+        "Seconds":  3.4
+    }
+]

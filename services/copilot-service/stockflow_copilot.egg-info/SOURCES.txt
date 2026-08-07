@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+stockflow_copilot/__init__.py
+stockflow_copilot/auth.py
+stockflow_copilot/config.py
+stockflow_copilot/main.py
+stockflow_copilot/mcp_client.py
+stockflow_copilot/models.py
+stockflow_copilot/prompts.py
+stockflow_copilot.egg-info/PKG-INFO
+stockflow_copilot.egg-info/SOURCES.txt
+stockflow_copilot.egg-info/dependency_links.txt
+stockflow_copilot.egg-info/requires.txt
+stockflow_copilot.egg-info/top_level.txt

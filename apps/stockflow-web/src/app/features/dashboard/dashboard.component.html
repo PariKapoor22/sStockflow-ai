@@ -147,7 +147,7 @@
       <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
         <div class="welcome-row">
           <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! <span>👋</span></h1><p>Here’s what’s happening with your inventory today.</p></div>
-          <button class="ask-ai">✦ <span>Ask StockFlow AI</span></button>
+          <button type="button" class="ask-ai" (click)="toggleCopilot($event)">✦ <span>Ask StockFlow AI</span></button>
         </div>
 
         <section class="kpi-grid">
@@ -179,19 +179,6 @@
               </div>
             </div>
           </article>
-
-          <aside class="card copilot-panel">
-            <div class="card-header"><h2><span class="sparkle">✦</span> StockFlow AI Assistant</h2><button>⋮</button></div>
-            <div class="messages">
-              <div *ngFor="let message of dashboard.copilotMessages" class="message" [class.user]="message.role === 'user'">
-                <div>{{ message.text }}</div><small>{{ message.timestamp }}</small>
-              </div>
-            </div>
-            <form class="copilot-input" (ngSubmit)="sendCopilotMessage()">
-              <input [(ngModel)]="copilotInput" name="copilotInput" placeholder="Ask anything about inventory...">
-              <button type="submit">➤</button>
-            </form>
-          </aside>
 
           <article class="card chart-card demand-card">
             <div class="card-header"><h2>Demand Forecast <small>(Current deterministic baseline)</small></h2><a (click)="selectView('demand')">View Full Forecast</a></div>
@@ -612,6 +599,55 @@
     </section>
   </main>
 </div>
+
+<button
+  type="button"
+  class="copilot-launcher"
+  [class.open]="copilotOpen"
+  [attr.aria-expanded]="copilotOpen"
+  aria-label="Open StockFlow Copilot"
+  (click)="toggleCopilot($event)"
+>
+  <span class="copilot-launcher__glow"></span>
+  <span class="copilot-launcher__mark">✦</span>
+</button>
+
+<section
+  *ngIf="copilotOpen"
+  class="copilot-popover"
+  role="dialog"
+  aria-modal="false"
+  aria-label="StockFlow Copilot"
+  (click)="$event.stopPropagation()"
+>
+  <header class="copilot-popover__header">
+    <div class="copilot-popover__identity">
+      <span class="copilot-popover__logo">✦</span>
+      <div><strong>StockFlow Copilot</strong><small>Grounded inventory intelligence</small></div>
+    </div>
+    <button type="button" class="copilot-popover__close" aria-label="Close StockFlow Copilot" (click)="closeCopilot($event)">×</button>
+  </header>
+
+  <div class="copilot-popover__status"><span></span> Read-only · tenant-scoped answers</div>
+
+  <div class="copilot-popover__messages" #copilotMessages role="log" aria-live="polite">
+    <div *ngFor="let message of data?.copilotMessages" class="message" [class.user]="message.role === 'user'">
+      <div>{{ message.text }}</div><small>{{ message.timestamp }}</small>
+    </div>
+    <div class="copilot-typing" *ngIf="copilotLoading"><span></span><span></span><span></span> Checking StockFlow data…</div>
+  </div>
+
+  <div class="copilot-suggestions" *ngIf="!copilotLoading && (data?.copilotMessages?.length ?? 0) < 3">
+    <button type="button" (click)="useCopilotSuggestion('Which inventory is at the highest expiry risk?')">Highest expiry risk</button>
+    <button type="button" (click)="useCopilotSuggestion('Which medicines may stock out this week?')">Stockout risks</button>
+    <button type="button" (click)="useCopilotSuggestion('Where is excess stock available for transfer?')">Transfer options</button>
+  </div>
+
+  <form class="copilot-popover__input" (ngSubmit)="sendCopilotMessage()">
+    <input [(ngModel)]="copilotInput" name="copilotInput" autocomplete="off" placeholder="Ask about inventory, expiry or routes…" [disabled]="copilotLoading">
+    <button type="submit" aria-label="Send message" [disabled]="copilotLoading || !copilotInput.trim()">➤</button>
+  </form>
+</section>
 
 <ng-template #dashboardLoadingState>
   <div class="loading-state"><div class="spinner"></div><p *ngIf="!error">Loading StockFlow data…</p><p *ngIf="error">{{ error }}</p></div>

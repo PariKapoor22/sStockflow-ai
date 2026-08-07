@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+google-genai
+mcp<2,>=1.27
+httpx
+pydantic
+pyjwt[crypto]
+python-dotenv
