@@ -1,7 +1,17 @@
 from mcp.server.fastmcp import FastMCP
 from .common import CORE_API, get_json
+from .domain_engine import answer_question
 
 mcp = FastMCP("StockFlow Data MCP", host="127.0.0.1", port=8201, stateless_http=True, json_response=True)
+
+@mcp.tool()
+def answer_stockflow_question(question: str, tenant_id: str, selected_warehouse_id: str = "", selected_sku_id: str = "") -> dict:
+    """Resolve and answer a StockFlow business question using live tenant APIs.
+
+    Owns product/location resolution, aggregations, risk and forecast evidence,
+    replenishment policy, route/carbon assumptions, and read-only safeguards.
+    """
+    return answer_question(question, tenant_id, selected_warehouse_id, selected_sku_id)
 
 @mcp.tool()
 def get_inventory_summary() -> dict:
