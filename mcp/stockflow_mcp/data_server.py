@@ -46,6 +46,43 @@ def get_data_freshness() -> dict:
     overview = get_json(f"{CORE_API}/api/v1/dashboard/overview")
     return {"sourceSystem": "StockFlow Core API", "asOf": overview.get("asOf") if isinstance(overview, dict) else None, "tenantId": "server-scoped"}
 
+@mcp.tool()
+def get_demand_summary(window_days: int = 30) -> dict:
+    """Returns tenant-scoped historical demand totals for the requested window."""
+    return get_json(f"{CORE_API}/api/v1/analytics/demand/summary", {"windowDays": window_days})
+
+@mcp.tool()
+def get_demand_by_sku(window_days: int = 30, limit: int = 100) -> list | dict:
+    """Returns actual demand by SKU for ranking and planning."""
+    return get_json(f"{CORE_API}/api/v1/analytics/demand/skus", {"windowDays": window_days, "limit": limit})
+
+@mcp.tool()
+def get_latest_forecasts(warehouse_id: str = "", sku_id: str = "", limit: int = 100) -> list | dict:
+    """Returns latest persisted forecasts with horizon, confidence and model evidence."""
+    params = {key: value for key, value in {"warehouseId": warehouse_id, "skuId": sku_id, "limit": limit}.items() if value != ""}
+    return get_json(f"{CORE_API}/api/v1/forecasts/latest", params)
+
+@mcp.tool()
+def get_forecast_summary() -> dict:
+    """Returns the latest forecast run summary and confidence distribution."""
+    return get_json(f"{CORE_API}/api/v1/forecasts/summary")
+
+@mcp.tool()
+def get_forecast_accuracy() -> dict:
+    """Returns latest forecast accuracy metrics."""
+    return get_json(f"{CORE_API}/api/v1/forecasts/accuracy-summary")
+
+@mcp.tool()
+def get_forecast_diagnostics(warehouse_id: str = "", sku_id: str = "", limit: int = 100) -> list | dict:
+    """Returns model eligibility, evidence and diagnostic reasons."""
+    params = {key: value for key, value in {"warehouseId": warehouse_id, "skuId": sku_id, "limit": limit}.items() if value != ""}
+    return get_json(f"{CORE_API}/api/v1/forecasts/diagnostics", params)
+
+@mcp.tool()
+def get_stockout_projections(limit: int = 100) -> list | dict:
+    """Returns products with forecasted stockout dates."""
+    return get_json(f"{CORE_API}/api/v1/forecasts/stockout-projections", {"limit": limit})
+
 @mcp.resource("stockflow://dashboard/overview")
 def dashboard_overview() -> str:
     """Dashboard overview resource for the current authorised tenant."""

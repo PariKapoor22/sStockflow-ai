@@ -35,3 +35,9 @@ class MCPHub:
     @property
     def tool_names(self) -> list[str]:
         return [tool for item in self.connections for tool in item.tool_names]
+
+    async def call_tool(self, tool_name: str, arguments: dict):
+        for connection in self.connections:
+            if tool_name in connection.tool_names:
+                return await connection.session.call_tool(tool_name, arguments=arguments)
+        raise LookupError(f"MCP tool is not connected: {tool_name}")
