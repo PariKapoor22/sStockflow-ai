@@ -15,14 +15,16 @@ def auth_headers(tenant_id: str | None = None, access_token: str | None = None) 
         headers["Authorization"] = f"Bearer {token}"
     return headers
 
-def get_json(url: str, params: dict | None = None, tenant_id: str | None = None, access_token: str | None = None) -> dict | list:
+def get_json(url: str, params: dict | None = None, tenant_id: str | None = None, access_token: str | None = None, extra_headers: dict[str, str] | None = None) -> dict | list:
     with httpx.Client(timeout=10) as client:
-        response = client.get(url, headers=auth_headers(tenant_id, access_token), params=params)
+        headers = {**auth_headers(tenant_id, access_token), **(extra_headers or {})}
+        response = client.get(url, headers=headers, params=params)
         response.raise_for_status()
         return response.json()
 
-def post_json(url: str, payload: dict, tenant_id: str | None = None, access_token: str | None = None) -> dict | list:
+def post_json(url: str, payload: dict, tenant_id: str | None = None, access_token: str | None = None, extra_headers: dict[str, str] | None = None) -> dict | list:
     with httpx.Client(timeout=20) as client:
-        response = client.post(url, headers=auth_headers(tenant_id, access_token), json=payload)
+        headers = {**auth_headers(tenant_id, access_token), **(extra_headers or {})}
+        response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()

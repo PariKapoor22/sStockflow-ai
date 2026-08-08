@@ -43,7 +43,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Phase 3 Increment 5B.1 | Calibration, diagnostics, daily/weekly selection | Complete and verified |
 | Phase 3 Increment 5C | Forecast scheduling, retries, monitoring, governance | Next |
 | Increment 6 | Replenishment and transfer optimization | Planned |
-| Increment 7 | Gemini inventory agent and MCP orchestration | Planned |
+| Increment 7 | Gemini inventory agent and MCP orchestration | In progress: grounded read-only answers and human-gated Action MCP |
 
 ---
 
@@ -668,10 +668,24 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Forecast accuracy degradation alerts are not implemented.
 - Routes and sustainability now call the dedicated FastAPI calculation service. The current solver is an explainable deterministic prototype; live traffic, road-network matrices and OR-Tools VRP remain future work.
 - Users & Roles remains a frontend preview; the secured tenant membership and role-assignment APIs are deployed, but the UI is not connected to them yet.
-- Purchase orders and stock transfers are not created automatically.
+- Transfer and purchase proposals can be persisted and independently approved, but approval does not execute inventory movement, dispatch a vehicle or place a supplier order.
 - Supabase JWT validation and tenant RBAC are deployed for the Core API and Copilot. The Carbon API still requires the same JWT membership enforcement before all operational services share one security boundary.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
 - The MCP Copilot is deployed. Gemini fallback requires `GEMINI_API_KEY` to be configured on the Cloud Run Copilot service.
+
+### Human-gated Action API
+
+Phase 2 adds a tenant-scoped proposal workflow under `/api/v1/actions`:
+
+- `POST /transfers` and `POST /purchases` create `DRAFT` proposals and require an `Idempotency-Key` header.
+- `POST /proposals/{id}/submit` moves a draft to `PENDING_APPROVAL`.
+- `POST /proposals/{id}/approve` and `/reject` require the `PROPOSAL_APPROVE` permission.
+- The proposer cannot approve or reject their own proposal.
+- Duplicate open proposals, cross-tenant records and out-of-scope warehouses are rejected.
+- Every lifecycle transition is appended to proposal history.
+- Action MCP tools wrap these APIs but never execute a transfer or purchase.
+
+Lifecycle: `DRAFT -> PENDING_APPROVAL -> APPROVED | REJECTED`, with cancellation allowed before review.
 
 ---
 

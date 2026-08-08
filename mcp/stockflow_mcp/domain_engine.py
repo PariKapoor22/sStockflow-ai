@@ -249,7 +249,7 @@ def answer_question(question: str, tenant_id: str, access_token: str = "", selec
     if any(term in q for term in ("approve yourself", "approve it yourself", "bypass approval", "without approval", "execute immediately", "transfer immediately")):
         return result("I cannot approve or execute my own recommendation. An authorised human must review it.", "policy.approval", ["human_approval_guard"], warnings=["No action was executed."])
     if any(term in q for term in ("create a transfer proposal", "submit this proposal", "approval status")):
-        return result("The current system is read-only. Proposal persistence and approval status require the planned Action API and approval tables.", "action.unavailable", ["action_capability_guard"], warnings=["No action was executed."])
+        return result("StockFlow now has a human-gated Action API for transfer and purchase proposals. This chat remains read-only until the explicit proposal form supplies the SKU, quantity, warehouses, reason and idempotency key; use the proposal workflow to create, submit or review an action. A proposer cannot approve their own proposal.", "action.requires_workflow", ["action_capability_guard"], warnings=["No action was executed from chat."])
 
     warehouses = get_json(f"{CORE_API}/api/v1/warehouses", tenant_id=tenant_id, access_token=access_token)
     skus = get_json(f"{CORE_API}/api/v1/skus", tenant_id=tenant_id, access_token=access_token)
@@ -262,7 +262,7 @@ def answer_question(question: str, tenant_id: str, access_token: str = "", selec
         sku = next((row for row in skus if row.get("skuId") == selected_sku_id), None)
 
     if "approved transfer" in q and ("sustainability" in q or "impact" in q):
-        return result("Approved-transfer sustainability totals are unavailable because the read-only prototype has no persisted Action API or approved-transfer ledger.", "sustainability.approved_unavailable", ["action_capability_guard"], warnings=["No value was inferred."])
+        return result("Proposal approval is now persisted, but an approved-transfer execution ledger is not yet implemented. Sustainability totals therefore include calculated recommendations, not proof that a shipment was executed.", "sustainability.execution_unavailable", ["action_capability_guard"], warnings=["No executed-shipment value was inferred."])
     if any(term in q for term in ("route", "vehicle", "carbon", "co2", "emission", "combined deliver", "fastest", "cheapest")):
         return _route_answer(q, tenant_id, access_token)
     if "forecast" in q or "predicted demand" in q or "prediction" in q:

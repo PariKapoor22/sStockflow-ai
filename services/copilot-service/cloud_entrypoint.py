@@ -36,9 +36,13 @@ def main() -> None:
         subprocess.Popen([sys.executable, "-m", "stockflow_mcp.data_server"]),
         subprocess.Popen([sys.executable, "-m", "stockflow_mcp.intelligence_server"]),
     ]
+    if os.getenv("STOCKFLOW_ENABLE_ACTIONS", "false").lower() == "true":
+        child_processes.append(subprocess.Popen([sys.executable, "-m", "stockflow_mcp.action_server"]))
     try:
         wait_for_port(8201)
         wait_for_port(8202)
+        if os.getenv("STOCKFLOW_ENABLE_ACTIONS", "false").lower() == "true":
+            wait_for_port(8203)
         uvicorn.run(
             "stockflow_copilot.main:app",
             host="0.0.0.0",

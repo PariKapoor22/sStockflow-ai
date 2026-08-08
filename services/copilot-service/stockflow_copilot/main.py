@@ -88,7 +88,7 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
         tools = [str(item) for item in domain_result.get("toolsUsed", ["answer_stockflow_question"])]
         warnings = [str(item) for item in domain_result.get("warnings", [])]
         warnings.append("Read-only answer; no inventory action was executed.")
-        answer_type = "NO_DATA" if domain_result.get("intent") in ("forecast.no_data", "action.unavailable", "clarification.required") else "GROUNDED_EXPLANATION"
+        answer_type = "NO_DATA" if domain_result.get("intent") in ("forecast.no_data", "action.requires_workflow", "clarification.required") else "GROUNDED_EXPLANATION"
         return ChatResponse(
             answer=answer,
             answerType=answer_type,
