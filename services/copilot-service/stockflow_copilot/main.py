@@ -82,6 +82,13 @@ def _match_product(question: str, products: list[dict]) -> dict | None:
 
 def _plain_api_answer(tool_name: str, data, question: str = "") -> str:
     rows = _items(data)
+    if tool_name == "get_inventory_summary" and isinstance(data, dict):
+        kpis = _items(data.get("kpis", []))
+        inventory_kpi = next((item for item in kpis if item.get("key") == "inventoryValue"), None)
+        if inventory_kpi:
+            return (f"The overall inventory value is {inventory_kpi.get('value')}. "
+                    f"Source: StockFlow PostgreSQL dashboard snapshot, as of {data.get('asOf', 'unavailable')}.")
+        return "Current StockFlow dashboard summary:\n" + json.dumps(data, indent=2, default=str)[:6000]
     if not rows:
         if isinstance(data, dict) and data:
             return "Current StockFlow API result:\n" + json.dumps(data, indent=2, default=str)[:6000]
@@ -239,7 +246,9 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
         sku_id = _field(product or {}, "skuId", "sku_id", "SKU")
         if any(term in question for term in ("create a transfer proposal", "submit this proposal", "approval status")):
             return ChatResponse(answer="The current Copilot is read-only: proposal creation, submission and approval-status persistence are not yet exposed by an Action API. No action was executed.", answerType="NO_DATA", toolsUsed=["action_capability_guard"], warnings=["A tenant-scoped Action API and approval database are required for this operation."])
-        if "how fresh" in question or "last updated" in question:
+        if any(term in question for term in ("overall inventory value", "total inventory value", "inventory value overall")):
+            tool_name, tool_args = "get_inventory_summary", {}
+        elif "how fresh" in question or "last updated" in question:
             tool_name, tool_args = "get_data_freshness", {}
         elif "forecast confidence" in question or "accuracy" in question:
             tool_name, tool_args = "get_forecast_accuracy", {}
