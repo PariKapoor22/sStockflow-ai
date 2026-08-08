@@ -97,6 +97,33 @@ def _plain_api_answer(tool_name: str, data) -> str:
     return f"StockFlow API returned {len(rows)} matching record(s):\n" + json.dumps(rows[:20], indent=2, default=str)[:6000]
 
 
+def _policy_answer(question: str) -> tuple[str, str] | None:
+    """Enforce security and approval rules before any model or MCP call."""
+    normalised = _normalise(question)
+    secret_terms = (
+        "api key", "apikey", "access token", "refresh token", "password",
+        "secret key", "private key", "service role key", "database url",
+        "connection string", "credential",
+    )
+    if any(term in normalised for term in secret_terms):
+        return (
+            "I can’t reveal API keys, tokens, passwords, private keys, connection strings, or other credentials. "
+            "An authorised administrator can configure secrets in the server’s secret manager or deployment environment.",
+            "security_policy_guard",
+        )
+    approval_terms = (
+        "approve yourself", "approve it yourself", "approve proposal", "self approve",
+        "bypass approval", "skip approval", "without approval", "execute immediately",
+        "transfer immediately", "place the order", "submit the order",
+    )
+    if any(term in normalised for term in approval_terms):
+        return (
+            "I can’t approve or execute my own recommendation. StockFlow keeps recommendations read-only until an authorised human reviews and approves the proposal.",
+            "human_approval_guard",
+        )
+    return None
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await hub.connect()
@@ -119,6 +146,16 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
     correlation_id = str(uuid4())
     try:
         question = payload.message.lower()
+        policy_result = _policy_answer(question)
+        if policy_result:
+            answer, guard_name = policy_result
+            return ChatResponse(
+                answer=answer,
+                answerType="GROUNDED_EXPLANATION",
+                toolsUsed=[guard_name],
+                evidence=[],
+                warnings=["No MCP tool was called and no action was executed."],
+            )
         data_session = hub.sessions[0]
 
         locations_result = await data_session.call_tool("search_locations", arguments={})
