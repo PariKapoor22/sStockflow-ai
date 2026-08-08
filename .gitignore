@@ -40,6 +40,7 @@ auth.json
 *.log
 npm-debug.log*
 *.egg-info/
+*.db
 tools/reports/
 
 # Specific app folders

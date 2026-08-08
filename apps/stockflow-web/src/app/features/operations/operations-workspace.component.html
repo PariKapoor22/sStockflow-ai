@@ -97,7 +97,7 @@
             <label><span>Optimization objective</span><select [(ngModel)]="routeObjective"><option>Balanced cost and carbon</option><option>Lowest transport cost</option><option>Lowest carbon impact</option><option>Fastest service recovery</option></select></label>
             <label><span>Vehicle eligibility</span><select [(ngModel)]="vehicleType"><option>All eligible vehicles</option><option>Electric and CNG preferred</option><option>Cold-chain vehicles only</option><option>High-capacity fleet only</option></select></label>
             <div class="constraint-list"><span><i>✓</i>Respect vehicle capacity</span><span><i>✓</i>Protect critical delivery priority</span><span><i>✓</i>Check cold-chain compatibility</span><span><i>✓</i>Keep human approval required</span></div>
-            <button type="button" class="optimize-button" (click)="optimizeRoutes()">Recalculate route candidates</button>
+            <button type="button" class="optimize-button" [disabled]="routeOptimizationRunning" (click)="optimizeRoutes()">{{ routeOptimizationRunning ? 'Calculating…' : 'Recalculate route candidates' }}</button>
             <small class="method-note">Prototype calculations use representative lanes. Production optimization requires live road, fleet and dispatch data.</small>
           </div>
         </aside>

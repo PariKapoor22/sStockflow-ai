@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
+import { CarbonApiService } from '../../core/services/carbon-api.service';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -105,6 +106,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   @Input() searchQuery = '';
 
   readonly prototype = inject(PrototypeStateService);
+  private readonly carbonApi = inject(CarbonApiService);
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
@@ -112,6 +114,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   vehicleType = 'All eligible vehicles';
   selectedRouteId = 'RTE-301';
   toastMessage = '';
+  routeOptimizationRunning = false;
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -370,16 +373,45 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   }
 
   optimizeRoutes(): void {
-    this.routePlans.forEach(item => {
-      if (item.status === 'Draft') item.status = 'Optimized';
+    if (this.routeOptimizationRunning) return;
+    this.routeOptimizationRunning = true;
+    const candidates = this.routePlans.map(({ id, lane, stops, vehicle, loadKg, capacityKg, baselineKm, priority, status }) => ({
+      id, lane, stops, vehicle, loadKg, capacityKg, baselineKm, priority, status
+    }));
+    this.carbonApi.optimiseRoutes(this.routeObjective, this.vehicleType, candidates).subscribe({
+      next: response => {
+        response.routes.forEach(result => {
+          const route = this.routePlans.find(item => item.id === result.id);
+          if (!route) return;
+          Object.assign(route, {
+            optimizedKm: result.optimizedKm,
+            duration: result.duration,
+            costInr: result.costInr,
+            co2Kg: result.co2Kg,
+            co2SavedKg: result.co2SavedKg,
+            status: result.status
+          });
+          this.prototype.patchRecord('routePlans', route.id, { ...route }, {
+            module: 'Route Optimization',
+            title: `${route.id} recalculated`,
+            detail: `${route.lane}: ${route.optimizedKm} km and ${route.co2Kg} kg CO₂e using the ${response.solver}.`,
+            tone: 'info'
+          });
+        });
+        this.prototype.addActivity({
+          module: 'Route Optimization',
+          title: 'Backend route candidates recalculated',
+          detail: `${response.routes.length} routes ranked using ${response.objective.toLowerCase()}.`,
+          tone: 'success'
+        });
+        this.routeOptimizationRunning = false;
+        this.showToast(`${response.routes.length} routes recalculated by the carbon and route backend.`);
+      },
+      error: () => {
+        this.routeOptimizationRunning = false;
+        this.showToast('The route and carbon backend could not be reached. Existing route values were preserved.');
+      }
     });
-    this.prototype.addActivity({
-      module: 'Route Optimization',
-      title: 'Route candidates recalculated',
-      detail: `${this.routePlans.length} routes ranked using ${this.routeObjective.toLowerCase()} and ${this.vehicleType.toLowerCase()}.`,
-      tone: 'info'
-    });
-    this.showToast(`${this.routePlans.length} route candidates recalculated and recorded.`);
   }
 
   advanceRoute(item: RoutePlan): void {

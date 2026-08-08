@@ -11,17 +11,18 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Component | URL | Current scope |
 |---|---|---|
 | Frontend | https://stockflow-ai-oveyj.pages.dev | Supabase-authenticated Angular application |
-| Backend API | https://stockflow-core-api-100044030673.asia-southeast1.run.app | Phase 2 cloud baseline |
+| Backend API | https://stockflow-core-api-100044030673.asia-southeast1.run.app | Inventory, risk, forecasting and warehouse-scoped dashboard API |
+| Route and carbon API | https://stockflow-carbon-100044030673.asia-southeast1.run.app | Explainable route, capacity, cost and prototype CO2e calculations |
 | Health check | https://stockflow-core-api-100044030673.asia-southeast1.run.app/actuator/health | Cloud API health |
 
-> Phase 3 forecasting increments are verified locally. Deploy the latest backend and frontend builds before treating the cloud URLs as the Phase 3 release.
+> Phase 3 forecasting increments and the integrated route/carbon backend are verified. Advanced OR-Tools vehicle routing remains a future solver phase.
 
 ---
 
 ## Current release status
 
-**Current development stage:** Phase 3 — Forecasting  
-**Latest completed backend increment:** Increment 5B.1 — Forecast Calibration and Diagnostics  
+**Current development stage:** Phase 3 — Forecasting
+**Latest completed backend increment:** Increment 5B.1 — Forecast Calibration and Diagnostics
 **Next planned increment:** Increment 5C — Forecast Operations and Governance
 
 | Phase / increment | Scope | Status |
@@ -350,7 +351,8 @@ Source control    -> GitHub
 |---|---|
 | Frontend | Angular, TypeScript |
 | Authentication | Supabase Auth and `@supabase/supabase-js` |
-| Backend | Kotlin, Spring Boot |
+| Core backend | Kotlin, Spring Boot |
+| Route and carbon backend | Python, FastAPI, Pydantic, geopy |
 | Database | PostgreSQL |
 | Database migrations | Flyway |
 | Persistence | Spring Data JPA, JdbcTemplate |
@@ -358,7 +360,7 @@ Source control    -> GitHub
 | API contracts | REST, OpenAPI |
 | Frontend hosting | Cloudflare Pages |
 | Backend hosting | Google Cloud Run |
-| Cloud database | Neon PostgreSQL |
+| Cloud database | Supabase PostgreSQL |
 | Secret storage | Google Secret Manager |
 | Source control | GitHub |
 | Future AI layer | Gemini on Google Cloud |
@@ -405,6 +407,7 @@ Verified local ports:
 |---|---:|
 | Angular frontend | 4200 |
 | Spring Boot API | 8080 |
+| Route and carbon service | 8400 |
 | PostgreSQL | 5433 |
 
 ---
@@ -663,12 +666,12 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Forecast operations are not yet scheduled.
 - Retry, cancellation, and failure-recovery workflows are not implemented.
 - Forecast accuracy degradation alerts are not implemented.
-- Operations UI workspaces are implemented; optimization and transactional backend endpoints are not yet connected.
+- Routes and sustainability now call the dedicated FastAPI calculation service. The current solver is an explainable deterministic prototype; live traffic, road-network matrices and OR-Tools VRP remain future work.
 - Users & Roles and Settings are implemented as interactive UI previews; secured admin APIs and settings persistence are not yet connected.
 - Purchase orders and stock transfers are not created automatically.
-- Frontend authentication is deployed; backend Supabase JWT validation and authenticated tenant authorization are still required.
+- Supabase authentication and JWT validation are deployed for the Copilot. Full role-based authorization across every operational service remains required.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
-- The Gemini agent is not yet implemented.
+- The MCP Copilot is deployed. Gemini fallback requires `GEMINI_API_KEY` to be configured on the Cloud Run Copilot service.
 
 ---
 
@@ -813,7 +816,3 @@ Copyright © 2026 Veyjval B. All rights reserved.
 ## License
 
 Add the intended open-source or commercial license before public distribution.
-#   S t o c k f l o w - a i .  
- #   S t o c k f l o w - a i .  
- #   s t o c k f l o w - a i  
- 
