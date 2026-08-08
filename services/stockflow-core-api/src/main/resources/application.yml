@@ -38,6 +38,9 @@ management:
 
 stockflow:
   tenant-header: X-Tenant-ID
+  security:
+    enabled: ${STOCKFLOW_SECURITY_ENABLED:false}
+    bootstrap-first-user-admin: ${STOCKFLOW_BOOTSTRAP_FIRST_USER_ADMIN:false}
   intelligence:
     stockout-cover-days: 14
     excess-cover-days: 90

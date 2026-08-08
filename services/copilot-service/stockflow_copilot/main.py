@@ -76,6 +76,7 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
         call_result = await hub.call_tool("answer_stockflow_question", {
             "question": payload.message,
             "tenant_id": context.tenant_id,
+            "access_token": context.access_token or "",
             "selected_warehouse_id": payload.selectedWarehouseId or "",
             "selected_sku_id": payload.selectedSkuId or "",
         })

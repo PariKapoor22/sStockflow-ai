@@ -8,20 +8,21 @@ CARBON_API = os.getenv("STOCKFLOW_CARBON_API_URL", "http://127.0.0.1:8400")
 TENANT_ID = os.getenv("STOCKFLOW_TENANT_ID", "TEN-ACME-PHARMA")
 ACCESS_TOKEN = os.getenv("STOCKFLOW_ACCESS_TOKEN", "")
 
-def auth_headers(tenant_id: str | None = None) -> dict[str, str]:
+def auth_headers(tenant_id: str | None = None, access_token: str | None = None) -> dict[str, str]:
     headers = {"X-Tenant-ID": tenant_id or TENANT_ID}
-    if ACCESS_TOKEN:
-        headers["Authorization"] = f"Bearer {ACCESS_TOKEN}"
+    token = access_token or ACCESS_TOKEN
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     return headers
 
-def get_json(url: str, params: dict | None = None, tenant_id: str | None = None) -> dict | list:
+def get_json(url: str, params: dict | None = None, tenant_id: str | None = None, access_token: str | None = None) -> dict | list:
     with httpx.Client(timeout=10) as client:
-        response = client.get(url, headers=auth_headers(tenant_id), params=params)
+        response = client.get(url, headers=auth_headers(tenant_id, access_token), params=params)
         response.raise_for_status()
         return response.json()
 
-def post_json(url: str, payload: dict, tenant_id: str | None = None) -> dict | list:
+def post_json(url: str, payload: dict, tenant_id: str | None = None, access_token: str | None = None) -> dict | list:
     with httpx.Client(timeout=20) as client:
-        response = client.post(url, headers=auth_headers(tenant_id), json=payload)
+        response = client.post(url, headers=auth_headers(tenant_id, access_token), json=payload)
         response.raise_for_status()
         return response.json()

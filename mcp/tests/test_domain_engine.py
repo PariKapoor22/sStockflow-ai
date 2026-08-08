@@ -16,7 +16,7 @@ BATCHES = [
 OVERVIEW = {"asOf": "2026-07-01", "kpis": [{"key": "inventoryValue", "value": "INR 1,500.00"}]}
 
 
-def fake_get(url, params=None, tenant_id=None):
+def fake_get(url, params=None, tenant_id=None, access_token=None):
     if url.endswith("/warehouses"):
         return WAREHOUSES
     if url.endswith("/skus"):

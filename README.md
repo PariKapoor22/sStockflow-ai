@@ -99,7 +99,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 - Displays the authenticated user's profile metadata and provides sign-out
 - Adds the Supabase user access token to backend API requests as `Authorization: Bearer <token>`
 
-The Angular authentication boundary is deployed. The backend must still validate the Supabase JWT and verify that the authenticated user is authorized for the requested `X-Tenant-ID` before production access control is complete.
+The Core API and Copilot validate Supabase JWTs. The Core API verifies active tenant membership before trusting `X-Tenant-ID`, applies role permissions to write operations, supports optional warehouse scopes, and exposes `/api/v1/security/me` plus administrator membership management APIs. On a new tenant, the first authenticated member can be bootstrapped as administrator only when the explicit deployment flag is enabled.
 
 ---
 
@@ -667,9 +667,9 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Retry, cancellation, and failure-recovery workflows are not implemented.
 - Forecast accuracy degradation alerts are not implemented.
 - Routes and sustainability now call the dedicated FastAPI calculation service. The current solver is an explainable deterministic prototype; live traffic, road-network matrices and OR-Tools VRP remain future work.
-- Users & Roles and Settings are implemented as interactive UI previews; secured admin APIs and settings persistence are not yet connected.
+- Users & Roles remains a frontend preview; the secured tenant membership and role-assignment APIs are deployed, but the UI is not connected to them yet.
 - Purchase orders and stock transfers are not created automatically.
-- Supabase authentication and JWT validation are deployed for the Copilot. Full role-based authorization across every operational service remains required.
+- Supabase JWT validation and tenant RBAC are deployed for the Core API and Copilot. The Carbon API still requires the same JWT membership enforcement before all operational services share one security boundary.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
 - The MCP Copilot is deployed. Gemini fallback requires `GEMINI_API_KEY` to be configured on the Cloud Run Copilot service.
 
@@ -757,6 +757,8 @@ Planned:
 - Tenant ID on every business operation
 - No secret or `service_role` credentials committed to source control; the browser-safe Supabase publishable key is intentionally public
 - Supabase user JWT validation at the backend boundary before trusting authenticated requests
+- Active database-backed tenant membership and role permissions
+- First-user administrator bootstrap disabled unless explicitly configured
 - Human approval for high-value actions
 - Read-only AI tools by default
 - Complete forecast and recommendation audit

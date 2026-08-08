@@ -1,0 +1,61 @@
+package com.stockflow.security
+
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.springframework.http.MediaType
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import org.springframework.stereotype.Component
+import org.springframework.web.filter.OncePerRequestFilter
+import java.time.Instant
+
+@Component
+class TenantAuthorizationFilter(
+    private val tenantSecurityService: TenantSecurityService
+) : OncePerRequestFilter() {
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean =
+        request.method.equals("OPTIONS", true) || request.requestURI.startsWith("/actuator/") || request.requestURI == "/error"
+
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain) {
+        val authentication = SecurityContextHolder.getContext().authentication as? JwtAuthenticationToken
+        if (authentication == null) {
+            filterChain.doFilter(request, response)
+            return
+        }
+        val tenantId = request.getHeader("X-Tenant-ID").orEmpty().trim()
+        try {
+            val context = tenantSecurityService.authorize(authentication.token, tenantId, requiredPermission(request))
+            request.setAttribute(TENANT_ACCESS_ATTRIBUTE, context)
+            filterChain.doFilter(request, response)
+        } catch (error: IllegalArgumentException) {
+            forbidden(response, "MISSING_TENANT", error.message ?: "X-Tenant-ID is required")
+        } catch (error: TenantAccessDeniedException) {
+            forbidden(response, "TENANT_ACCESS_DENIED", error.message ?: "Tenant access denied")
+        }
+    }
+
+    private fun requiredPermission(request: HttpServletRequest): String? {
+        val path = request.requestURI
+        if (path.startsWith("/api/v1/security/memberships")) return "USER_MANAGE"
+        if (request.method.equals("GET", true)) return null
+        return when {
+            path.startsWith("/api/v1/imports") -> "IMPORT_MANAGE"
+            path == "/api/v1/forecasts/runs" && request.method.equals("POST", true) -> "FORECAST_RUN"
+            path.startsWith("/api/v1/forecasts/configuration") -> "FORECAST_RUN"
+            path.startsWith("/api/v1/security") -> "USER_MANAGE"
+            else -> "USER_MANAGE"
+        }
+    }
+
+    private fun forbidden(response: HttpServletResponse, code: String, message: String) {
+        response.status = HttpServletResponse.SC_FORBIDDEN
+        response.contentType = MediaType.APPLICATION_JSON_VALUE
+        val escaped = message.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+        response.writer.write("{\"timestamp\":\"${Instant.now()}\",\"status\":403,\"code\":\"$code\",\"message\":\"$escaped\"}")
+    }
+
+    companion object {
+        const val TENANT_ACCESS_ATTRIBUTE = "stockflowTenantAccess"
+    }
+}

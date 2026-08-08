@@ -1,4 +1,9 @@
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_JWT_ISSUER}
   datasource:
     url: ${STOCKFLOW_DB_URL}
     username: ${STOCKFLOW_DB_USERNAME}

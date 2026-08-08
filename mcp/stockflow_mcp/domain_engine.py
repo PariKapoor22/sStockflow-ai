@@ -122,13 +122,13 @@ def _inventory_answer(q: str, warehouses: list[dict], skus: list[dict], batches:
     return None
 
 
-def _forecast_answer(q: str, warehouse: dict | None, sku: dict | None, tenant_id: str) -> dict:
+def _forecast_answer(q: str, warehouse: dict | None, sku: dict | None, tenant_id: str, access_token: str) -> dict:
     params = {"limit": 100}
     if warehouse:
         params["warehouseId"] = warehouse["warehouseId"]
     if sku:
         params["skuId"] = sku["skuId"]
-    forecasts = get_json(f"{CORE_API}/api/v1/forecasts/latest", params, tenant_id)
+    forecasts = get_json(f"{CORE_API}/api/v1/forecasts/latest", params, tenant_id, access_token)
     if not forecasts:
         target = " / ".join(filter(None, [sku.get("skuName") if sku else None, warehouse.get("warehouseName") if warehouse else None])) or "that selection"
         return result(f"No persisted forecast exists for {target}. I will not invent a prediction.", "forecast.no_data", ["get_latest_forecasts"], warnings=["Create a forecast run for this product and warehouse first."])
@@ -222,14 +222,14 @@ def _transfer_answer(q: str, warehouses: list[dict], skus: list[dict], batches: 
     return result(answer, "transfer.recommend", ["get_current_inventory", "find_stockout_risks", "recommend_sustainable_transfer"], str(destination_risk.get("asOfDate") or ""), warnings, {"source": source, "destination": destination, "quantity": transferable, "sourceRemaining": remaining, "safetyStock": safety})
 
 
-def _route_answer(q: str, tenant_id: str) -> dict:
+def _route_answer(q: str, tenant_id: str, access_token: str) -> dict:
     quantity_match = re.search(r"(\d[\d,]*)\s*(?:units|kg)", q)
     load = float(quantity_match.group(1).replace(",", "")) if quantity_match else 900.0
     compare = any(term in q for term in ("compare", "fastest", "cheapest", "lowest carbon", "road vehicles"))
     vehicles = ["diesel", "cng", "electric", "petrol"] if compare else ["diesel"]
     routes = [{"id": f"copilot-{vehicle}", "lane": "Chennai to Bengaluru", "stops": ["Chennai", "Bengaluru"], "vehicle": vehicle, "loadKg": load, "capacityKg": 1500.0, "baselineKm": 350.0, "priority": "High", "status": "Draft"} for vehicle in vehicles]
     payload = {"objective": "Balanced cost and carbon", "vehicleType": "All eligible vehicles" if compare else "diesel", "routes": routes}
-    response = post_json(f"{CARBON_API}/api/v1/routes/optimise", payload, tenant_id)
+    response = post_json(f"{CARBON_API}/api/v1/routes/optimise", payload, tenant_id, access_token)
     route = response["routes"][0]
     answer = (f"Read-only Chennai–Bengaluru route candidate: {route['optimizedKm']} km, {route['duration']}, cost {money(float(route['costInr']))}, "
               f"emissions {route['co2Kg']} kg CO2e, saving {route['co2SavedKg']} kg CO2e. Load {route['loadKg']} kg of {route['capacityKg']} kg. "
@@ -242,7 +242,7 @@ def _route_answer(q: str, tenant_id: str) -> dict:
     return result(answer, "route.optimise", ["optimise_transfer_route"], warnings=warnings, data=response)
 
 
-def answer_question(question: str, tenant_id: str, selected_warehouse_id: str = "", selected_sku_id: str = "") -> dict:
+def answer_question(question: str, tenant_id: str, access_token: str = "", selected_warehouse_id: str = "", selected_sku_id: str = "") -> dict:
     q = normalise(question)
     if any(term in q for term in ("api key", "password", "access token", "secret key", "private key", "connection string", "credential")):
         return result("I cannot reveal credentials or secrets. Configure them only in the server secret manager.", "policy.secrets", ["security_policy_guard"], warnings=["No API was called."])
@@ -251,9 +251,9 @@ def answer_question(question: str, tenant_id: str, selected_warehouse_id: str = 
     if any(term in q for term in ("create a transfer proposal", "submit this proposal", "approval status")):
         return result("The current system is read-only. Proposal persistence and approval status require the planned Action API and approval tables.", "action.unavailable", ["action_capability_guard"], warnings=["No action was executed."])
 
-    warehouses = get_json(f"{CORE_API}/api/v1/warehouses", tenant_id=tenant_id)
-    skus = get_json(f"{CORE_API}/api/v1/skus", tenant_id=tenant_id)
-    overview = get_json(f"{CORE_API}/api/v1/dashboard/overview", tenant_id=tenant_id)
+    warehouses = get_json(f"{CORE_API}/api/v1/warehouses", tenant_id=tenant_id, access_token=access_token)
+    skus = get_json(f"{CORE_API}/api/v1/skus", tenant_id=tenant_id, access_token=access_token)
+    overview = get_json(f"{CORE_API}/api/v1/dashboard/overview", tenant_id=tenant_id, access_token=access_token)
     warehouse = resolve(q, warehouses, ("warehouseName", "city", "state", "warehouseId"))
     sku = resolve(q, skus, ("skuName", "skuId", "productId"))
     if not warehouse and selected_warehouse_id:
@@ -264,25 +264,25 @@ def answer_question(question: str, tenant_id: str, selected_warehouse_id: str = 
     if "approved transfer" in q and ("sustainability" in q or "impact" in q):
         return result("Approved-transfer sustainability totals are unavailable because the read-only prototype has no persisted Action API or approved-transfer ledger.", "sustainability.approved_unavailable", ["action_capability_guard"], warnings=["No value was inferred."])
     if any(term in q for term in ("route", "vehicle", "carbon", "co2", "emission", "combined deliver", "fastest", "cheapest")):
-        return _route_answer(q, tenant_id)
+        return _route_answer(q, tenant_id, access_token)
     if "forecast" in q or "predicted demand" in q or "prediction" in q:
-        return _forecast_answer(q, warehouse, sku, tenant_id)
+        return _forecast_answer(q, warehouse, sku, tenant_id, access_token)
 
     risks = None
     expiry = None
     is_transfer = any(term in q for term in ("transfer stock", "transfer instead", "source warehouse", "after the transfer", "recommend this transfer", "transfer recommendation"))
     if any(term in q for term in ("stockout", "stock out", "risk", "excess", "slow", "expir", "waste", "reorder", "purchase", "replenish", "why did you recommend", "evidence", "alternative recommendation", "incorrect")) or is_transfer:
-        risks = get_json(f"{CORE_API}/api/v1/risks/inventory", {"limit": 250}, tenant_id)
-        expiry = get_json(f"{CORE_API}/api/v1/risks/expiry", {"days": 60, "limit": 250}, tenant_id)
+        risks = get_json(f"{CORE_API}/api/v1/risks/inventory", {"limit": 250}, tenant_id, access_token)
+        expiry = get_json(f"{CORE_API}/api/v1/risks/expiry", {"days": 60, "limit": 250}, tenant_id, access_token)
     if is_transfer:
-        batches = get_json(f"{CORE_API}/api/v1/inventory/batches", tenant_id=tenant_id)
+        batches = get_json(f"{CORE_API}/api/v1/inventory/batches", tenant_id=tenant_id, access_token=access_token)
         return _transfer_answer(q, warehouses, skus, batches, risks or [], sku, warehouse)
     if any(term in q for term in ("reorder", "purchase", "replenish", "how many units")):
         return _replenishment_answer(q, risks or [], skus, sku)
     if risks is not None:
         return _risk_answer(q, risks, expiry or []) or result("No matching risk logic was found.", "risk.no_match", ["get_inventory_risks"])
 
-    batches = get_json(f"{CORE_API}/api/v1/inventory/batches", tenant_id=tenant_id)
+    batches = get_json(f"{CORE_API}/api/v1/inventory/batches", tenant_id=tenant_id, access_token=access_token)
     inventory = _inventory_answer(q, warehouses, skus, batches, overview)
     if inventory:
         return inventory
