@@ -25,6 +25,13 @@ def _mcp_text(result) -> str:
 
 
 def _mcp_json(result):
+    structured = getattr(result, "structuredContent", None)
+    if structured is None:
+        structured = getattr(result, "structured_content", None)
+    if structured is not None:
+        if isinstance(structured, dict) and set(structured) == {"result"}:
+            return structured["result"]
+        return structured
     text = _mcp_text(result).strip()
     try:
         return json.loads(text)
@@ -80,7 +87,7 @@ def _match_product(question: str, products: list[dict]) -> dict | None:
     return max(matches, key=lambda item: item[0])[1] if matches else None
 
 
-def _plain_api_answer(tool_name: str, data, question: str = "") -> str:
+def _plain_api_answer(tool_name: str, data, question: str = "", locations: list[dict] | None = None) -> str:
     rows = _items(data)
     if tool_name == "get_inventory_summary" and isinstance(data, dict):
         kpis = _items(data.get("kpis", []))
@@ -94,6 +101,23 @@ def _plain_api_answer(tool_name: str, data, question: str = "") -> str:
             return "Current StockFlow API result:\n" + json.dumps(data, indent=2, default=str)[:6000]
         return "No matching current records were returned by the StockFlow API."
     if tool_name == "get_current_inventory":
+        if "each warehouse" in question and "inventory value" in question or "warehouse wise inventory value" in question or "warehouse-wise inventory value" in question:
+            names = {
+                str(_field(location, "warehouseId", "warehouse_id", "warehouse")): str(_field(location, "warehouseName", "warehouse_name", "city"))
+                for location in (locations or [])
+            }
+            totals: dict[str, float] = {}
+            for row in rows:
+                warehouse_id = str(_field(row, "warehouseId", "warehouse_id"))
+                quantity = float(_field(row, "usableQuantity", "usable_quantity", "availableQuantity", "available_quantity") or 0)
+                unit_cost = float(_field(row, "unitCost", "unit_cost") or 0)
+                totals[warehouse_id] = totals.get(warehouse_id, 0) + quantity * unit_cost
+            if totals:
+                return "Usable inventory value by warehouse:\n" + "\n".join(
+                    f"- {names.get(warehouse_id, warehouse_id)}: INR {value:,.2f}"
+                    for warehouse_id, value in sorted(totals.items(), key=lambda item: item[1], reverse=True)
+                )
+            return "No warehouse inventory records were returned by the StockFlow API."
         if "how many products" in question:
             count = len({_field(row, "skuId", "sku_id") for row in rows if float(_field(row, "usableQuantity", "usable_quantity", "availableQuantity", "available_quantity") or 0) > 0})
             return f"{count} distinct products currently have usable stock across the returned warehouses."
@@ -302,7 +326,7 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
             response = await client.aio.models.generate_content(model=GEMINI_MODEL, contents=grounded_prompt, config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION, temperature=0.1))
             answer = response.text or "No readable answer was returned."
         else:
-            answer = _plain_api_answer(tool_name, evidence_data, question)
+            answer = _plain_api_answer(tool_name, evidence_data, question, locations)
 
         return ChatResponse(answer=answer, answerType="GROUNDED_EXPLANATION", toolsUsed=[tool_name], evidence=[Evidence(source="StockFlow Core API via Data MCP", asOf=datetime.now(timezone.utc).isoformat(), freshness="CURRENT", correlationId=correlation_id)], warnings=["Read-only answer; no inventory action was executed."])
     except Exception as exc:
