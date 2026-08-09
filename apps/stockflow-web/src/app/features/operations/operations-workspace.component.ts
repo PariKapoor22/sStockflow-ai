@@ -5,6 +5,8 @@ import { PrototypeStateService } from '../../core/services/prototype-state.servi
 import { CarbonApiService } from '../../core/services/carbon-api.service';
 import { ActionProposal, ProposalHistory, ProposalType } from '../../core/models/action.models';
 import { ActionProposalService } from '../../core/services/action-proposal.service';
+import { SkuView, WarehouseView } from '../../core/models/foundation.models';
+import { FoundationDataService } from '../../core/services/foundation-data.service';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -123,6 +125,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   readonly prototype = inject(PrototypeStateService);
   private readonly carbonApi = inject(CarbonApiService);
   private readonly actionApi = inject(ActionProposalService);
+  private readonly foundationApi = inject(FoundationDataService);
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
@@ -140,6 +143,8 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   selectedProposal?: ActionProposal;
   reviewComment = '';
   proposalForm: ProposalForm = this.emptyProposal('TRANSFER');
+  proposalWarehouses: WarehouseView[] = [];
+  proposalSkus: SkuView[] = [];
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -196,6 +201,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       Object.assign(record, this.prototype.recordPatch<SustainabilityRecord>('sustainability', record.location));
     });
     this.loadProposals();
+    this.loadProposalOptions();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -490,6 +496,11 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     });
   }
 
+  loadProposalOptions(): void {
+    this.foundationApi.warehouses().subscribe({ next: values => this.proposalWarehouses = values, error: () => undefined });
+    this.foundationApi.skus().subscribe({ next: values => this.proposalSkus = values, error: () => undefined });
+  }
+
   openProposalDialog(type: ProposalType): void {
     this.proposalForm = this.emptyProposal(type);
     this.selectedProposal = undefined;
@@ -580,8 +591,19 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     return ids[label] ?? label;
   }
 
-  private apiError(error: { error?: { message?: string; detail?: string }; message?: string }, fallback: string): string {
-    return error?.error?.message || error?.error?.detail || error?.message || fallback;
+  private apiError(error: { error?: unknown; message?: string; status?: number }, fallback: string): string {
+    const payload = error?.error;
+    if (typeof payload === 'object' && payload !== null) {
+      const body = payload as { message?: string; detail?: string; error?: string; errors?: Array<{ defaultMessage?: string }> };
+      return body.detail || body.message || body.errors?.[0]?.defaultMessage || body.error || fallback;
+    }
+    if (typeof payload === 'string' && payload.trim()) {
+      try {
+        const body = JSON.parse(payload) as { message?: string; detail?: string };
+        return body.detail || body.message || payload;
+      } catch { return payload; }
+    }
+    return error?.status ? `${fallback} The server returned HTTP ${error.status}.` : error?.message || fallback;
   }
 
   private matches(status: string, searchable: string[], locations: string[]): boolean {

@@ -4,10 +4,10 @@
       <header><div><span>HUMAN-GATED ACTION</span><h2 id="proposal-title">{{ selectedProposal ? shortProposalId(selectedProposal) : 'Create ' + proposalForm.type.toLowerCase() + ' proposal' }}</h2></div><button type="button" aria-label="Close proposal" (click)="closeProposalDialog()">×</button></header>
       <ng-container *ngIf="!selectedProposal; else proposalReview">
         <div class="proposal-form">
-          <label><span>SKU ID</span><input [(ngModel)]="proposalForm.skuId" placeholder="SKU-PARA-650"></label>
+          <label><span>Product / SKU</span><select [(ngModel)]="proposalForm.skuId"><option value="" disabled>Select a product</option><option *ngFor="let sku of proposalSkus" [value]="sku.skuId">{{ sku.skuName }} · {{ sku.skuId }}</option></select></label>
           <label><span>Quantity</span><input type="number" min="1" [(ngModel)]="proposalForm.quantity"></label>
-          <label *ngIf="proposalForm.type === 'TRANSFER'"><span>Source warehouse ID</span><input [(ngModel)]="proposalForm.sourceWarehouseId" placeholder="WH-CHENNAI"></label>
-          <label><span>Destination warehouse ID</span><input [(ngModel)]="proposalForm.destinationWarehouseId" placeholder="WH-BENGALURU"></label>
+          <label *ngIf="proposalForm.type === 'TRANSFER'"><span>Source warehouse</span><select [(ngModel)]="proposalForm.sourceWarehouseId"><option value="" disabled>Select source warehouse</option><option *ngFor="let warehouse of proposalWarehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select></label>
+          <label><span>Destination warehouse</span><select [(ngModel)]="proposalForm.destinationWarehouseId"><option value="" disabled>Select destination warehouse</option><option *ngFor="let warehouse of proposalWarehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select></label>
           <label *ngIf="proposalForm.type === 'PURCHASE'"><span>Supplier reference</span><input [(ngModel)]="proposalForm.supplierReference" placeholder="Supplier name or code"></label>
           <label><span>Unit cost (optional)</span><input type="number" min="0" [(ngModel)]="proposalForm.unitCost"></label>
           <label *ngIf="proposalForm.type === 'TRANSFER'"><span>Transport cost (optional)</span><input type="number" min="0" [(ngModel)]="proposalForm.transportCost"></label>
