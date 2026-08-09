@@ -688,6 +688,18 @@ Phase 2 adds a tenant-scoped proposal workflow under `/api/v1/actions`:
 
 Lifecycle: `DRAFT -> PENDING_APPROVAL -> APPROVED | REJECTED`, with cancellation allowed before review.
 
+### Transfer execution workflow
+
+Approved transfer proposals can now be converted into one idempotent execution:
+
+- `PLANNED`: execution ledger created from the approved proposal.
+- `RESERVED`: usable source inventory is reserved across FEFO batches.
+- `IN_TRANSIT`: only the execution's reserved quantities are deducted from source stock.
+- `RECEIVED`: the same batches are posted once to destination inventory, with actual cost and CO2e evidence.
+- `CANCELLED`: planned executions are closed; reserved executions release their reservations. Dispatched stock cannot be cancelled.
+
+The workflow requires `TRANSFER_EXECUTE`, respects tenant/warehouse scope, prevents duplicate execution per proposal and records every state transition. The Transfers UI exposes allocation, dispatch, receipt and execution-audit controls.
+
 ---
 
 ## Next increment — Phase 3 Increment 5C

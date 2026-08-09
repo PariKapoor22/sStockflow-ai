@@ -41,6 +41,8 @@ class TenantAuthorizationFilter(
         if (path == "/api/v1/actions/transfers" && request.method.equals("POST", true)) return "TRANSFER_PROPOSE"
         if (path == "/api/v1/actions/purchases" && request.method.equals("POST", true)) return "PURCHASE_PROPOSE"
         if ((path.endsWith("/approve") || path.endsWith("/reject")) && request.method.equals("POST", true)) return "PROPOSAL_APPROVE"
+        if (path.contains("/execution") && request.method.equals("POST", true)) return "TRANSFER_EXECUTE"
+        if (path.contains("/transfer-executions/") && request.method.equals("POST", true)) return "TRANSFER_EXECUTE"
         if (path.startsWith("/api/v1/actions/")) return null
         if (request.method.equals("GET", true)) return null
         return when {

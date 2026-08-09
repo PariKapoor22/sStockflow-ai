@@ -3,7 +3,7 @@ import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject }
 import { FormsModule } from '@angular/forms';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
 import { CarbonApiService } from '../../core/services/carbon-api.service';
-import { ActionProposal, ProposalHistory, ProposalType } from '../../core/models/action.models';
+import { ActionProposal, ProposalHistory, ProposalType, TransferExecution, TransferExecutionDetail } from '../../core/models/action.models';
 import { ActionProposalService } from '../../core/services/action-proposal.service';
 import { SkuView, WarehouseView } from '../../core/models/foundation.models';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
@@ -147,6 +147,11 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   proposalForm: ProposalForm = this.emptyProposal('TRANSFER');
   proposalWarehouses: WarehouseView[] = [];
   proposalSkus: SkuView[] = [];
+  transferExecutions: TransferExecution[] = [];
+  selectedExecution?: TransferExecutionDetail;
+  executionComment = '';
+  actualTransportCost?: number;
+  actualCarbonKg?: number;
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -204,6 +209,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     });
     this.loadProposals();
     this.loadProposalOptions();
+    this.loadExecutions();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -503,6 +509,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.foundationApi.skus().subscribe({ next: values => this.proposalSkus = values, error: () => undefined });
   }
 
+  loadExecutions(): void {
+    this.actionApi.executions().subscribe({ next: values => this.transferExecutions = values, error: () => undefined });
+  }
+
   openProposalDialog(type: ProposalType): void {
     this.proposalForm = this.emptyProposal(type);
     this.selectedProposal = undefined;
@@ -554,9 +564,40 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.reviewComment = '';
     this.proposalHistory = [];
     this.proposalError = '';
+    this.selectedExecution = undefined;
     this.proposalDialogOpen = true;
     this.actionApi.history(proposal.proposalId).subscribe({ next: history => this.proposalHistory = history, error: error => this.proposalError = this.apiError(error, 'Proposal history could not be loaded.') });
+    const execution = this.transferExecutions.find(item => item.proposalId === proposal.proposalId);
+    if (execution) this.loadExecution(execution.executionId);
   }
+
+  createExecution(): void {
+    if (!this.selectedProposal || this.proposalSaving) return;
+    this.proposalSaving = true; this.proposalError = '';
+    this.actionApi.createExecution(this.selectedProposal.proposalId).subscribe({
+      next: detail => { this.proposalSaving = false; this.selectedExecution = detail; this.upsertExecution(detail.execution); this.showToast('Transfer execution created. Reserve stock before dispatch.'); },
+      error: error => { this.proposalSaving = false; this.proposalError = this.apiError(error, 'Execution could not be created.'); }
+    });
+  }
+
+  loadExecution(id: string): void { this.actionApi.execution(id).subscribe({ next: detail => this.selectedExecution = detail, error: error => this.proposalError = this.apiError(error, 'Execution details could not be loaded.') }); }
+
+  transitionExecution(action: 'reserve' | 'dispatch' | 'receive' | 'cancel'): void {
+    const detail = this.selectedExecution; if (!detail || this.proposalSaving) return;
+    this.proposalSaving = true; this.proposalError = '';
+    const id = detail.execution.executionId;
+    const request = action === 'reserve' ? this.actionApi.reserveExecution(id, this.executionComment)
+      : action === 'dispatch' ? this.actionApi.dispatchExecution(id, this.executionComment)
+      : action === 'receive' ? this.actionApi.receiveExecution(id, this.executionComment, this.actualTransportCost, this.actualCarbonKg)
+      : this.actionApi.cancelExecution(id, this.executionComment);
+    request.subscribe({
+      next: updated => { this.proposalSaving = false; this.selectedExecution = updated; this.upsertExecution(updated.execution); this.executionComment = ''; this.showToast(`Execution moved to ${this.proposalStatus(updated.execution.status)}.`); },
+      error: error => { this.proposalSaving = false; this.proposalError = this.apiError(error, 'Execution status could not be changed.'); }
+    });
+  }
+
+  executionFor(proposal: ActionProposal): TransferExecution | undefined { return this.transferExecutions.find(item => item.proposalId === proposal.proposalId); }
+  private upsertExecution(execution: TransferExecution): void { this.transferExecutions = [execution, ...this.transferExecutions.filter(item => item.executionId !== execution.executionId)]; }
 
   transitionProposal(action: 'submit' | 'approve' | 'reject' | 'cancel'): void {
     const proposal = this.selectedProposal;

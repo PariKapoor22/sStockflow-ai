@@ -29,6 +29,20 @@
         <label class="review-comment"><span>Review comment</span><textarea rows="3" [(ngModel)]="reviewComment" placeholder="Required when rejecting; optional otherwise"></textarea></label>
         <p class="proposal-error" *ngIf="proposalError">{{ proposalError }}</p>
         <div class="proposal-history"><span>STATUS HISTORY</span><div *ngFor="let event of proposalHistory"><i></i><p><strong>{{ proposalStatus(event.toStatus) }}</strong><small>{{ event.changedAt | date:'medium' }} · {{ event.changedBy }}</small><em *ngIf="event.comment">{{ event.comment }}</em></p></div></div>
+        <div class="execution-panel" *ngIf="selectedExecution as detail">
+          <header><div><span>TRANSFER EXECUTION</span><h3>{{ proposalStatus(detail.execution.status) }}</h3></div><strong>{{ detail.execution.quantity | number }} units</strong></header>
+          <div class="execution-steps"><span [class.done]="detail.execution.status !== 'PLANNED'"><i>1</i>Reserved</span><span [class.done]="detail.execution.status === 'IN_TRANSIT' || detail.execution.status === 'RECEIVED'"><i>2</i>Dispatched</span><span [class.done]="detail.execution.status === 'RECEIVED'"><i>3</i>Received</span></div>
+          <div class="allocation-list" *ngIf="detail.allocations.length"><span>FEFO BATCH ALLOCATIONS</span><p *ngFor="let allocation of detail.allocations"><strong>{{ allocation.batchNumber }}</strong><small>{{ allocation.quantity }} units · expires {{ allocation.expiryDate }}</small></p></div>
+          <label class="review-comment"><span>Execution comment</span><textarea rows="2" [(ngModel)]="executionComment" placeholder="Operational note for the audit history"></textarea></label>
+          <div class="receipt-fields" *ngIf="detail.execution.status === 'IN_TRANSIT'"><label><span>Actual transport cost</span><input type="number" min="0" [(ngModel)]="actualTransportCost"></label><label><span>Actual CO2e (kg)</span><input type="number" min="0" [(ngModel)]="actualCarbonKg"></label></div>
+          <div class="execution-actions">
+            <button type="button" *ngIf="detail.execution.status === 'PLANNED' || detail.execution.status === 'RESERVED'" (click)="transitionExecution('cancel')">Cancel execution</button>
+            <button type="button" class="dialog-primary" *ngIf="detail.execution.status === 'PLANNED'" (click)="transitionExecution('reserve')">Reserve FEFO stock</button>
+            <button type="button" class="dialog-primary" *ngIf="detail.execution.status === 'RESERVED'" (click)="transitionExecution('dispatch')">Mark dispatched</button>
+            <button type="button" class="dialog-primary" *ngIf="detail.execution.status === 'IN_TRANSIT'" (click)="transitionExecution('receive')">Confirm receipt</button>
+          </div>
+          <div class="execution-events"><span>EXECUTION AUDIT</span><p *ngFor="let event of detail.events"><strong>{{ proposalStatus(event.toStatus) }}</strong><small>{{ event.occurredAt | date:'medium' }} · {{ event.comment }}</small></p></div>
+        </div>
         <footer class="review-actions" *ngIf="selectedProposal as proposal">
           <span *ngIf="proposal.status === 'DRAFT' && isProposalOwner(proposal)">You created this draft. Submit it before switching to the approver account.</span>
           <span *ngIf="proposal.status === 'DRAFT' && !isProposalOwner(proposal)">Only the account that created this draft can submit it. Sign back in as the creator.</span>
@@ -38,6 +52,8 @@
           <button type="button" class="dialog-primary" *ngIf="proposal.status === 'DRAFT' && isProposalOwner(proposal)" [disabled]="proposalSaving" (click)="transitionProposal('submit')">Submit for approval</button>
           <button type="button" class="danger-action" *ngIf="proposal.status === 'PENDING_APPROVAL' && !isProposalOwner(proposal)" [disabled]="proposalSaving" (click)="transitionProposal('reject')">Reject</button>
           <button type="button" class="dialog-primary" *ngIf="proposal.status === 'PENDING_APPROVAL' && !isProposalOwner(proposal)" [disabled]="proposalSaving" (click)="transitionProposal('approve')">Approve proposal</button>
+          <span *ngIf="proposal.status === 'APPROVED' && !selectedExecution">An operational manager must create the execution, reserve stock and dispatch it.</span>
+          <button type="button" class="dialog-primary" *ngIf="proposal.status === 'APPROVED' && !selectedExecution" [disabled]="proposalSaving" (click)="createExecution()">Create transfer execution</button>
         </footer>
       </ng-template>
     </section>
@@ -76,7 +92,7 @@
       <button type="button" *ngFor="let proposal of visibleProposals()" (click)="reviewProposal(proposal)">
         <span><strong>{{ shortProposalId(proposal) }}</strong><small>{{ proposal.skuId }} · {{ proposal.quantity | number }} units</small></span>
         <span><strong>{{ proposal.destinationWarehouseId }}</strong><small>{{ proposal.updatedAt | date:'short' }}</small></span>
-        <em [class]="'proposal-status ' + proposal.status.toLowerCase()">{{ proposalStatus(proposal.status) }}</em>
+        <em [class]="'proposal-status ' + (executionFor(proposal)?.status || proposal.status).toLowerCase()">{{ executionFor(proposal) ? 'Execution: ' + proposalStatus(executionFor(proposal)!.status) : proposalStatus(proposal.status) }}</em>
       </button>
     </div>
     <div class="execution-boundary"><strong>Approval is not execution</strong><span>An approved proposal does not change inventory, dispatch a vehicle or place a supplier order.</span></div>
