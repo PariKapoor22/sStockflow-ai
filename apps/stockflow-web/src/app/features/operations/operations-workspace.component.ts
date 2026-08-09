@@ -7,6 +7,7 @@ import { ActionProposal, ProposalHistory, ProposalType } from '../../core/models
 import { ActionProposalService } from '../../core/services/action-proposal.service';
 import { SkuView, WarehouseView } from '../../core/models/foundation.models';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
+import { AuthService } from '../../core/services/auth.service';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -126,6 +127,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   private readonly carbonApi = inject(CarbonApiService);
   private readonly actionApi = inject(ActionProposalService);
   private readonly foundationApi = inject(FoundationDataService);
+  readonly auth = inject(AuthService);
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
@@ -581,6 +583,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   closeProposalDialog(): void { if (!this.proposalSaving) this.proposalDialogOpen = false; }
   shortProposalId(item: ActionProposal): string { return `${item.proposalType === 'TRANSFER' ? 'TRF' : 'PUR'}-${item.proposalId.slice(0, 8).toUpperCase()}`; }
   proposalStatus(status: string): string { return status.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase()); }
+  isProposalOwner(proposal: ActionProposal): boolean { return this.auth.user()?.id === proposal.createdBy; }
 
   private emptyProposal(type: ProposalType): ProposalForm {
     return { type, skuId: '', quantity: 1, sourceWarehouseId: '', destinationWarehouseId: '', supplierReference: '', reason: '', recommendationEvidence: '' };

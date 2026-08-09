@@ -22,7 +22,7 @@
           <div><span>Status</span><strong [class]="'proposal-status ' + proposal.status.toLowerCase()">{{ proposalStatus(proposal.status) }}</strong></div>
           <div><span>SKU / quantity</span><strong>{{ proposal.skuId }} · {{ proposal.quantity | number }} units</strong></div>
           <div><span>Movement</span><strong>{{ proposal.sourceWarehouseId || proposal.supplierReference || 'Supplier TBD' }} → {{ proposal.destinationWarehouseId }}</strong></div>
-          <div><span>Created by</span><strong>{{ proposal.createdBy }}</strong></div>
+          <div><span>Created by</span><strong>{{ isProposalOwner(proposal) ? 'You (' + (auth.user()?.email || proposal.createdBy) + ')' : proposal.createdBy }}</strong></div>
           <div class="full"><span>Reason</span><strong>{{ proposal.reason }}</strong></div>
           <div class="full" *ngIf="proposal.recommendationEvidence"><span>Evidence</span><strong>{{ proposal.recommendationEvidence }}</strong></div>
         </div>
@@ -30,11 +30,14 @@
         <p class="proposal-error" *ngIf="proposalError">{{ proposalError }}</p>
         <div class="proposal-history"><span>STATUS HISTORY</span><div *ngFor="let event of proposalHistory"><i></i><p><strong>{{ proposalStatus(event.toStatus) }}</strong><small>{{ event.changedAt | date:'medium' }} · {{ event.changedBy }}</small><em *ngIf="event.comment">{{ event.comment }}</em></p></div></div>
         <footer class="review-actions" *ngIf="selectedProposal as proposal">
-          <span>Server permissions and proposer/approver separation are enforced.</span>
-          <button type="button" *ngIf="proposal.status === 'DRAFT'" [disabled]="proposalSaving" (click)="transitionProposal('cancel')">Cancel</button>
-          <button type="button" class="dialog-primary" *ngIf="proposal.status === 'DRAFT'" [disabled]="proposalSaving" (click)="transitionProposal('submit')">Submit for approval</button>
-          <button type="button" class="danger-action" *ngIf="proposal.status === 'PENDING_APPROVAL'" [disabled]="proposalSaving" (click)="transitionProposal('reject')">Reject</button>
-          <button type="button" class="dialog-primary" *ngIf="proposal.status === 'PENDING_APPROVAL'" [disabled]="proposalSaving" (click)="transitionProposal('approve')">Approve proposal</button>
+          <span *ngIf="proposal.status === 'DRAFT' && isProposalOwner(proposal)">You created this draft. Submit it before switching to the approver account.</span>
+          <span *ngIf="proposal.status === 'DRAFT' && !isProposalOwner(proposal)">Only the account that created this draft can submit it. Sign back in as the creator.</span>
+          <span *ngIf="proposal.status === 'PENDING_APPROVAL' && isProposalOwner(proposal)">You submitted this proposal. A different authorised user must review it.</span>
+          <span *ngIf="proposal.status === 'PENDING_APPROVAL' && !isProposalOwner(proposal)">Review the evidence before approving or rejecting. Approval does not execute inventory movement.</span>
+          <button type="button" *ngIf="proposal.status === 'DRAFT' && isProposalOwner(proposal)" [disabled]="proposalSaving" (click)="transitionProposal('cancel')">Cancel</button>
+          <button type="button" class="dialog-primary" *ngIf="proposal.status === 'DRAFT' && isProposalOwner(proposal)" [disabled]="proposalSaving" (click)="transitionProposal('submit')">Submit for approval</button>
+          <button type="button" class="danger-action" *ngIf="proposal.status === 'PENDING_APPROVAL' && !isProposalOwner(proposal)" [disabled]="proposalSaving" (click)="transitionProposal('reject')">Reject</button>
+          <button type="button" class="dialog-primary" *ngIf="proposal.status === 'PENDING_APPROVAL' && !isProposalOwner(proposal)" [disabled]="proposalSaving" (click)="transitionProposal('approve')">Approve proposal</button>
         </footer>
       </ng-template>
     </section>
