@@ -1,4 +1,44 @@
 <section class="operations-page">
+  <div class="proposal-backdrop" *ngIf="proposalDialogOpen" (click)="closeProposalDialog()">
+    <section class="proposal-dialog" role="dialog" aria-modal="true" aria-labelledby="proposal-title" (click)="$event.stopPropagation()">
+      <header><div><span>HUMAN-GATED ACTION</span><h2 id="proposal-title">{{ selectedProposal ? shortProposalId(selectedProposal) : 'Create ' + proposalForm.type.toLowerCase() + ' proposal' }}</h2></div><button type="button" aria-label="Close proposal" (click)="closeProposalDialog()">×</button></header>
+      <ng-container *ngIf="!selectedProposal; else proposalReview">
+        <div class="proposal-form">
+          <label><span>SKU ID</span><input [(ngModel)]="proposalForm.skuId" placeholder="SKU-PARA-650"></label>
+          <label><span>Quantity</span><input type="number" min="1" [(ngModel)]="proposalForm.quantity"></label>
+          <label *ngIf="proposalForm.type === 'TRANSFER'"><span>Source warehouse ID</span><input [(ngModel)]="proposalForm.sourceWarehouseId" placeholder="WH-CHENNAI"></label>
+          <label><span>Destination warehouse ID</span><input [(ngModel)]="proposalForm.destinationWarehouseId" placeholder="WH-BENGALURU"></label>
+          <label *ngIf="proposalForm.type === 'PURCHASE'"><span>Supplier reference</span><input [(ngModel)]="proposalForm.supplierReference" placeholder="Supplier name or code"></label>
+          <label><span>Unit cost (optional)</span><input type="number" min="0" [(ngModel)]="proposalForm.unitCost"></label>
+          <label *ngIf="proposalForm.type === 'TRANSFER'"><span>Transport cost (optional)</span><input type="number" min="0" [(ngModel)]="proposalForm.transportCost"></label>
+          <label class="full"><span>Business reason</span><textarea [(ngModel)]="proposalForm.reason" rows="3" placeholder="Why this action is required"></textarea></label>
+          <label class="full"><span>Recommendation evidence</span><textarea [(ngModel)]="proposalForm.recommendationEvidence" rows="3" placeholder="Forecast, stock, route and sustainability evidence"></textarea></label>
+        </div>
+        <p class="proposal-error" *ngIf="proposalError">{{ proposalError }}</p>
+        <footer><span>Creates a draft only. A separate user must approve it.</span><button type="button" class="dialog-primary" [disabled]="proposalSaving" (click)="saveProposal()">{{ proposalSaving ? 'Saving…' : 'Create draft proposal' }}</button></footer>
+      </ng-container>
+      <ng-template #proposalReview>
+        <div class="proposal-summary" *ngIf="selectedProposal as proposal">
+          <div><span>Status</span><strong [class]="'proposal-status ' + proposal.status.toLowerCase()">{{ proposalStatus(proposal.status) }}</strong></div>
+          <div><span>SKU / quantity</span><strong>{{ proposal.skuId }} · {{ proposal.quantity | number }} units</strong></div>
+          <div><span>Movement</span><strong>{{ proposal.sourceWarehouseId || proposal.supplierReference || 'Supplier TBD' }} → {{ proposal.destinationWarehouseId }}</strong></div>
+          <div><span>Created by</span><strong>{{ proposal.createdBy }}</strong></div>
+          <div class="full"><span>Reason</span><strong>{{ proposal.reason }}</strong></div>
+          <div class="full" *ngIf="proposal.recommendationEvidence"><span>Evidence</span><strong>{{ proposal.recommendationEvidence }}</strong></div>
+        </div>
+        <label class="review-comment"><span>Review comment</span><textarea rows="3" [(ngModel)]="reviewComment" placeholder="Required when rejecting; optional otherwise"></textarea></label>
+        <p class="proposal-error" *ngIf="proposalError">{{ proposalError }}</p>
+        <div class="proposal-history"><span>STATUS HISTORY</span><div *ngFor="let event of proposalHistory"><i></i><p><strong>{{ proposalStatus(event.toStatus) }}</strong><small>{{ event.changedAt | date:'medium' }} · {{ event.changedBy }}</small><em *ngIf="event.comment">{{ event.comment }}</em></p></div></div>
+        <footer class="review-actions" *ngIf="selectedProposal as proposal">
+          <span>Server permissions and proposer/approver separation are enforced.</span>
+          <button type="button" *ngIf="proposal.status === 'DRAFT'" [disabled]="proposalSaving" (click)="transitionProposal('cancel')">Cancel</button>
+          <button type="button" class="dialog-primary" *ngIf="proposal.status === 'DRAFT'" [disabled]="proposalSaving" (click)="transitionProposal('submit')">Submit for approval</button>
+          <button type="button" class="danger-action" *ngIf="proposal.status === 'PENDING_APPROVAL'" [disabled]="proposalSaving" (click)="transitionProposal('reject')">Reject</button>
+          <button type="button" class="dialog-primary" *ngIf="proposal.status === 'PENDING_APPROVAL'" [disabled]="proposalSaving" (click)="transitionProposal('approve')">Approve proposal</button>
+        </footer>
+      </ng-template>
+    </section>
+  </div>
   <header class="operations-heading">
     <div>
       <span class="eyebrow">{{ pageCopy.eyebrow }}</span>
@@ -10,7 +50,8 @@
 
   <div class="prototype-note">
     <span>INTERACTIVE PROTOTYPE</span>
-    <p>Built for {{ tenantLabel }} with representative operational data. Changes are saved in this browser and remain after refresh.</p>
+    <p *ngIf="view !== 'transfers' && view !== 'purchase'">Built for {{ tenantLabel }} with representative operational data. Changes are saved in this browser and remain after refresh.</p>
+    <p *ngIf="view === 'transfers' || view === 'purchase'">Recommendations are representative; proposals and approval history are persisted through the secured StockFlow Action API.</p>
     <div class="prototype-save-state"><i></i><strong>{{ prototype.changeCount() }} saved changes</strong><small *ngIf="prototype.lastUpdatedAt()">Updated {{ prototype.lastUpdatedAt() | date:'shortTime' }}</small></div>
   </div>
 
@@ -19,6 +60,23 @@
     <label><span>{{ view === 'purchase' ? 'Supplier' : 'Location' }}</span><select [(ngModel)]="locationFilter"><option value="ALL">All {{ view === 'purchase' ? 'suppliers' : 'locations' }}</option><option *ngFor="let location of locations()" [value]="location">{{ location }}</option></select></label>
     <div class="filter-context"><span>Workspace search</span><strong>{{ searchQuery || 'No search applied' }}</strong></div>
     <button type="button" class="clear-action" (click)="statusFilter = 'ALL'; locationFilter = 'ALL'">Clear filters</button>
+  </article>
+
+  <article class="panel proposal-queue" *ngIf="view === 'transfers' || view === 'purchase'">
+    <div class="panel-heading">
+      <div><span>LIVE APPROVAL WORKFLOW</span><h2>{{ view === 'transfers' ? 'Transfer proposals' : 'Purchase proposals' }}</h2><p>Saved in PostgreSQL with tenant access, independent review and an auditable status history.</p></div>
+      <button type="button" class="refresh-proposals" (click)="loadProposals()" [disabled]="proposalsLoading">{{ proposalsLoading ? 'Refreshing…' : 'Refresh' }}</button>
+    </div>
+    <p class="proposal-error" *ngIf="proposalError && !proposalDialogOpen">{{ proposalError }}</p>
+    <div class="proposal-empty" *ngIf="!proposalsLoading && !visibleProposals().length"><strong>No persisted proposals yet</strong><span>Create one from a recommendation below or use the primary action.</span></div>
+    <div class="proposal-cards" *ngIf="visibleProposals().length">
+      <button type="button" *ngFor="let proposal of visibleProposals()" (click)="reviewProposal(proposal)">
+        <span><strong>{{ shortProposalId(proposal) }}</strong><small>{{ proposal.skuId }} · {{ proposal.quantity | number }} units</small></span>
+        <span><strong>{{ proposal.destinationWarehouseId }}</strong><small>{{ proposal.updatedAt | date:'short' }}</small></span>
+        <em [class]="'proposal-status ' + proposal.status.toLowerCase()">{{ proposalStatus(proposal.status) }}</em>
+      </button>
+    </div>
+    <div class="execution-boundary"><strong>Approval is not execution</strong><span>An approved proposal does not change inventory, dispatch a vehicle or place a supplier order.</span></div>
   </article>
 
   <ng-container [ngSwitch]="view">

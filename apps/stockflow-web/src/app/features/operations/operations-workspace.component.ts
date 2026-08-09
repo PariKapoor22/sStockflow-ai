@@ -3,6 +3,8 @@ import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject }
 import { FormsModule } from '@angular/forms';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
 import { CarbonApiService } from '../../core/services/carbon-api.service';
+import { ActionProposal, ProposalHistory, ProposalType } from '../../core/models/action.models';
+import { ActionProposalService } from '../../core/services/action-proposal.service';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -93,6 +95,19 @@ interface SustainabilityRecord {
   status: string;
 }
 
+interface ProposalForm {
+  type: ProposalType;
+  skuId: string;
+  quantity: number;
+  sourceWarehouseId: string;
+  destinationWarehouseId: string;
+  supplierReference: string;
+  unitCost?: number;
+  transportCost?: number;
+  reason: string;
+  recommendationEvidence: string;
+}
+
 @Component({
   selector: 'sf-operations-workspace',
   standalone: true,
@@ -107,6 +122,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   readonly prototype = inject(PrototypeStateService);
   private readonly carbonApi = inject(CarbonApiService);
+  private readonly actionApi = inject(ActionProposalService);
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
@@ -115,6 +131,15 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   selectedRouteId = 'RTE-301';
   toastMessage = '';
   routeOptimizationRunning = false;
+  proposals: ActionProposal[] = [];
+  proposalHistory: ProposalHistory[] = [];
+  proposalsLoading = false;
+  proposalSaving = false;
+  proposalError = '';
+  proposalDialogOpen = false;
+  selectedProposal?: ActionProposal;
+  reviewComment = '';
+  proposalForm: ProposalForm = this.emptyProposal('TRANSFER');
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -170,6 +195,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.sustainabilityRecords.forEach(record => {
       Object.assign(record, this.prototype.recordPatch<SustainabilityRecord>('sustainability', record.location));
     });
+    this.loadProposals();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -323,25 +349,11 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   }
 
   approveTransfer(item: TransferPlan): void {
-    item.status = item.status === 'Awaiting approval' ? 'Approved' : item.status;
-    this.prototype.patchRecord('transfers', item.id, { status: item.status }, {
-      module: 'Smart Transfers',
-      title: `${item.id} approved`,
-      detail: `${item.quantity.toLocaleString()} units of ${item.product} can move from ${item.from} to ${item.to}.`,
-      tone: 'success'
-    });
-    this.showToast(`${item.id} approved and saved in this prototype.`);
+    this.openTransferProposal(item);
   }
 
   approvePurchase(item: PurchasePlan): void {
-    item.status = 'Approved';
-    this.prototype.patchRecord('purchasePlans', item.id, { status: item.status }, {
-      module: 'Purchase Planning',
-      title: `${item.id} approved`,
-      detail: `${item.quantity.toLocaleString()} units of ${item.product} approved for ${item.supplier}.`,
-      tone: 'success'
-    });
-    this.showToast(`${item.id} approved and saved in this prototype.`);
+    this.openPurchaseProposal(item);
   }
 
   advanceOrder(item: CustomerOrder): void {
@@ -457,7 +469,119 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       this.showToast('Impact report preview prepared. Backend evidence export is not connected yet.');
       return;
     }
+    if (this.view === 'transfers' || this.view === 'purchase') {
+      this.openProposalDialog(this.view === 'transfers' ? 'TRANSFER' : 'PURCHASE');
+      return;
+    }
     this.showToast(`${this.pageCopy.action} opened as a UI preview. Backend submission is not connected yet.`);
+  }
+
+  visibleProposals(): ActionProposal[] {
+    const type: ProposalType | undefined = this.view === 'transfers' ? 'TRANSFER' : this.view === 'purchase' ? 'PURCHASE' : undefined;
+    return type ? this.proposals.filter(item => item.proposalType === type) : [];
+  }
+
+  loadProposals(): void {
+    this.proposalsLoading = true;
+    this.proposalError = '';
+    this.actionApi.list().subscribe({
+      next: proposals => { this.proposals = proposals; this.proposalsLoading = false; },
+      error: error => { this.proposalsLoading = false; this.proposalError = this.apiError(error, 'Proposal queue could not be loaded.'); }
+    });
+  }
+
+  openProposalDialog(type: ProposalType): void {
+    this.proposalForm = this.emptyProposal(type);
+    this.selectedProposal = undefined;
+    this.proposalHistory = [];
+    this.proposalError = '';
+    this.proposalDialogOpen = true;
+  }
+
+  openTransferProposal(item: TransferPlan): void {
+    this.proposalForm = {
+      ...this.emptyProposal('TRANSFER'), skuId: item.sku, quantity: item.quantity,
+      sourceWarehouseId: this.warehouseId(item.from), destinationWarehouseId: this.warehouseId(item.to),
+      transportCost: Math.round(item.distanceKm * 34), reason: item.reason,
+      recommendationEvidence: `${item.id}; ${item.distanceKm} km; ${item.co2SavedKg} kg CO2e avoided; estimated service lift ${item.serviceLift}%.`
+    };
+    this.selectedProposal = undefined;
+    this.proposalError = '';
+    this.proposalDialogOpen = true;
+  }
+
+  openPurchaseProposal(item: PurchasePlan): void {
+    this.proposalForm = {
+      ...this.emptyProposal('PURCHASE'), skuId: item.sku, quantity: item.quantity,
+      destinationWarehouseId: 'WH-CHENNAI', supplierReference: item.supplier, unitCost: item.unitCost,
+      reason: `${item.risk} stock risk with ${item.coverDays} days of cover remaining.`,
+      recommendationEvidence: `${item.id}; forecast confidence ${item.confidence}%; need by ${item.needBy}; lead time ${item.leadTimeDays} days.`
+    };
+    this.selectedProposal = undefined;
+    this.proposalError = '';
+    this.proposalDialogOpen = true;
+  }
+
+  saveProposal(): void {
+    if (this.proposalSaving || !this.proposalForm.skuId.trim() || this.proposalForm.quantity <= 0 || !this.proposalForm.destinationWarehouseId.trim() || !this.proposalForm.reason.trim()) return;
+    this.proposalSaving = true;
+    this.proposalError = '';
+    const key = `web-${crypto.randomUUID()}`;
+    const request = this.proposalForm.type === 'TRANSFER'
+      ? this.actionApi.createTransfer({ skuId: this.proposalForm.skuId.trim(), quantity: this.proposalForm.quantity, sourceWarehouseId: this.proposalForm.sourceWarehouseId.trim(), destinationWarehouseId: this.proposalForm.destinationWarehouseId.trim(), unitCost: this.proposalForm.unitCost, transportCost: this.proposalForm.transportCost, currency: 'INR', reason: this.proposalForm.reason.trim(), recommendationEvidence: this.proposalForm.recommendationEvidence.trim() || undefined }, key)
+      : this.actionApi.createPurchase({ skuId: this.proposalForm.skuId.trim(), quantity: this.proposalForm.quantity, destinationWarehouseId: this.proposalForm.destinationWarehouseId.trim(), supplierReference: this.proposalForm.supplierReference.trim() || undefined, unitCost: this.proposalForm.unitCost, currency: 'INR', reason: this.proposalForm.reason.trim(), recommendationEvidence: this.proposalForm.recommendationEvidence.trim() || undefined }, key);
+    request.subscribe({
+      next: proposal => { this.proposalSaving = false; this.proposals.unshift(proposal); this.proposalDialogOpen = false; this.showToast(`${this.shortProposalId(proposal)} created as a draft. No stock was moved.`); },
+      error: error => { this.proposalSaving = false; this.proposalError = this.apiError(error, 'Proposal could not be created.'); }
+    });
+  }
+
+  reviewProposal(proposal: ActionProposal): void {
+    this.selectedProposal = proposal;
+    this.reviewComment = '';
+    this.proposalHistory = [];
+    this.proposalError = '';
+    this.proposalDialogOpen = true;
+    this.actionApi.history(proposal.proposalId).subscribe({ next: history => this.proposalHistory = history, error: error => this.proposalError = this.apiError(error, 'Proposal history could not be loaded.') });
+  }
+
+  transitionProposal(action: 'submit' | 'approve' | 'reject' | 'cancel'): void {
+    const proposal = this.selectedProposal;
+    if (!proposal || this.proposalSaving) return;
+    if (action === 'reject' && !this.reviewComment.trim()) { this.proposalError = 'Enter a rejection reason before rejecting.'; return; }
+    this.proposalSaving = true;
+    this.proposalError = '';
+    const request = action === 'submit' ? this.actionApi.submit(proposal.proposalId, this.reviewComment)
+      : action === 'approve' ? this.actionApi.approve(proposal.proposalId, this.reviewComment)
+      : action === 'reject' ? this.actionApi.reject(proposal.proposalId, this.reviewComment)
+      : this.actionApi.cancel(proposal.proposalId, this.reviewComment);
+    request.subscribe({
+      next: updated => {
+        this.proposalSaving = false;
+        this.selectedProposal = updated;
+        this.proposals = this.proposals.map(item => item.proposalId === updated.proposalId ? updated : item);
+        this.actionApi.history(updated.proposalId).subscribe(history => this.proposalHistory = history);
+        this.showToast(`${this.shortProposalId(updated)} moved to ${this.proposalStatus(updated.status)}. No inventory transaction was executed.`);
+      },
+      error: error => { this.proposalSaving = false; this.proposalError = this.apiError(error, 'The proposal status could not be changed.'); }
+    });
+  }
+
+  closeProposalDialog(): void { if (!this.proposalSaving) this.proposalDialogOpen = false; }
+  shortProposalId(item: ActionProposal): string { return `${item.proposalType === 'TRANSFER' ? 'TRF' : 'PUR'}-${item.proposalId.slice(0, 8).toUpperCase()}`; }
+  proposalStatus(status: string): string { return status.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, char => char.toUpperCase()); }
+
+  private emptyProposal(type: ProposalType): ProposalForm {
+    return { type, skuId: '', quantity: 1, sourceWarehouseId: '', destinationWarehouseId: '', supplierReference: '', reason: '', recommendationEvidence: '' };
+  }
+
+  private warehouseId(label: string): string {
+    const ids: Record<string, string> = { 'Chennai Central': 'WH-CHENNAI', 'Bengaluru North': 'WH-BENGALURU', 'Hyderabad Hub': 'WH-HYDERABAD', 'Mysuru DC': 'WH-MYSURU', 'Coimbatore West': 'WH-COIMBATORE' };
+    return ids[label] ?? label;
+  }
+
+  private apiError(error: { error?: { message?: string; detail?: string }; message?: string }, fallback: string): string {
+    return error?.error?.message || error?.error?.detail || error?.message || fallback;
   }
 
   private matches(status: string, searchable: string[], locations: string[]): boolean {

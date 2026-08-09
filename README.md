@@ -684,6 +684,7 @@ Phase 2 adds a tenant-scoped proposal workflow under `/api/v1/actions`:
 - Duplicate open proposals, cross-tenant records and out-of-scope warehouses are rejected.
 - Every lifecycle transition is appended to proposal history.
 - Action MCP tools wrap these APIs but never execute a transfer or purchase.
+- Transfers and Purchase Planning include an API-backed proposal queue, draft form, submission/review controls and status-history dialog. Recommendation data remains representative until the recommendation engine is connected end to end.
 
 Lifecycle: `DRAFT -> PENDING_APPROVAL -> APPROVED | REJECTED`, with cancellation allowed before review.
 
