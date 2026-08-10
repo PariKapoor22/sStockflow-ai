@@ -30,6 +30,8 @@ import { ImportDataService } from '../../core/services/import-data.service';
 import { IntelligenceDataService } from '../../core/services/intelligence-data.service';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
 import { CopilotService } from '../../core/services/copilot.service';
+import { ForecastGovernanceAlert, ForecastJob, ForecastSchedule } from '../../core/models/forecast-operations.models';
+import { ForecastOperationsService } from '../../core/services/forecast-operations.service';
 import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 
@@ -95,6 +97,16 @@ export class DashboardComponent implements OnInit {
   demandSummary?: DemandSummary;
   demandSkus: DemandSku[] = [];
   demandTrend?: DemandTrend;
+  forecastJobs: ForecastJob[] = [];
+  forecastSchedules: ForecastSchedule[] = [];
+  forecastAlerts: ForecastGovernanceAlert[] = [];
+  forecastOpsBusy = false;
+  forecastOpsMessage = '';
+  forecastHorizon = 30;
+  forecastHistory = 180;
+  scheduleName = 'Daily network forecast';
+  scheduleCadence = 'DAILY';
+  scheduleHour = 2;
 
   foundationSummary?: FoundationSummary;
   warehouses: WarehouseView[] = [];
@@ -296,7 +308,8 @@ export class DashboardComponent implements OnInit {
     private readonly foundationData: FoundationDataService,
     private readonly importData: ImportDataService,
     readonly prototype: PrototypeStateService,
-    private readonly copilot: CopilotService
+    private readonly copilot: CopilotService,
+    private readonly forecastOps: ForecastOperationsService
   ) {}
 
   ngOnInit(): void {
@@ -1158,7 +1171,36 @@ export class DashboardComponent implements OnInit {
         },
         error: () => this.pageError = 'Demand analytics could not be loaded from the API.'
       });
+    this.loadForecastOperations();
   }
+
+  loadForecastOperations(): void {
+    forkJoin({jobs:this.forecastOps.jobs(),schedules:this.forecastOps.schedules(),alerts:this.forecastOps.alerts()}).subscribe({
+      next:r=>{this.forecastJobs=r.jobs;this.forecastSchedules=r.schedules;this.forecastAlerts=r.alerts;},
+      error:()=>this.forecastOpsMessage='Forecast operations could not be loaded.'
+    });
+  }
+
+  queueForecast():void{
+    if(this.forecastOpsBusy)return;this.forecastOpsBusy=true;this.forecastOpsMessage='';
+    this.forecastOps.queue({horizonDays:this.forecastHorizon,historyDays:this.forecastHistory}).pipe(finalize(()=>this.forecastOpsBusy=false)).subscribe({next:j=>{this.forecastJobs=[j,...this.forecastJobs];this.forecastOpsMessage='Forecast job queued. Run it now or allow the worker to claim it.';},error:e=>this.forecastOpsMessage=e?.error?.detail||'Forecast job could not be queued.'});
+  }
+
+  processForecastQueue():void{
+    if(this.forecastOpsBusy)return;this.forecastOpsBusy=true;this.forecastOpsMessage='Running the next queued forecast…';
+    this.forecastOps.processNext().pipe(finalize(()=>this.forecastOpsBusy=false)).subscribe({next:j=>{this.forecastOpsMessage=j?`Forecast job finished with status ${j.status}.`:'No queued forecast job was available.';this.loadForecastOperations();this.loadDemandWorkspace();},error:e=>this.forecastOpsMessage=e?.error?.detail||'Queued forecast could not be processed.'});
+  }
+
+  createForecastSchedule():void{
+    if(this.forecastOpsBusy||!this.scheduleName.trim())return;this.forecastOpsBusy=true;
+    this.forecastOps.createSchedule({scheduleName:this.scheduleName.trim(),cadence:this.scheduleCadence,dayOfWeek:this.scheduleCadence==='WEEKLY'?1:undefined,runHour:this.scheduleHour,runMinute:0,timezone:'Asia/Kolkata',horizonDays:this.forecastHorizon,historyDays:this.forecastHistory,active:true}).pipe(finalize(()=>this.forecastOpsBusy=false)).subscribe({next:s=>{this.forecastSchedules=[s,...this.forecastSchedules];this.forecastOpsMessage='Forecast schedule created.';},error:e=>this.forecastOpsMessage=e?.error?.detail||'Schedule could not be created.'});
+  }
+
+  toggleForecastSchedule(item:ForecastSchedule):void{this.forecastOps.setActive(item.scheduleId,!item.active).subscribe({next:s=>this.forecastSchedules=this.forecastSchedules.map(x=>x.scheduleId===s.scheduleId?s:x),error:()=>this.forecastOpsMessage='Schedule status could not be changed.'});}
+  cancelForecastJob(item:ForecastJob):void{this.forecastOps.cancel(item.jobId).subscribe({next:j=>this.forecastJobs=this.forecastJobs.map(x=>x.jobId===j.jobId?j:x),error:e=>this.forecastOpsMessage=e?.error?.detail||'Job could not be cancelled.'});}
+  retryForecastJob(item:ForecastJob):void{this.forecastOps.retry(item.jobId).subscribe({next:j=>this.forecastJobs=[j,...this.forecastJobs],error:e=>this.forecastOpsMessage=e?.error?.detail||'Job could not be retried.'});}
+  acknowledgeForecastAlert(item:ForecastGovernanceAlert):void{this.forecastOps.acknowledge(item.alertId).subscribe({next:a=>this.forecastAlerts=this.forecastAlerts.map(x=>x.alertId===a.alertId?a:x),error:()=>this.forecastOpsMessage='Alert could not be acknowledged.'});}
+  forecastStatusLabel(value:string):string{return value.replaceAll('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());}
 
   loadRiskWorkspace(): void {
     this.pageLoading = true;

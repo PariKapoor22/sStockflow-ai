@@ -702,36 +702,33 @@ The workflow requires `TRANSFER_EXECUTE`, respects tenant/warehouse scope, preve
 
 ---
 
-## Next increment — Phase 3 Increment 5C
+## Phase 3 Increment 5C — forecast operations and governance
 
-Increment 5C will operationalize the forecasting engine.
+Increment 5C operationalizes the calibrated forecasting engine with durable, tenant-scoped jobs.
 
-Planned capabilities:
+Implemented capabilities:
 
 - Tenant-specific schedules
 - Daily and weekly forecast execution
 - Queued and scheduled runs
 - Run lifecycle management
-- Failed-position retry
-- Full-run retry
-- Run cancellation
-- Accuracy-performance history
-- Confidence movement
-- Model-selection history
+- Full-job retry with attempt lineage
+- Queued-job cancellation
+- Existing accuracy, confidence, calibration and model-selection diagnostics
 - Data-freshness alerts
 - Forecast-quality degradation alerts
-- Governance rules for downstream use
+- Acknowledgement workflow for governance alerts
+- Role-gated manual queue processing and schedule administration
+- Demand Forecast UI for jobs, schedules, retries and alerts
 
 Planned lifecycle:
 
 ```text
-SCHEDULED
 QUEUED
 RUNNING
 COMPLETED
-PARTIALLY_COMPLETED
+COMPLETED_WITH_ERRORS
 FAILED
-RETRYING
 CANCELLED
 ```
 
@@ -744,9 +741,10 @@ Completed: Phase 2 inventory intelligence
 Completed: Increment 5A forecasting foundation
 Completed: Increment 5B forecast-quality engine
 Completed: Increment 5B.1 calibration and diagnostics
+Completed: Increment 5C forecasting operations and governance
 
-Next:      Increment 5C forecasting operations and governance
-Then:      Increment 6 replenishment and transfer optimization
+Next:      Increment 6 replenishment and purchase planning
+Then:      Increment 6 transfer and route optimization
 Then:      Increment 7 Gemini inventory agent and MCP integration
 ```
 

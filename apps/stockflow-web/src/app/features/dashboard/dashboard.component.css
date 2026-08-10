@@ -2031,6 +2031,25 @@ td small { display: block; margin-top: 4px; color: #8a94a6; font-size: 8.5px; li
     font-size: 8px;
   }
 }
+/* Forecast operations and governance */
+.forecast-ops-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .85fr); gap: 16px; margin-bottom: 16px; }
+.forecast-control-card, .forecast-schedule-card, .forecast-alert-card { padding: 20px; }
+.forecast-control-form, .schedule-form { display: flex; align-items: end; gap: 10px; margin-top: 18px; }
+.forecast-control-form label { display: grid; gap: 6px; min-width: 110px; }
+.forecast-control-form label span, .forecast-job-list > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.forecast-control-form select, .schedule-form input, .schedule-form select { min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: var(--surface); }
+.forecast-ops-message { margin: 12px 0 0; padding: 9px 11px; border-radius: 9px; color: #5140bd; background: rgb(98 75 222 / 10%); font-size: 10px; }
+.forecast-job-list, .schedule-list, .forecast-alert-list { display: grid; gap: 8px; margin-top: 18px; }
+.forecast-job-list > div, .schedule-list > div, .forecast-alert-list > div { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); }
+.forecast-job-list i, .forecast-alert-list i { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: #8a96aa; }
+.forecast-job-list i.queued { background: #6b55e8; }.forecast-job-list i.running { background: #2389dc; box-shadow: 0 0 0 4px rgb(35 137 220 / 12%); }.forecast-job-list i.completed { background: #18b978; }.forecast-job-list i.completed_with_errors, .forecast-alert-list i.warning { background: #f2a120; }.forecast-job-list i.failed, .forecast-alert-list i.critical { background: #e45151; }.forecast-job-list i.cancelled, .forecast-alert-list i.info { background: #8a96aa; }
+.forecast-job-list p, .forecast-job-list p strong, .forecast-job-list p small, .forecast-job-list p em, .schedule-list span, .schedule-list strong, .schedule-list small, .forecast-alert-list span, .forecast-alert-list strong, .forecast-alert-list small { display: block; }
+.forecast-job-list p, .forecast-alert-list span, .schedule-list span { flex: 1; min-width: 0; margin: 0; }.forecast-job-list strong, .schedule-list strong, .forecast-alert-list strong { color: var(--text); font-size: 10px; }.forecast-job-list small, .schedule-list small, .forecast-alert-list small { margin-top: 3px; color: var(--muted); font-size: 8.5px; line-height: 1.45; }.forecast-job-list em { margin-top: 3px; color: #d34d4d; font-size: 8px; font-style: normal; }
+.forecast-job-list button, .schedule-list button, .forecast-alert-list button { padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--accent); background: transparent; font-size: 8px; cursor: pointer; }.schedule-list button.active { color: #09885a; border-color: rgb(9 136 90 / 25%); background: rgb(9 136 90 / 8%); }
+.schedule-form { align-items: stretch; flex-wrap: wrap; }.schedule-form input:first-child { flex: 1 1 145px; }.schedule-form input[type="number"] { width: 74px; }.forecast-alert-card { margin-bottom: 16px; }.forecast-alert-list > div.acknowledged { opacity: .62; }.forecast-alert-list em { color: var(--muted); font-size: 8px; font-style: normal; }
+@media (max-width: 980px) { .forecast-ops-grid { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .forecast-control-form { align-items: stretch; flex-direction: column; }.forecast-control-form label { width: 100%; }.forecast-control-form button { width: 100%; }.forecast-control-card, .forecast-schedule-card, .forecast-alert-card { padding: 14px; } }
+
 .top-actions-pill.auto-hide {
   opacity: 0;
   transform: translateY(-40px);
