@@ -8,6 +8,8 @@ import { ActionProposalService } from '../../core/services/action-proposal.servi
 import { SkuView, WarehouseView } from '../../core/models/foundation.models';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ReplenishmentSummary } from '../../core/models/replenishment.models';
+import { ReplenishmentService } from '../../core/services/replenishment.service';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -40,6 +42,11 @@ interface PurchasePlan {
   confidence: number;
   risk: string;
   status: string;
+  warehouseId?: string;
+  warehouseName?: string;
+  explanation?: string;
+  openPurchaseQuantity?: number;
+  demandSource?: string;
 }
 
 interface CustomerOrder {
@@ -128,6 +135,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   private readonly actionApi = inject(ActionProposalService);
   private readonly foundationApi = inject(FoundationDataService);
   readonly auth = inject(AuthService);
+  private readonly replenishmentApi = inject(ReplenishmentService);
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
@@ -152,6 +160,9 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   executionComment = '';
   actualTransportCost?: number;
   actualCarbonKg?: number;
+  replenishmentSummary?: ReplenishmentSummary;
+  replenishmentLoading = false;
+  targetCoverDays = 30;
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -210,12 +221,14 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.loadProposals();
     this.loadProposalOptions();
     this.loadExecutions();
+    this.loadReplenishmentPlans();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['view']) {
       this.statusFilter = 'ALL';
       this.locationFilter = 'ALL';
+      if (this.view === 'purchase') this.loadReplenishmentPlans();
     }
   }
 
@@ -364,6 +377,33 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   approveTransfer(item: TransferPlan): void {
     this.openTransferProposal(item);
+  }
+
+  averagePurchaseConfidence(): number {
+    return this.purchasePlans.reduce((sum, item) => sum + item.confidence, 0) / Math.max(this.purchasePlans.length, 1);
+  }
+
+  criticalPurchaseCount(): number { return this.purchasePlans.filter(item => item.risk === 'CRITICAL' || item.risk === 'Critical').length; }
+
+  loadReplenishmentPlans(): void {
+    this.replenishmentLoading = true;
+    this.replenishmentApi.plans(this.targetCoverDays).subscribe({
+      next: summary => {
+        this.replenishmentSummary = summary;
+        this.purchasePlans = summary.plans.map(item => ({
+          id: item.recommendationId, sku: item.skuId, product: item.skuName, supplier: item.supplierName,
+          quantity: item.recommendedQuantity, unitCost: item.unitCost, needBy: item.needBy, leadTimeDays: item.leadTimeDays,
+          coverDays: item.coverDays ?? 0, confidence: item.confidencePercent, risk: item.risk, status: item.status,
+          warehouseId: item.warehouseId, warehouseName: item.warehouseName, explanation: item.explanation,
+          openPurchaseQuantity: item.openPurchaseQuantity, demandSource: item.demandSource
+        }));
+        this.replenishmentLoading = false;
+      },
+      error: error => {
+        this.replenishmentLoading = false;
+        this.proposalError = this.apiError(error, 'Live replenishment plans could not be loaded.');
+      }
+    });
   }
 
   approvePurchase(item: PurchasePlan): void {
@@ -536,9 +576,9 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   openPurchaseProposal(item: PurchasePlan): void {
     this.proposalForm = {
       ...this.emptyProposal('PURCHASE'), skuId: item.sku, quantity: item.quantity,
-      destinationWarehouseId: 'WH-CHENNAI', supplierReference: item.supplier, unitCost: item.unitCost,
+      destinationWarehouseId: item.warehouseId ?? 'WH-CHENNAI', supplierReference: item.supplier, unitCost: item.unitCost,
       reason: `${item.risk} stock risk with ${item.coverDays} days of cover remaining.`,
-      recommendationEvidence: `${item.id}; forecast confidence ${item.confidence}%; need by ${item.needBy}; lead time ${item.leadTimeDays} days.`
+      recommendationEvidence: `${item.id}; ${item.explanation ?? `forecast confidence ${item.confidence}%; need by ${item.needBy}; lead time ${item.leadTimeDays} days.`}`
     };
     this.selectedProposal = undefined;
     this.proposalError = '';

@@ -743,23 +743,30 @@ Completed: Increment 5B forecast-quality engine
 Completed: Increment 5B.1 calibration and diagnostics
 Completed: Increment 5C forecasting operations and governance
 
-Next:      Increment 6 replenishment and purchase planning
-Then:      Increment 6 transfer and route optimization
+In progress: Increment 6 replenishment and purchase planning
+Next:        Increment 6 transfer and route optimization
 Then:      Increment 7 Gemini inventory agent and MCP integration
 ```
 
 ### Increment 6
 
-Planned:
+Implemented replenishment slice:
 
-- Recommended purchase quantity
-- Recommended reorder date
+- Live warehouse/SKU purchase recommendations
+- Latest forecast with 30-day-sales fallback
+- Supplier lead-time and preferred-supplier support
+- Safety-stock and target-cover calculations
+- Open purchase-proposal deduction
+- Reorder-multiple rounding
+- Explainable need date, confidence and quantity evidence
+- Direct handoff into the human approval workflow
+
+Remaining:
+
 - Inter-warehouse transfer recommendations
-- Supplier-lead-time support
-- Open-purchase-order awareness
-- Reorder-multiple enforcement
+- Executed purchase-order lifecycle and supplier acknowledgement
 - Working-capital impact
-- Human approval workflow
+- Purchase-versus-transfer comparison
 
 ### Increment 7
 

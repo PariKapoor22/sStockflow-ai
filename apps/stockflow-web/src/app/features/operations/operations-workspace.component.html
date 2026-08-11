@@ -255,10 +255,10 @@
 
     <ng-container *ngSwitchCase="'purchase'">
       <section class="metric-grid">
-        <article><span>Planned spend</span><strong>{{ purchasePlanValue() | currency:'INR':'symbol':'1.0-0' }}</strong><small>Across {{ purchasePlans.length }} recommendations</small><i class="metric-icon indigo">₹</i></article>
-        <article><span>Critical lines</span><strong>1</strong><small>Needs approval today</small><i class="metric-icon red">!</i></article>
-        <article><span>Average confidence</span><strong>89.8%</strong><small>Forecast-backed quantity</small><i class="metric-icon green">⌁</i></article>
-        <article><span>Cash protected</span><strong>₹82.6K</strong><small>Excess buying avoided</small><i class="metric-icon teal">◇</i></article>
+        <article><span>Planned spend</span><strong>{{ purchasePlanValue() | currency:'INR':'symbol':'1.0-0' }}</strong><small>Across {{ purchasePlans.length }} live recommendations</small><i class="metric-icon indigo">₹</i></article>
+        <article><span>Critical lines</span><strong>{{ criticalPurchaseCount() }}</strong><small>Need action within supplier lead time</small><i class="metric-icon red">!</i></article>
+        <article><span>Average confidence</span><strong>{{ averagePurchaseConfidence() | number:'1.0-1' }}%</strong><small>Forecast or recent-sales backed</small><i class="metric-icon green">⌁</i></article>
+        <article><span>Open purchase units</span><strong>{{ (replenishmentSummary?.openPurchaseQuantity || 0) | number }}</strong><small>Deducted before recommendations</small><i class="metric-icon teal">◇</i></article>
       </section>
 
       <section class="insight-grid purchase-insights">
@@ -273,18 +273,18 @@
       </section>
 
       <article class="panel table-panel">
-        <div class="panel-heading"><div><span>PLANNING QUEUE</span><h2>Purchase recommendations</h2><p>Quantities respect demand confidence, lead time, cover and reorder multiples.</p></div><span>{{ filteredPurchasePlans().length }} records</span></div>
+        <div class="panel-heading"><div><span>PLANNING QUEUE</span><h2>Purchase recommendations</h2><p>Live quantities respect demand, lead time, safety stock, open proposals and reorder multiples.</p></div><span>{{ replenishmentLoading ? 'Calculating…' : filteredPurchasePlans().length + ' records' }}</span></div>
         <div class="table-scroll"><table><thead><tr><th>Plan</th><th>Product</th><th>Supplier</th><th class="numeric">Recommended qty</th><th class="numeric">Plan value</th><th>Need / cover</th><th>Confidence</th><th>Status</th><th></th></tr></thead><tbody>
           <tr *ngFor="let item of filteredPurchasePlans()">
             <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('purchasePlans', item.id)">Updated</em></strong><small><span [class]="'priority-dot ' + statusClass(item.risk)"></span>{{ item.risk }} risk</small></td>
-            <td><strong>{{ item.product }}</strong><small>{{ item.sku }}</small></td>
+            <td><strong>{{ item.product }}</strong><small>{{ item.sku }} · {{ item.warehouseName }}</small></td>
             <td><strong>{{ item.supplier }}</strong><small>{{ item.leadTimeDays }} day lead time</small></td>
             <td class="numeric"><strong>{{ item.quantity | number }}</strong><small>units</small></td>
             <td class="numeric"><strong>{{ item.quantity * item.unitCost | currency:'INR':'symbol':'1.0-0' }}</strong><small>{{ item.unitCost | currency:'INR':'symbol':'1.2-2' }} / unit</small></td>
             <td><strong>{{ item.needBy }}</strong><small>{{ item.coverDays }} days cover remaining</small></td>
             <td><strong>{{ item.confidence }}%</strong><div class="mini-progress"><i [style.width.%]="item.confidence"></i></div></td>
             <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
-            <td><button type="button" class="row-action" [disabled]="item.status === 'Approved'" (click)="approvePurchase(item)">{{ item.status === 'Approved' ? 'Approved' : 'Review plan' }}</button></td>
+            <td><button type="button" class="row-action" [disabled]="item.quantity === 0 || item.status === 'APPROVED'" (click)="approvePurchase(item)">{{ item.quantity === 0 ? 'Already covered' : 'Review plan' }}</button></td>
           </tr><tr *ngIf="!filteredPurchasePlans().length"><td colspan="9" class="empty-row">No purchase plans match the current filters.</td></tr>
         </tbody></table></div>
       </article>
