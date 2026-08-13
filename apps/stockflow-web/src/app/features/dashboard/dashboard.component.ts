@@ -30,7 +30,7 @@ import { ImportDataService } from '../../core/services/import-data.service';
 import { IntelligenceDataService } from '../../core/services/intelligence-data.service';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
 import { CopilotService } from '../../core/services/copilot.service';
-import { ForecastGovernanceAlert, ForecastJob, ForecastSchedule } from '../../core/models/forecast-operations.models';
+import { ForecastGovernanceAlert, ForecastJob, ForecastSchedule, LatestForecastPosition } from '../../core/models/forecast-operations.models';
 import { ForecastOperationsService } from '../../core/services/forecast-operations.service';
 import { ReplenishmentPlan, TransferRecommendation } from '../../core/models/replenishment.models';
 import { ReplenishmentService } from '../../core/services/replenishment.service';
@@ -123,6 +123,7 @@ export class DashboardComponent implements OnInit {
   forecastJobs: ForecastJob[] = [];
   forecastSchedules: ForecastSchedule[] = [];
   forecastAlerts: ForecastGovernanceAlert[] = [];
+  latestForecasts: LatestForecastPosition[] = [];
   forecastOpsBusy = false;
   forecastOpsMessage = '';
   forecastHorizon = 30;
@@ -1192,13 +1193,15 @@ export class DashboardComponent implements OnInit {
     forkJoin({
       summary: this.intelligenceData.demandSummary(this.selectedWindowDays),
       skus: this.intelligenceData.demandSkus(this.selectedWindowDays, 50),
-      trend: this.intelligenceData.demandTrend(16)
+      trend: this.intelligenceData.demandTrend(16),
+      forecasts: this.forecastOps.latest(50)
     }).pipe(finalize(() => this.pageLoading = false))
       .subscribe({
         next: result => {
           this.demandSummary = result.summary;
           this.demandSkus = result.skus;
           this.demandTrend = result.trend;
+          this.latestForecasts = result.forecasts;
         },
         error: () => this.pageError = 'Demand analytics could not be loaded from the API.'
       });
