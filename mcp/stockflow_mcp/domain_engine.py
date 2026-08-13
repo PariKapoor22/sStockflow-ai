@@ -222,24 +222,41 @@ def _transfer_answer(q: str, warehouses: list[dict], skus: list[dict], batches: 
     return result(answer, "transfer.recommend", ["get_current_inventory", "find_stockout_risks", "recommend_sustainable_transfer"], str(destination_risk.get("asOfDate") or ""), warnings, {"source": source, "destination": destination, "quantity": transferable, "sourceRemaining": remaining, "safetyStock": safety})
 
 
-def _route_answer(q: str, tenant_id: str, access_token: str) -> dict:
+def _route_answer(q: str, tenant_id: str, access_token: str, warehouses: list[dict], skus: list[dict]) -> dict:
     quantity_match = re.search(r"(\d[\d,]*)\s*(?:units|kg)", q)
-    load = float(quantity_match.group(1).replace(",", "")) if quantity_match else 900.0
+    requested_quantity = float(quantity_match.group(1).replace(",", "")) if quantity_match else None
+    summary = get_json(f"{CORE_API}/api/v1/replenishment/transfer-recommendations", {"targetCoverDays": 30}, tenant_id, access_token)
+    candidates = summary.get("recommendations", []) if isinstance(summary, dict) else []
+    requested_warehouses = [row for row in warehouses if normalise(row.get("warehouseName")) in q or normalise(row.get("city")) in q]
+    requested_sku = resolve(q, skus, ("skuName", "skuId", "productId"))
+    if requested_warehouses:
+        ids = {row["warehouseId"] for row in requested_warehouses}
+        candidates = [row for row in candidates if row.get("sourceWarehouseId") in ids or row.get("destinationWarehouseId") in ids]
+    if requested_sku:
+        candidates = [row for row in candidates if row.get("skuId") == requested_sku.get("skuId")]
+    if not candidates:
+        return result("No live transfer recommendation matches that route or product. I will not invent a lane, distance or shipment quantity.", "route.no_data", ["get_transfer_recommendations"], warnings=["Generate a database-backed transfer recommendation first."])
+    recommendation = candidates[0]
+    units = requested_quantity or float(recommendation["recommendedQuantity"])
+    load = units * 0.05
     compare = any(term in q for term in ("compare", "fastest", "cheapest", "lowest carbon", "road vehicles"))
     vehicles = ["diesel", "cng", "electric", "petrol"] if compare else ["diesel"]
-    routes = [{"id": f"copilot-{vehicle}", "lane": "Chennai to Bengaluru", "stops": ["Chennai", "Bengaluru"], "vehicle": vehicle, "loadKg": load, "capacityKg": 1500.0, "baselineKm": 350.0, "priority": "High", "status": "Draft"} for vehicle in vehicles]
+    origin = recommendation["sourceWarehouseName"]
+    destination = recommendation["destinationWarehouseName"]
+    baseline = float(recommendation["distanceKm"])
+    routes = [{"id": f"copilot-{vehicle}", "lane": f"{origin} to {destination}", "stops": [origin, destination], "vehicle": vehicle, "loadKg": load, "capacityKg": 6000.0, "baselineKm": baseline, "priority": recommendation["risk"].title(), "status": "Draft"} for vehicle in vehicles]
     payload = {"objective": "Balanced cost and carbon", "vehicleType": "All eligible vehicles" if compare else "diesel", "routes": routes}
     response = post_json(f"{CARBON_API}/api/v1/routes/optimise", payload, tenant_id, access_token)
     route = response["routes"][0]
-    answer = (f"Read-only Chennai–Bengaluru route candidate: {route['optimizedKm']} km, {route['duration']}, cost {money(float(route['costInr']))}, "
+    answer = (f"Read-only {origin} to {destination} route candidate for {units:,.0f} units: {route['optimizedKm']} km, {route['duration']}, cost {money(float(route['costInr']))}, "
               f"emissions {route['co2Kg']} kg CO2e, saving {route['co2SavedKg']} kg CO2e. Load {route['loadKg']} kg of {route['capacityKg']} kg. "
               f"Human approval is required. Explanations: {' '.join(route['explanation'])}")
     if compare:
         answer = "Vehicle/route comparison (sorted by carbon then cost):\n" + "\n".join(f"- {item['vehicleFamily']}: {item['optimizedKm']} km, {item['duration']}, {money(float(item['costInr']))}, {item['co2Kg']} kg CO2e" for item in response["routes"])
-    warnings = ["Prototype assumptions: 350 km baseline, diesel vehicle, 1,500 kg capacity, no live traffic or road time windows."]
+    warnings = [f"Distance and quantity come from live recommendation {recommendation['recommendationId']}; vehicle factors remain prototype estimates without live traffic or road time windows."]
     if "units" in q:
-        warnings.append("Units were temporarily treated as kilograms because product weight is unavailable; replace with actual shipment weight.")
-    return result(answer, "route.optimise", ["optimise_transfer_route"], warnings=warnings, data=response)
+        warnings.append("A disclosed 0.05 kg representative unit weight was used; replace it with SKU shipment weight for dispatch.")
+    return result(answer, "route.optimise", ["get_transfer_recommendations", "optimise_transfer_route"], str(recommendation.get("asOfDate") or ""), warnings, {"recommendation": recommendation, "routeComparison": response})
 
 
 def answer_question(question: str, tenant_id: str, access_token: str = "", selected_warehouse_id: str = "", selected_sku_id: str = "") -> dict:
@@ -262,9 +279,13 @@ def answer_question(question: str, tenant_id: str, access_token: str = "", selec
         sku = next((row for row in skus if row.get("skuId") == selected_sku_id), None)
 
     if "approved transfer" in q and ("sustainability" in q or "impact" in q):
-        return result("Proposal approval is now persisted, but an approved-transfer execution ledger is not yet implemented. Sustainability totals therefore include calculated recommendations, not proof that a shipment was executed.", "sustainability.execution_unavailable", ["action_capability_guard"], warnings=["No executed-shipment value was inferred."])
+        executions = get_json(f"{CORE_API}/api/v1/actions/transfer-executions", tenant_id=tenant_id, access_token=access_token)
+        completed = [row for row in executions if row.get("status") == "RECEIVED"]
+        carbon = sum(float(row.get("actualCarbonKg") or 0) for row in completed)
+        cost = sum(float(row.get("actualTransportCost") or 0) for row in completed)
+        return result(f"Completed approved transfers: {len(completed)}. Recorded actual transport cost: {money(cost)}; recorded actual emissions: {carbon:,.2f} kg CO2e.", "sustainability.executed_transfers", ["list_transfer_executions"], warnings=["Only completed executions with recorded actual values are included."], data=completed)
     if any(term in q for term in ("route", "vehicle", "carbon", "co2", "emission", "combined deliver", "fastest", "cheapest")):
-        return _route_answer(q, tenant_id, access_token)
+        return _route_answer(q, tenant_id, access_token, warehouses, skus)
     if "forecast" in q or "predicted demand" in q or "prediction" in q:
         return _forecast_answer(q, warehouse, sku, tenant_id, access_token)
 

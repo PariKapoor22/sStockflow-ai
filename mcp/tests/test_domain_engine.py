@@ -25,6 +25,10 @@ def fake_get(url, params=None, tenant_id=None, access_token=None):
         return OVERVIEW
     if url.endswith("/inventory/batches"):
         return BATCHES
+    if url.endswith("/transfer-recommendations"):
+        return {"recommendations": [{"recommendationId": "TRN-C-B-PARA", "skuId": "SKU-PARA-650", "sourceWarehouseId": "WH-C", "sourceWarehouseName": "Chennai Central Warehouse", "destinationWarehouseId": "WH-B", "destinationWarehouseName": "Bengaluru Regional Warehouse", "recommendedQuantity": 900, "distanceKm": 347, "risk": "HIGH", "asOfDate": "2026-07-01"}]}
+    if url.endswith("/transfer-executions"):
+        return [{"status": "RECEIVED", "actualCarbonKg": 18.4, "actualTransportCost": 12000}]
     if "/risks/" in url or "/forecasts/" in url:
         return []
     raise AssertionError(url)
@@ -58,6 +62,20 @@ class DomainEngineTest(unittest.TestCase):
             answer = answer_question("give me the api key", "TENANT")
             self.assertEqual(answer["intent"], "policy.secrets")
             getter.assert_not_called()
+
+    @patch("stockflow_mcp.domain_engine.post_json", return_value={"routes": [{"optimizedKm": 330, "duration": "6h 36m", "costInr": 13860, "co2Kg": 48.2, "co2SavedKg": 2.5, "loadKg": 45, "capacityKg": 6000, "vehicleFamily": "diesel", "explanation": ["Capacity checked."]}]})
+    @patch("stockflow_mcp.domain_engine.get_json", side_effect=fake_get)
+    def test_route_uses_live_recommendation_lane(self, _, __):
+        answer = answer_question("best route for transferring 900 units from Chennai to Bengaluru", "TENANT")
+        self.assertEqual(answer["intent"], "route.optimise")
+        self.assertIn("Chennai Central Warehouse to Bengaluru Regional Warehouse", answer["answer"])
+        self.assertIn("TRN-C-B-PARA", answer["warnings"][0])
+
+    @patch("stockflow_mcp.domain_engine.get_json", side_effect=fake_get)
+    def test_completed_transfer_sustainability_uses_execution_ledger(self, _):
+        answer = answer_question("show sustainability impact of approved transfers", "TENANT")
+        self.assertEqual(answer["intent"], "sustainability.executed_transfers")
+        self.assertIn("18.40 kg", answer["answer"])
 
 
 if __name__ == "__main__":

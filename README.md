@@ -788,7 +788,7 @@ Transfer decision intelligence completed:
 
 ### Increment 7
 
-Planned:
+Implemented:
 
 - Gemini-powered inventory copilot
 - Natural-language inventory questions
@@ -799,6 +799,11 @@ Planned:
 - Human approval before write actions
 - Prompt and tool-call audit
 - No direct database access from the model
+- Deterministic domain intent routing with product and warehouse alias resolution
+- Live transfer recommendation grounding for route and vehicle comparisons
+- Completed-transfer sustainability totals from the execution ledger
+- Secret-disclosure and self-approval policy guards
+- Regression coverage for inventory aggregation, product resolution, live routing and execution impact
 
 ---
 
