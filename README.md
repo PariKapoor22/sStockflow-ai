@@ -21,9 +21,9 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 
 ## Current release status
 
-**Current development stage:** Phase 3 — Forecasting
-**Latest completed backend increment:** Increment 5B.1 — Forecast Calibration and Diagnostics
-**Next planned increment:** Increment 5C — Forecast Operations and Governance
+**Current development stage:** Prototype release hardening
+**Latest completed backend increment:** Increment 7 — Grounded Copilot and MCP orchestration
+**Next planned increment:** Production road-network and fleet integrations
 
 | Phase / increment | Scope | Status |
 |---|---|---|
@@ -41,9 +41,9 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Phase 3 Increment 5A | Forecasting foundation and backtesting | Complete |
 | Phase 3 Increment 5B | Forecast-quality engine and additional models | Complete |
 | Phase 3 Increment 5B.1 | Calibration, diagnostics, daily/weekly selection | Complete and verified |
-| Phase 3 Increment 5C | Forecast scheduling, retries, monitoring, governance | Next |
-| Increment 6 | Replenishment and transfer optimization | Planned |
-| Increment 7 | Gemini inventory agent and MCP orchestration | In progress: grounded read-only answers and human-gated Action MCP |
+| Phase 3 Increment 5C | Forecast scheduling, retries, monitoring, governance | Complete |
+| Increment 6 | Replenishment, purchase execution and transfer decision optimization | Complete |
+| Increment 7 | Grounded inventory agent and MCP orchestration | Complete |
 
 ---
 
@@ -743,9 +743,9 @@ Completed: Increment 5B forecast-quality engine
 Completed: Increment 5B.1 calibration and diagnostics
 Completed: Increment 5C forecasting operations and governance
 
-In progress: Increment 6 replenishment and purchase planning
-Next:        Increment 6 transfer and route optimization
-Then:      Increment 7 Gemini inventory agent and MCP integration
+Completed: Increment 6 replenishment, purchase execution and transfer decisions
+Completed: Increment 7 grounded Copilot and MCP integration
+Future:    Production road-network, telematics and verified fleet-emission integrations
 ```
 
 ### Increment 6
