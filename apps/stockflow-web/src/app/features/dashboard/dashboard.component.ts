@@ -32,6 +32,8 @@ import { PrototypeStateService } from '../../core/services/prototype-state.servi
 import { CopilotService } from '../../core/services/copilot.service';
 import { ForecastGovernanceAlert, ForecastJob, ForecastSchedule } from '../../core/models/forecast-operations.models';
 import { ForecastOperationsService } from '../../core/services/forecast-operations.service';
+import { ReplenishmentPlan, TransferRecommendation } from '../../core/models/replenishment.models';
+import { ReplenishmentService } from '../../core/services/replenishment.service';
 import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 
@@ -83,6 +85,27 @@ interface PrototypeRecommendationView {
   target: 'batches' | 'routes';
 }
 
+interface DecisionRecommendationView {
+  id: string;
+  type: 'TRANSFER' | 'PURCHASE';
+  skuId: string;
+  skuName: string;
+  risk: string;
+  title: string;
+  subtitle: string;
+  quantity: number;
+  primaryBenefit: number;
+  primaryBenefitLabel: string;
+  cost: number;
+  carbonKg?: number;
+  confidence: number;
+  asOf: string;
+  explanation: string;
+  evidence: string[];
+  assumptions: string[];
+  target: 'transfers' | 'purchase';
+}
+
 @Component({
   selector: 'sf-dashboard',
   standalone: true,
@@ -107,6 +130,10 @@ export class DashboardComponent implements OnInit {
   scheduleName = 'Daily network forecast';
   scheduleCadence = 'DAILY';
   scheduleHour = 2;
+  decisionRecommendations: DecisionRecommendationView[] = [];
+  decisionRecommendationsLoading = false;
+  decisionRecommendationsError = '';
+  selectedDecisionRecommendation?: DecisionRecommendationView;
 
   foundationSummary?: FoundationSummary;
   warehouses: WarehouseView[] = [];
@@ -309,7 +336,8 @@ export class DashboardComponent implements OnInit {
     private readonly importData: ImportDataService,
     readonly prototype: PrototypeStateService,
     private readonly copilot: CopilotService,
-    private readonly forecastOps: ForecastOperationsService
+    private readonly forecastOps: ForecastOperationsService,
+    private readonly replenishment: ReplenishmentService
   ) {}
 
   ngOnInit(): void {
@@ -338,7 +366,10 @@ export class DashboardComponent implements OnInit {
 
     if (view === 'dashboard' || view === 'recommendations') {
       if (!this.data) this.loadDashboard();
-      if (view === 'recommendations') this.loadPrototypeRecommendationData();
+      if (view === 'recommendations') {
+        this.loadPrototypeRecommendationData();
+        this.loadDecisionRecommendations();
+      }
       return;
     }
 
@@ -1172,6 +1203,85 @@ export class DashboardComponent implements OnInit {
         error: () => this.pageError = 'Demand analytics could not be loaded from the API.'
       });
     this.loadForecastOperations();
+  }
+
+  loadDecisionRecommendations(): void {
+    this.decisionRecommendationsLoading = true;
+    this.decisionRecommendationsError = '';
+    forkJoin({
+      purchases: this.replenishment.plans(30),
+      transfers: this.replenishment.transferRecommendations(30)
+    }).pipe(finalize(() => this.decisionRecommendationsLoading = false)).subscribe({
+      next: ({ purchases, transfers }) => {
+        const transferCards = transfers.recommendations.map(item => this.transferDecision(item));
+        const transferPositions = new Set(transfers.recommendations.map(item => `${item.destinationWarehouseId}:${item.skuId}`));
+        const purchaseCards = purchases.plans
+          .filter(item => item.recommendedQuantity > 0 && !transferPositions.has(`${item.warehouseId}:${item.skuId}`))
+          .map(item => this.purchaseDecision(item));
+        this.decisionRecommendations = [...transferCards, ...purchaseCards]
+          .sort((a, b) => this.riskRank(a.risk) - this.riskRank(b.risk) || b.primaryBenefit - a.primaryBenefit)
+          .slice(0, 50);
+      },
+      error: error => {
+        this.decisionRecommendations = [];
+        this.decisionRecommendationsError = error?.error?.message || error?.error?.detail || 'Live decision recommendations could not be loaded.';
+      }
+    });
+  }
+
+  reviewDecisionRecommendation(item: DecisionRecommendationView): void {
+    this.selectedDecisionRecommendation = item;
+  }
+
+  closeDecisionRecommendation(): void {
+    this.selectedDecisionRecommendation = undefined;
+  }
+
+  decisionTypeCount(type: 'TRANSFER' | 'PURCHASE'): number {
+    return this.decisionRecommendations.filter(item => item.type === type).length;
+  }
+
+  continueDecisionRecommendation(item: DecisionRecommendationView): void {
+    this.selectedDecisionRecommendation = undefined;
+    this.selectView(item.target);
+    this.showTopbarToast(`${item.type === 'TRANSFER' ? 'Transfer' : 'Purchase'} planning opened for ${item.skuName}. Create a proposal to begin the approval workflow.`);
+  }
+
+  private transferDecision(item: TransferRecommendation): DecisionRecommendationView {
+    return {
+      id: item.recommendationId, type: 'TRANSFER', skuId: item.skuId, skuName: item.skuName, risk: item.risk,
+      title: `Transfer ${item.recommendedQuantity.toLocaleString()} units from ${item.sourceWarehouseName}`,
+      subtitle: `Rebalance into ${item.destinationWarehouseName} before purchasing additional inventory.`,
+      quantity: item.recommendedQuantity, primaryBenefit: item.estimatedSavings, primaryBenefitLabel: 'Estimated savings',
+      cost: item.estimatedTransferCost, carbonKg: item.estimatedCarbonKgCo2e, confidence: item.confidencePercent,
+      asOf: item.asOfDate, explanation: item.explanation,
+      evidence: [
+        `Source after transfer: ${item.sourceUsableAfter.toLocaleString()} units; safety stock: ${item.sourceSafetyStock.toLocaleString()}.`,
+        `Destination before transfer: ${item.destinationUsableBefore.toLocaleString()} units; target: ${item.destinationTargetStock.toLocaleString()}.`,
+        `Purchase alternative: INR ${item.estimatedPurchaseCost.toLocaleString('en-IN')}; transfer: INR ${item.estimatedTransferCost.toLocaleString('en-IN')}.`,
+        `${item.distanceKm.toLocaleString()} km, ${item.trips} trip(s), ${item.vehicleCapacityUnits.toLocaleString()}-unit vehicle capacity.`
+      ], assumptions: item.assumptions, target: 'transfers'
+    };
+  }
+
+  private purchaseDecision(item: ReplenishmentPlan): DecisionRecommendationView {
+    return {
+      id: item.recommendationId, type: 'PURCHASE', skuId: item.skuId, skuName: item.skuName, risk: item.risk,
+      title: `Purchase ${item.recommendedQuantity.toLocaleString()} units from ${item.supplierName}`,
+      subtitle: `Replenish ${item.warehouseName} by ${item.needBy}; no eligible transfer currently covers this position.`,
+      quantity: item.recommendedQuantity, primaryBenefit: item.plannedValue, primaryBenefitLabel: 'Planned commitment',
+      cost: item.plannedValue, confidence: item.confidencePercent, asOf: item.asOfDate, explanation: item.explanation,
+      evidence: [
+        `Usable: ${item.usableQuantity.toLocaleString()} units; safety stock: ${item.safetyStock.toLocaleString()}; target: ${item.targetStock.toLocaleString()}.`,
+        `Demand: ${item.averageDailyDemand.toLocaleString()} units/day from ${item.demandSource.replaceAll('_', ' ').toLowerCase()}.`,
+        `Lead time: ${item.leadTimeDays} days; open supply already deducted: ${item.openPurchaseQuantity.toLocaleString()} units.`,
+        `Reorder multiple: ${item.reorderMultiple.toLocaleString()}; unit cost: INR ${item.unitCost.toLocaleString('en-IN')}.`
+      ], assumptions: ['Latest persisted forecast, with 30-day sales fallback', 'Preferred active supplier', 'Human approval required before order creation'], target: 'purchase'
+    };
+  }
+
+  private riskRank(risk: string): number {
+    return risk === 'CRITICAL' ? 0 : risk === 'HIGH' ? 1 : 2;
   }
 
   loadForecastOperations(): void {

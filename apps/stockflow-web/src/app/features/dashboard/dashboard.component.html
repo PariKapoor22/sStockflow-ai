@@ -368,23 +368,42 @@
     </section>
 
     <section class="content workspace" *ngIf="activeView === 'recommendations'">
-      <div class="page-heading"><div><span class="eyebrow">INTELLIGENCE</span><h1>Recommendations</h1><p>Deterministic recommendations generated from current operational inventory risks.</p></div><span class="live-badge">PHASE 2 RULE ENGINE</span></div>
+      <div class="page-heading"><div><span class="eyebrow">DECISION INTELLIGENCE</span><h1>Recommendations</h1><p>Live purchase and transfer decisions generated from inventory, demand, safety-stock, supplier, route and carbon evidence.</p></div><span class="live-badge">LIVE · HUMAN-GATED</span></div>
       <section class="prototype-recommendations" *ngIf="prototypeRecommendations().length">
         <div class="prototype-recommendation-heading"><div><span>LIVE PROTOTYPE</span><h2>Recommendations generated from your saved changes</h2><p>These update immediately when batch quantities, expiry dates or SKU safety-stock policies change.</p></div><strong>{{ prototypeRecommendations().length }} new signals</strong></div>
         <article *ngFor="let recommendation of prototypeRecommendations()" [class]="'card prototype-recommendation ' + recommendation.tone">
           <i></i><div><span>Updated-data recommendation</span><h3>{{ recommendation.title }}</h3><p>{{ recommendation.subtitle }}</p></div><strong>{{ recommendation.benefit }}</strong><button type="button" class="secondary-button" (click)="selectView(recommendation.target)">{{ recommendation.target === 'routes' ? 'Plan route' : 'Review inventory' }}</button>
         </article>
       </section>
-      <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
-        <section class="recommendation-workspace">
-          <article *ngFor="let recommendation of dashboard.recommendations; let i = index" class="card recommendation-detail">
+      <div class="inline-state" *ngIf="decisionRecommendationsLoading"><div class="spinner"></div><span>Calculating purchase and transfer alternatives…</span></div>
+      <div class="error-banner" *ngIf="decisionRecommendationsError"><strong>Recommendations unavailable</strong><span>{{ decisionRecommendationsError }}</span><button type="button" class="secondary-button" (click)="loadDecisionRecommendations()">Retry</button></div>
+      <section class="decision-summary" *ngIf="decisionRecommendations.length">
+        <article><span>Live decisions</span><strong>{{ decisionRecommendations.length }}</strong><small>Ranked by service risk and benefit</small></article>
+        <article><span>Transfer alternatives</span><strong>{{ decisionTypeCount('TRANSFER') }}</strong><small>Safety-stock protected</small></article>
+        <article><span>Data basis</span><strong>PostgreSQL</strong><small>Latest inventory and demand evidence</small></article>
+      </section>
+      <ng-container *ngIf="!decisionRecommendationsLoading">
+        <section class="recommendation-workspace" *ngIf="decisionRecommendations.length; else noDecisionRecommendations">
+          <article *ngFor="let recommendation of decisionRecommendations; let i = index" class="card recommendation-detail live-decision-card">
             <div class="recommendation-rank">{{ i + 1 }}</div>
-            <div class="recommendation-detail-copy"><span>Recommended action</span><h2>{{ recommendation.title }}</h2><p>{{ recommendation.subtitle }}</p></div>
-            <div class="benefit-block"><span>Estimated benefit</span><strong>{{ recommendation.benefit }}</strong></div>
-            <div class="recommendation-actions"><button class="secondary-button">Review evidence</button><button class="primary-button" disabled>Approve in Increment 6</button></div>
+            <div class="recommendation-detail-copy"><span>{{ recommendation.type }} · {{ recommendation.risk }} RISK</span><h2>{{ recommendation.title }}</h2><p>{{ recommendation.subtitle }}</p><small>{{ recommendation.skuId }} · {{ recommendation.confidence }}% confidence · as of {{ recommendation.asOf | date:'mediumDate' }}</small></div>
+            <div class="benefit-block"><span>{{ recommendation.primaryBenefitLabel }}</span><strong>{{ recommendation.primaryBenefit | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong><small *ngIf="recommendation.carbonKg !== undefined">{{ recommendation.carbonKg | number:'1.1-1' }} kg CO₂e estimated</small></div>
+            <div class="recommendation-actions"><button type="button" class="secondary-button" (click)="reviewDecisionRecommendation(recommendation)">Review evidence</button><button type="button" class="primary-button" (click)="continueDecisionRecommendation(recommendation)">{{ recommendation.type === 'TRANSFER' ? 'Plan transfer' : 'Plan purchase' }}</button></div>
           </article>
         </section>
+        <ng-template #noDecisionRecommendations><div class="proposal-empty" *ngIf="!decisionRecommendationsError"><strong>No action required</strong><span>No live position currently requires a safe purchase or transfer recommendation.</span></div></ng-template>
       </ng-container>
+
+      <div class="decision-dialog-backdrop" *ngIf="selectedDecisionRecommendation as recommendation" (click)="closeDecisionRecommendation()">
+        <section class="decision-dialog" role="dialog" aria-modal="true" aria-labelledby="decision-title" (click)="$event.stopPropagation()">
+          <header><div><span>EXPLAINABLE {{ recommendation.type }} DECISION</span><h2 id="decision-title">{{ recommendation.title }}</h2><p>{{ recommendation.id }} · as of {{ recommendation.asOf | date:'mediumDate' }}</p></div><button type="button" aria-label="Close" (click)="closeDecisionRecommendation()">×</button></header>
+          <div class="decision-dialog-metrics"><span><small>Quantity</small><strong>{{ recommendation.quantity | number }} units</strong></span><span><small>Estimated cost</small><strong>{{ recommendation.cost | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong></span><span><small>Confidence</small><strong>{{ recommendation.confidence }}%</strong></span><span><small>Risk</small><strong>{{ recommendation.risk }}</strong></span></div>
+          <article><span>WHY THIS IS RECOMMENDED</span><p>{{ recommendation.explanation }}</p></article>
+          <div class="decision-evidence-grid"><article><span>EVIDENCE</span><ul><li *ngFor="let evidence of recommendation.evidence">{{ evidence }}</li></ul></article><article><span>ASSUMPTIONS &amp; LIMITS</span><ul><li *ngFor="let assumption of recommendation.assumptions">{{ assumption }}</li></ul></article></div>
+          <div class="human-gate-note"><strong>Human approval remains mandatory</strong><span>This recommendation does not move inventory, dispatch a vehicle or place a supplier order. The next screen creates a reviewable proposal.</span></div>
+          <footer><button type="button" class="secondary-button" (click)="closeDecisionRecommendation()">Close</button><button type="button" class="primary-button" (click)="continueDecisionRecommendation(recommendation)">Continue to {{ recommendation.type === 'TRANSFER' ? 'transfer' : 'purchase' }} planning</button></footer>
+        </section>
+      </div>
     </section>
 
 

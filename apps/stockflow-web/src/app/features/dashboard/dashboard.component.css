@@ -142,6 +142,22 @@ td small { display: block; margin-top: 4px; color: #8a94a6; font-size: 8.5px; li
 .benefit-block { display: flex; flex-direction: column; gap: 7px; }
 .benefit-block strong { color: #079455; font-size: 17px; }
 .recommendation-actions { display: flex; gap: 8px; }
+.decision-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+.decision-summary article { display:grid; gap:5px; padding:14px 16px; border:1px solid #e2e6ef; border-radius:12px; background:#fff; }
+.decision-summary span,.decision-dialog article > span,.decision-evidence-grid article > span { color:#6650d8; font-size:8px; font-weight:900; letter-spacing:.08em; }
+.decision-summary strong { color:#17213a; font-size:18px; }.decision-summary small { color:#667085; font-size:9px; }
+.live-decision-card .recommendation-detail-copy > small { display:block; margin-top:6px; color:#8a94a6; font-size:8px; }
+.benefit-block small { color:#667085; font-size:8px; }
+.decision-dialog-backdrop { position:fixed; inset:0; z-index:500; display:grid; place-items:center; padding:24px; background:rgb(12 19 32 / 66%); backdrop-filter:blur(3px); }
+.decision-dialog { width:min(900px,100%); max-height:calc(100vh - 48px); overflow:auto; border-radius:18px; background:#fff; box-shadow:0 24px 70px rgb(16 24 40 / 28%); }
+.decision-dialog > header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:22px 24px; border-bottom:1px solid #e6e9f0; }
+.decision-dialog > header span { color:#6249db; font-size:8px; font-weight:900; letter-spacing:.1em; }.decision-dialog > header h2 { margin:6px 0; color:#111827; font-size:20px; }.decision-dialog > header p { margin:0; color:#667085; font-size:9px; }
+.decision-dialog > header button { width:36px; height:36px; border:0; border-radius:10px; background:#f4f6fa; color:#344054; font-size:22px; cursor:pointer; }
+.decision-dialog-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; padding:18px 24px 0; }.decision-dialog-metrics span { display:grid; gap:5px; padding:13px; border-radius:10px; background:#f7f8fc; }.decision-dialog-metrics small { color:#667085; font-size:8px; text-transform:uppercase; }.decision-dialog-metrics strong { color:#17213a; font-size:12px; }
+.decision-dialog > article { margin:16px 24px 0; padding:15px; border:1px solid #ded9ff; border-radius:11px; background:#faf9ff; }.decision-dialog article p { margin:7px 0 0; color:#344054; font-size:10px; line-height:1.6; }
+.decision-evidence-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:14px 24px; }.decision-evidence-grid article { padding:14px; border:1px solid #e4e7ec; border-radius:11px; }.decision-evidence-grid ul { margin:9px 0 0; padding-left:17px; color:#475467; font-size:9px; line-height:1.65; }
+.human-gate-note { display:flex; gap:12px; margin:0 24px 16px; padding:13px 14px; border-radius:10px; background:#fff7e8; color:#805300; font-size:9px; }.human-gate-note span { color:#806b42; }
+.decision-dialog > footer { display:flex; justify-content:flex-end; gap:9px; padding:16px 24px; border-top:1px solid #e6e9f0; }
 .prototype-recommendations { display:grid; gap:10px; margin-bottom:16px; padding:14px; border:1px solid #d9d2ff; border-radius:13px; background:#f8f6ff; }
 .prototype-recommendation-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:2px 2px 6px; }.prototype-recommendation-heading span { color:#6249db; font-size:8px; font-weight:900; letter-spacing:.1em; }.prototype-recommendation-heading h2 { margin:5px 0 3px; font-size:13px; }.prototype-recommendation-heading p { margin:0; color:#667085; font-size:8px; }.prototype-recommendation-heading > strong { color:#5d45d6; font-size:9px; white-space:nowrap; }
 .prototype-recommendation { display:grid; grid-template-columns:9px minmax(0,1fr) 130px auto; align-items:center; gap:13px; padding:13px 14px; }.prototype-recommendation > i { width:8px; height:8px; border-radius:50%; background:#25aa6d; }.prototype-recommendation.warning > i { background:#e7a13c; }.prototype-recommendation.critical > i { background:#df5148; }.prototype-recommendation > div { display:grid; gap:4px; }.prototype-recommendation span { color:#6c55dc; font-size:7px; font-weight:900; letter-spacing:.07em; text-transform:uppercase; }.prototype-recommendation h3 { margin:0; font-size:10px; }.prototype-recommendation p { margin:0; color:#667085; font-size:8px; line-height:1.4; }.prototype-recommendation > strong { color:#168451; font-size:10px; text-align:right; }
@@ -176,6 +192,8 @@ td small { display: block; margin-top: 4px; color: #8a94a6; font-size: 8.5px; li
 @media (max-width:1120px) { .activity-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }.activity-layout { grid-template-columns:1fr; } }
 @media (max-width:720px) { .activity-heading { align-items:stretch; flex-direction:column; }.reset-demo-button { width:100%; }.activity-metrics { grid-template-columns:1fr; }.activity-entry { grid-template-columns:12px 1fr; }.activity-entry time { grid-column:2; }.activity-list { max-height:none; } }
 @media (max-width: 900px) {
+  .decision-summary { grid-template-columns:1fr; }
+  .decision-dialog-metrics,.decision-evidence-grid { grid-template-columns:1fr 1fr; }
   .tenant-picker { display: none; }
   .page-heading { align-items: flex-start; flex-direction: column; }
   .metric-grid.five, .metric-grid.four { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -186,6 +204,7 @@ td small { display: block; margin-top: 4px; color: #8a94a6; font-size: 8.5px; li
   .benefit-block, .recommendation-actions { grid-column: 2; }
 }
 @media (max-width: 620px) {
+  .decision-dialog-backdrop { padding:8px; }.decision-dialog { max-height:calc(100vh - 16px); }.decision-dialog-metrics,.decision-evidence-grid { grid-template-columns:1fr; }.human-gate-note { flex-direction:column; }.decision-dialog > footer { flex-direction:column-reverse; }
   .metric-grid.five, .metric-grid.four { grid-template-columns: 1fr; }
   .workspace-card-header { align-items: flex-start; }
   .wide-chart { height: 230px; }
