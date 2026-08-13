@@ -43,6 +43,7 @@ class TenantAuthorizationFilter(
         if ((path.endsWith("/approve") || path.endsWith("/reject")) && request.method.equals("POST", true)) return "PROPOSAL_APPROVE"
         if (path.contains("/execution") && request.method.equals("POST", true)) return "TRANSFER_EXECUTE"
         if (path.contains("/transfer-executions/") && request.method.equals("POST", true)) return "TRANSFER_EXECUTE"
+        if ((path.contains("/purchase-order") || path.contains("/purchase-orders/")) && request.method.equals("POST", true)) return "PURCHASE_EXECUTE"
         if (path.startsWith("/api/v1/forecast-operations") && request.method.equals("POST", true)) return "FORECAST_RUN"
         if (path.startsWith("/api/v1/replenishment")) return "FORECAST_READ"
         if (path.startsWith("/api/v1/actions/")) return null

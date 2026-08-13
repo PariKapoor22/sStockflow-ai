@@ -3,7 +3,7 @@ import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject }
 import { FormsModule } from '@angular/forms';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
 import { CarbonApiService } from '../../core/services/carbon-api.service';
-import { ActionProposal, ProposalHistory, ProposalType, TransferExecution, TransferExecutionDetail } from '../../core/models/action.models';
+import { ActionProposal, ProposalHistory, ProposalType, PurchaseOrder, PurchaseOrderDetail, TransferExecution, TransferExecutionDetail } from '../../core/models/action.models';
 import { ActionProposalService } from '../../core/services/action-proposal.service';
 import { SkuView, WarehouseView } from '../../core/models/foundation.models';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
@@ -157,9 +157,18 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   proposalSkus: SkuView[] = [];
   transferExecutions: TransferExecution[] = [];
   selectedExecution?: TransferExecutionDetail;
+  purchaseOrders: PurchaseOrder[] = [];
+  selectedPurchaseOrder?: PurchaseOrderDetail;
   executionComment = '';
   actualTransportCost?: number;
   actualCarbonKg?: number;
+  poExpectedDate = '';
+  poAcknowledgement = '';
+  receiptQuantity = 1;
+  receiptBatchNumber = '';
+  receiptManufactureDate = '';
+  receiptExpiryDate = '';
+  receiptStorage = 'AMBIENT';
   replenishmentSummary?: ReplenishmentSummary;
   replenishmentLoading = false;
   targetCoverDays = 30;
@@ -221,6 +230,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.loadProposals();
     this.loadProposalOptions();
     this.loadExecutions();
+    this.loadPurchaseOrders();
     this.loadReplenishmentPlans();
   }
 
@@ -553,6 +563,8 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.actionApi.executions().subscribe({ next: values => this.transferExecutions = values, error: () => undefined });
   }
 
+  loadPurchaseOrders(): void { this.actionApi.purchaseOrders().subscribe({ next: values => this.purchaseOrders = values, error: () => undefined }); }
+
   openProposalDialog(type: ProposalType): void {
     this.proposalForm = this.emptyProposal(type);
     this.selectedProposal = undefined;
@@ -605,10 +617,13 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.proposalHistory = [];
     this.proposalError = '';
     this.selectedExecution = undefined;
+    this.selectedPurchaseOrder = undefined;
     this.proposalDialogOpen = true;
     this.actionApi.history(proposal.proposalId).subscribe({ next: history => this.proposalHistory = history, error: error => this.proposalError = this.apiError(error, 'Proposal history could not be loaded.') });
     const execution = this.transferExecutions.find(item => item.proposalId === proposal.proposalId);
     if (execution) this.loadExecution(execution.executionId);
+    const order = this.purchaseOrders.find(item => item.proposalId === proposal.proposalId);
+    if (order) this.loadPurchaseOrder(order.purchaseOrderId);
   }
 
   createExecution(): void {
@@ -638,6 +653,30 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   executionFor(proposal: ActionProposal): TransferExecution | undefined { return this.transferExecutions.find(item => item.proposalId === proposal.proposalId); }
   private upsertExecution(execution: TransferExecution): void { this.transferExecutions = [execution, ...this.transferExecutions.filter(item => item.executionId !== execution.executionId)]; }
+
+  createPurchaseOrder(): void {
+    if (!this.selectedProposal || this.proposalSaving) return;
+    this.proposalSaving = true; this.proposalError = '';
+    this.actionApi.createPurchaseOrder(this.selectedProposal.proposalId, this.poExpectedDate).subscribe({
+      next: detail => { this.proposalSaving = false; this.selectedPurchaseOrder = detail; this.upsertPurchaseOrder(detail.purchaseOrder); this.showToast('Purchase order created from the approved proposal.'); },
+      error: error => { this.proposalSaving = false; this.proposalError = this.apiError(error, 'Purchase order could not be created.'); }
+    });
+  }
+
+  loadPurchaseOrder(id: string): void { this.actionApi.purchaseOrder(id).subscribe({ next: detail => this.selectedPurchaseOrder = detail, error: error => this.proposalError = this.apiError(error, 'Purchase order details could not be loaded.') }); }
+
+  transitionPurchaseOrder(action: 'send' | 'acknowledge' | 'receive' | 'cancel'): void {
+    const detail = this.selectedPurchaseOrder; if (!detail || this.proposalSaving) return;
+    if (action === 'receive' && (!this.receiptBatchNumber.trim() || !this.receiptExpiryDate || this.receiptQuantity <= 0)) { this.proposalError = 'Receipt quantity, batch number and expiry date are required.'; return; }
+    this.proposalSaving = true; this.proposalError = ''; const id = detail.purchaseOrder.purchaseOrderId;
+    const request = action === 'send' ? this.actionApi.sendPurchaseOrder(id, this.executionComment)
+      : action === 'acknowledge' ? this.actionApi.acknowledgePurchaseOrder(id, this.poAcknowledgement, this.poExpectedDate, this.executionComment)
+      : action === 'receive' ? this.actionApi.receivePurchaseOrder(id, { quantity: this.receiptQuantity, batchNumber: this.receiptBatchNumber.trim(), manufactureDate: this.receiptManufactureDate || undefined, expiryDate: this.receiptExpiryDate, storageConditionCode: this.receiptStorage, comment: this.executionComment })
+      : this.actionApi.cancelPurchaseOrder(id, this.executionComment);
+    request.subscribe({ next: updated => { this.proposalSaving = false; this.selectedPurchaseOrder = updated; this.upsertPurchaseOrder(updated.purchaseOrder); this.executionComment = ''; this.receiptBatchNumber = ''; this.loadReplenishmentPlans(); this.showToast(`Purchase order moved to ${this.proposalStatus(updated.purchaseOrder.status)}.`); }, error: error => { this.proposalSaving = false; this.proposalError = this.apiError(error, 'Purchase-order status could not be changed.'); } });
+  }
+
+  private upsertPurchaseOrder(order: PurchaseOrder): void { this.purchaseOrders = [order, ...this.purchaseOrders.filter(item => item.purchaseOrderId !== order.purchaseOrderId)]; }
 
   transitionProposal(action: 'submit' | 'approve' | 'reject' | 'cancel'): void {
     const proposal = this.selectedProposal;

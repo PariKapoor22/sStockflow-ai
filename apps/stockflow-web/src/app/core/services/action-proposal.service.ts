@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { ActionProposal, ProposalHistory, PurchaseProposalRequest, TransferExecution, TransferExecutionDetail, TransferProposalRequest } from '../models/action.models';
+import { ActionProposal, ProposalHistory, PurchaseOrder, PurchaseOrderDetail, PurchaseProposalRequest, TransferExecution, TransferExecutionDetail, TransferProposalRequest } from '../models/action.models';
 
 @Injectable({ providedIn: 'root' })
 export class ActionProposalService {
@@ -44,10 +44,23 @@ export class ActionProposalService {
   receiveExecution(id: string, comment = '', actualTransportCost?: number, actualCarbonKg?: number): Observable<TransferExecutionDetail> { return this.executionTransition(id, 'receive', { comment, actualTransportCost, actualCarbonKg }); }
   cancelExecution(id: string, comment = ''): Observable<TransferExecutionDetail> { return this.executionTransition(id, 'cancel', { comment }); }
 
+  purchaseOrders(): Observable<PurchaseOrder[]> { return this.http.get<PurchaseOrder[]>(`${this.baseUrl}/purchase-orders`, { headers: this.tenantHeaders() }); }
+  purchaseOrder(id: string): Observable<PurchaseOrderDetail> { return this.http.get<PurchaseOrderDetail>(`${this.baseUrl}/purchase-orders/${id}`, { headers: this.tenantHeaders() }); }
+  createPurchaseOrder(proposalId: string, expectedDeliveryDate?: string): Observable<PurchaseOrderDetail> {
+    return this.http.post<PurchaseOrderDetail>(`${this.baseUrl}/proposals/${proposalId}/purchase-order`, { expectedDeliveryDate: expectedDeliveryDate || null }, { headers: this.tenantHeaders().set('Idempotency-Key', `web-po-${proposalId}`) });
+  }
+  sendPurchaseOrder(id: string, comment = ''): Observable<PurchaseOrderDetail> { return this.purchaseTransition(id, 'send', { comment }); }
+  acknowledgePurchaseOrder(id: string, acknowledgementReference = '', expectedDeliveryDate = '', comment = ''): Observable<PurchaseOrderDetail> { return this.purchaseTransition(id, 'acknowledge', { acknowledgementReference: acknowledgementReference || null, expectedDeliveryDate: expectedDeliveryDate || null, comment }); }
+  receivePurchaseOrder(id: string, body: { quantity: number; batchNumber: string; manufactureDate?: string; expiryDate: string; unitCost?: number; storageConditionCode: string; comment?: string }): Observable<PurchaseOrderDetail> {
+    return this.http.post<PurchaseOrderDetail>(`${this.baseUrl}/purchase-orders/${id}/receive`, body, { headers: this.tenantHeaders().set('Idempotency-Key', `web-receipt-${crypto.randomUUID()}`) });
+  }
+  cancelPurchaseOrder(id: string, comment = ''): Observable<PurchaseOrderDetail> { return this.purchaseTransition(id, 'cancel', { comment }); }
+
   private transition(proposalId: string, action: string, comment: string): Observable<ActionProposal> {
     return this.http.post<ActionProposal>(`${this.baseUrl}/proposals/${proposalId}/${action}`, { comment }, { headers: this.tenantHeaders() });
   }
   private executionTransition(id: string, action: string, body: object): Observable<TransferExecutionDetail> { return this.http.post<TransferExecutionDetail>(`${this.baseUrl}/transfer-executions/${id}/${action}`, body, { headers: this.tenantHeaders() }); }
+  private purchaseTransition(id: string, action: string, body: object): Observable<PurchaseOrderDetail> { return this.http.post<PurchaseOrderDetail>(`${this.baseUrl}/purchase-orders/${id}/${action}`, body, { headers: this.tenantHeaders() }); }
 
   private tenantHeaders(): HttpHeaders {
     return new HttpHeaders({ 'X-Tenant-ID': localStorage.getItem('stockflowTenantId') ?? 'TEN-ACME-PHARMA' });

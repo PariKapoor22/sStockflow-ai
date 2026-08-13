@@ -71,3 +71,16 @@ export interface TransferExecution {
 export interface TransferAllocation { batchNumber: string; quantity: number; expiryDate: string; unitCost: number; currency: string; }
 export interface TransferExecutionEvent { eventId: string; fromStatus?: TransferExecutionStatus; toStatus: TransferExecutionStatus; changedBy: string; comment?: string; occurredAt: string; }
 export interface TransferExecutionDetail { execution: TransferExecution; allocations: TransferAllocation[]; events: TransferExecutionEvent[]; }
+
+export type PurchaseOrderStatus = 'PO_CREATED' | 'SENT_TO_SUPPLIER' | 'ACKNOWLEDGED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED';
+export interface PurchaseOrder {
+  purchaseOrderId: string; proposalId: string; tenantId: string; status: PurchaseOrderStatus; skuId: string;
+  destinationWarehouseId: string; supplierReference: string; orderedQuantity: number; receivedQuantity: number;
+  remainingQuantity: number; unitCost: number; currency: string; expectedDeliveryDate?: string;
+  supplierAcknowledgementReference?: string; createdBy: string; sentBy?: string; acknowledgedBy?: string;
+  lastReceivedBy?: string; createdAt: string; sentAt?: string; acknowledgedAt?: string; lastReceivedAt?: string;
+  updatedAt: string; version: number;
+}
+export interface PurchaseReceipt { receiptId: string; quantity: number; batchNumber: string; manufactureDate?: string; expiryDate: string; unitCost: number; storageConditionCode: string; receivedBy: string; receivedAt: string; }
+export interface PurchaseOrderEvent { eventId: string; fromStatus?: PurchaseOrderStatus; toStatus: PurchaseOrderStatus; changedBy: string; comment?: string; occurredAt: string; }
+export interface PurchaseOrderDetail { purchaseOrder: PurchaseOrder; receipts: PurchaseReceipt[]; events: PurchaseOrderEvent[]; }

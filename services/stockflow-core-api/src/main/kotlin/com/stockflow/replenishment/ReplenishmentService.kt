@@ -24,7 +24,7 @@ class ReplenishmentService(private val jdbc: JdbcTemplate) {
             forecastConfidence = rs.getString("forecast_confidence"), supplierId = rs.getString("supplier_id"), supplierName = rs.getString("supplier_name"),
             leadTimeDays = rs.getInt("lead_time_days"), supplierCost = rs.getBigDecimal("supplier_unit_cost"), openPurchase = rs.getLong("open_purchase_quantity"),
             proposalStatus = rs.getString("proposal_status")
-        ) }, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId)
+        ) }, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId)
 
         val visible = if (actor.warehouseIds.isEmpty()) rows else rows.filter { it.warehouseId in actor.warehouseIds }
         val calculated = visible.mapNotNull { calculate(it, targetCoverDays) }
@@ -85,10 +85,16 @@ class ReplenishmentService(private val jdbc: JdbcTemplate) {
           FROM forecast_result f JOIN forecast_run r ON r.forecast_run_id=f.forecast_run_id
           WHERE f.tenant_id=? AND r.status IN ('COMPLETED','COMPLETED_WITH_ERRORS')
           GROUP BY r.started_at,f.warehouse_id,f.sku_id
+        ), open_supply_rows AS (
+          SELECT ap.destination_warehouse_id warehouse_id,ap.sku_id,ap.quantity::bigint open_quantity,ap.status
+          FROM action_proposal ap LEFT JOIN purchase_order po ON po.tenant_id=ap.tenant_id AND po.proposal_id=ap.proposal_id
+          WHERE ap.tenant_id=? AND ap.proposal_type='PURCHASE' AND ap.status IN ('DRAFT','PENDING_APPROVAL','APPROVED') AND po.purchase_order_id IS NULL
+          UNION ALL
+          SELECT destination_warehouse_id,sku_id,(ordered_quantity-received_quantity)::bigint,status
+          FROM purchase_order WHERE tenant_id=? AND status IN ('PO_CREATED','SENT_TO_SUPPLIER','ACKNOWLEDGED','PARTIALLY_RECEIVED')
         ), open_po AS (
-          SELECT destination_warehouse_id warehouse_id,sku_id,SUM(quantity)::bigint open_purchase_quantity,
-                 MAX(status) proposal_status FROM action_proposal WHERE tenant_id=? AND proposal_type='PURCHASE' AND status IN ('DRAFT','PENDING_APPROVAL','APPROVED')
-          GROUP BY destination_warehouse_id,sku_id
+          SELECT warehouse_id,sku_id,SUM(open_quantity)::bigint open_purchase_quantity,MAX(status) proposal_status
+          FROM open_supply_rows GROUP BY warehouse_id,sku_id
         ), preferred_supplier AS (
           SELECT DISTINCT ON (ss.sku_id) ss.sku_id,p.supplier_id,p.supplier_name,p.lead_time_days,ss.supplier_unit_cost
           FROM sku_supplier ss JOIN supplier p ON p.tenant_id=ss.tenant_id AND p.supplier_id=ss.supplier_id

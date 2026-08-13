@@ -761,10 +761,19 @@ Implemented replenishment slice:
 - Explainable need date, confidence and quantity evidence
 - Direct handoff into the human approval workflow
 
+Purchase-order execution completed:
+
+- Approved purchase proposals convert into controlled purchase orders
+- Supplier dispatch and acknowledgement lifecycle
+- Partial and complete goods receipts with batch and expiry details
+- Idempotent receipt posting into the latest inventory snapshot
+- Tenant, warehouse and role enforcement for every execution action
+- Complete purchase-order audit history
+- Open purchase-order quantities feed back into replenishment planning
+
 Remaining:
 
 - Inter-warehouse transfer recommendations
-- Executed purchase-order lifecycle and supplier acknowledgement
 - Working-capital impact
 - Purchase-versus-transfer comparison
 
