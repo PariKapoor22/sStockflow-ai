@@ -171,6 +171,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   receiptStorage = 'AMBIENT';
   replenishmentSummary?: ReplenishmentSummary;
   replenishmentLoading = false;
+  transferRecommendationsLoading = false;
   targetCoverDays = 30;
   private toastTimer?: number;
 
@@ -232,6 +233,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.loadExecutions();
     this.loadPurchaseOrders();
     this.loadReplenishmentPlans();
+    this.loadTransferRecommendations();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -561,6 +563,24 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   loadExecutions(): void {
     this.actionApi.executions().subscribe({ next: values => this.transferExecutions = values, error: () => undefined });
+  }
+
+  loadTransferRecommendations(): void {
+    this.transferRecommendationsLoading = true;
+    this.replenishmentApi.transferRecommendations(this.targetCoverDays).subscribe({
+      next: summary => {
+        this.transferRecommendationsLoading = false;
+        this.transfers = summary.recommendations.map(item => ({
+          id: item.recommendationId, sku: item.skuId, product: item.skuName,
+          from: item.sourceWarehouseName, to: item.destinationWarehouseName,
+          quantity: item.recommendedQuantity, priority: this.proposalStatus(item.risk), status: 'Awaiting approval',
+          distanceKm: item.distanceKm, eta: `${item.trips} trip${item.trips === 1 ? '' : 's'}`,
+          reason: item.explanation, co2SavedKg: item.estimatedCarbonKgCo2e,
+          serviceLift: Math.max(1, Math.round(item.recommendedQuantity / Math.max(item.destinationTargetStock, 1) * 100))
+        }));
+      },
+      error: () => { this.transferRecommendationsLoading = false; }
+    });
   }
 
   loadPurchaseOrders(): void { this.actionApi.purchaseOrders().subscribe({ next: values => this.purchaseOrders = values, error: () => undefined }); }

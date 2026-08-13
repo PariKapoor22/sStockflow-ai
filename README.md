@@ -773,9 +773,18 @@ Purchase-order execution completed:
 
 Remaining:
 
-- Inter-warehouse transfer recommendations
-- Working-capital impact
-- Purchase-versus-transfer comparison
+- Advanced road-network and multi-stop OR-Tools optimization
+
+Transfer decision intelligence completed:
+
+- Live destination shortages and eligible source surpluses
+- Source safety-stock protection after transfer
+- Warehouse-coordinate distance estimation
+- Vehicle-capacity trip calculation
+- Transfer cost versus supplier purchase comparison
+- Estimated savings and working capital moved
+- Explainable carbon estimate with disclosed assumptions
+- Direct handoff to the existing human approval workflow
 
 ### Increment 7
 
