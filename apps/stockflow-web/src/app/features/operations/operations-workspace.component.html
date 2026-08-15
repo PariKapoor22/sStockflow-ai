@@ -1,4 +1,21 @@
 <section class="operations-page">
+  <div class="proposal-backdrop" *ngIf="orderDialogOpen" (click)="closeOrderDialog()">
+    <section class="proposal-dialog" role="dialog" aria-modal="true" aria-labelledby="order-dialog-title" (click)="$event.stopPropagation()">
+      <header><div><span>CUSTOMER ORDER</span><h2 id="order-dialog-title">Create order</h2></div><button type="button" aria-label="Close order form" (click)="closeOrderDialog()">×</button></header>
+      <div class="proposal-form">
+        <label><span>Customer name</span><input [(ngModel)]="orderForm.customerName" maxlength="200" placeholder="Customer or business name"></label>
+        <label><span>Customer city</span><input [(ngModel)]="orderForm.customerCity" maxlength="120" placeholder="Delivery city"></label>
+        <label><span>Order channel</span><select [(ngModel)]="orderForm.channel"><option>B2B Portal</option><option>EDI</option><option>Sales desk</option><option>Mobile app</option><option>API</option></select></label>
+        <label><span>Promised date and time</span><input type="datetime-local" [(ngModel)]="orderForm.promisedAt"></label>
+        <label><span>Fulfilment warehouse</span><select [(ngModel)]="orderForm.warehouseId"><option value="" disabled>Select a warehouse</option><option *ngFor="let warehouse of proposalWarehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select></label>
+        <label><span>Product / SKU</span><select [(ngModel)]="orderForm.skuId"><option value="" disabled>Select a product</option><option *ngFor="let sku of proposalSkus" [value]="sku.skuId">{{ sku.skuName }} · {{ sku.skuId }}</option></select></label>
+        <label><span>Quantity</span><input type="number" min="1" step="1" [(ngModel)]="orderForm.quantity"></label>
+        <label><span>Unit selling price (optional)</span><input type="number" min="0" step="0.01" [(ngModel)]="orderForm.unitPrice" placeholder="Uses SKU selling price"></label>
+      </div>
+      <p class="proposal-error" *ngIf="orderError">{{ orderError }}</p>
+      <footer><span>Creates a persisted order. Shipment and inventory deduction remain separate controlled steps.</span><button type="button" class="dialog-primary" [disabled]="orderSaving" (click)="submitOrder()">{{ orderSaving ? 'Creating…' : 'Create order' }}</button></footer>
+    </section>
+  </div>
   <div class="proposal-backdrop" *ngIf="proposalDialogOpen" (click)="closeProposalDialog()">
     <section class="proposal-dialog" role="dialog" aria-modal="true" aria-labelledby="proposal-title" (click)="$event.stopPropagation()">
       <header><div><span>HUMAN-GATED ACTION</span><h2 id="proposal-title">{{ selectedProposal ? shortProposalId(selectedProposal) : 'Create ' + proposalForm.type.toLowerCase() + ' proposal' }}</h2></div><button type="button" aria-label="Close proposal" (click)="closeProposalDialog()">×</button></header>
@@ -319,17 +336,19 @@
 
       <article class="panel table-panel">
         <div class="panel-heading"><div><span>ORDER QUEUE</span><h2>Customer orders</h2><p>Promise-date, allocation and fulfilment visibility across every active warehouse.</p></div><span>{{ filteredOrders().length }} records</span></div>
+        <p class="proposal-error" *ngIf="orderError && !orderDialogOpen">{{ orderError }}</p>
+        <p class="empty-row" *ngIf="ordersLoading">Loading live customer orders…</p>
         <div class="table-scroll"><table><thead><tr><th>Order</th><th>Customer</th><th>Fulfilment node</th><th class="numeric">Items</th><th class="numeric">Value</th><th>Promised</th><th>Fulfilment</th><th>Status</th><th></th></tr></thead><tbody>
           <tr *ngFor="let item of filteredOrders()">
             <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('orders', item.id)">Updated</em></strong><small>{{ item.channel }}</small></td>
             <td><strong>{{ item.customer }}</strong><small>{{ item.city }}</small></td>
             <td><strong>{{ item.warehouse }}</strong><small>Inventory allocation node</small></td>
-            <td class="numeric"><strong>{{ item.itemCount }}</strong><small>order lines</small></td>
+            <td class="numeric"><strong>{{ item.quantity || item.itemCount }}</strong><small>{{ item.skuName || 'order lines' }}</small></td>
             <td class="numeric"><strong>{{ item.value | currency:'INR':'symbol':'1.0-0' }}</strong><small>net order value</small></td>
             <td><strong>{{ item.promisedDate }}</strong><small>Customer commitment</small></td>
             <td><strong>{{ item.fulfillment }}%</strong><div class="mini-progress"><i [style.width.%]="item.fulfillment" [class.warning]="item.fulfillment < 70"></i></div></td>
             <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
-            <td><button type="button" class="row-action" [disabled]="item.status === 'Shipped'" (click)="advanceOrder(item)">{{ item.status === 'Shipped' ? 'Track order' : 'Advance' }}</button></td>
+            <td><button type="button" class="row-action" [disabled]="item.status === 'Shipped' || item.status === 'Cancelled' || orderActionId === item.orderId" (click)="advanceOrder(item)">{{ orderActionId === item.orderId ? 'Saving…' : item.status === 'Shipped' ? 'Completed' : 'Advance' }}</button></td>
           </tr><tr *ngIf="!filteredOrders().length"><td colspan="9" class="empty-row">No orders match the current filters.</td></tr>
         </tbody></table></div>
       </article>

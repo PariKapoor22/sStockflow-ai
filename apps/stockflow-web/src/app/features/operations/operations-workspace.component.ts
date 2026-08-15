@@ -10,6 +10,8 @@ import { FoundationDataService } from '../../core/services/foundation-data.servi
 import { AuthService } from '../../core/services/auth.service';
 import { ReplenishmentSummary } from '../../core/models/replenishment.models';
 import { ReplenishmentService } from '../../core/services/replenishment.service';
+import { CustomerOrderService } from '../../core/services/customer-order.service';
+import { CreateCustomerOrderRequest, CustomerOrderView } from '../../core/models/customer-order.models';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -50,6 +52,7 @@ interface PurchasePlan {
 }
 
 interface CustomerOrder {
+  orderId?: string;
   id: string;
   customer: string;
   city: string;
@@ -60,6 +63,20 @@ interface CustomerOrder {
   promisedDate: string;
   fulfillment: number;
   status: string;
+  skuId?: string;
+  skuName?: string;
+  quantity?: number;
+}
+
+interface OrderForm {
+  customerName: string;
+  customerCity: string;
+  channel: string;
+  warehouseId: string;
+  skuId: string;
+  quantity: number;
+  promisedAt: string;
+  unitPrice?: number;
 }
 
 interface ReturnCase {
@@ -136,6 +153,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   private readonly foundationApi = inject(FoundationDataService);
   readonly auth = inject(AuthService);
   private readonly replenishmentApi = inject(ReplenishmentService);
+  private readonly orderApi = inject(CustomerOrderService);
 
   statusFilter = 'ALL';
   locationFilter = 'ALL';
@@ -173,6 +191,12 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   replenishmentLoading = false;
   transferRecommendationsLoading = false;
   targetCoverDays = 30;
+  ordersLoading = false;
+  orderSaving = false;
+  orderActionId = '';
+  orderError = '';
+  orderDialogOpen = false;
+  orderForm: OrderForm = this.emptyOrder();
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -234,6 +258,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.loadPurchaseOrders();
     this.loadReplenishmentPlans();
     this.loadTransferRecommendations();
+    this.loadOrders();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -241,6 +266,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       this.statusFilter = 'ALL';
       this.locationFilter = 'ALL';
       if (this.view === 'purchase') this.loadReplenishmentPlans();
+      if (this.view === 'orders') this.loadOrders();
     }
   }
 
@@ -423,16 +449,21 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   }
 
   advanceOrder(item: CustomerOrder): void {
-    const next: Record<string, string> = { Allocated: 'Picking', Picking: 'Ready to ship', 'Ready to ship': 'Shipped', 'On hold': 'Allocated' };
-    item.status = next[item.status] ?? item.status;
-    item.fulfillment = item.status === 'Shipped' || item.status === 'Ready to ship' ? 100 : Math.max(item.fulfillment, 72);
-    this.prototype.patchRecord('orders', item.id, { status: item.status, fulfillment: item.fulfillment }, {
-      module: 'Orders',
-      title: `${item.id} moved to ${item.status}`,
-      detail: `${item.customer} is now ${item.fulfillment}% fulfilled from ${item.warehouse}.`,
-      tone: item.status === 'Shipped' ? 'success' : 'info'
+    if (!item.orderId || this.orderActionId) return;
+    this.orderActionId = item.orderId;
+    this.orderError = '';
+    this.orderApi.advance(item.orderId, `Advanced from the StockFlow order workspace`).subscribe({
+      next: detail => {
+        this.orderActionId = '';
+        const updated = this.mapOrder(detail.order);
+        this.orders = this.orders.map(candidate => candidate.orderId === updated.orderId ? updated : candidate);
+        this.showToast(`${updated.id} moved to ${updated.status}.`);
+      },
+      error: error => {
+        this.orderActionId = '';
+        this.orderError = this.apiError(error, 'The order could not be advanced.');
+      }
     });
-    this.showToast(`${item.id} moved to ${item.status} and was saved.`);
   }
 
   approveReturn(item: ReturnCase): void {
@@ -539,6 +570,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       this.openProposalDialog(this.view === 'transfers' ? 'TRANSFER' : 'PURCHASE');
       return;
     }
+    if (this.view === 'orders') {
+      this.openOrderDialog();
+      return;
+    }
     this.showToast(`${this.pageCopy.action} opened as a UI preview. Backend submission is not connected yet.`);
   }
 
@@ -563,6 +598,67 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   loadExecutions(): void {
     this.actionApi.executions().subscribe({ next: values => this.transferExecutions = values, error: () => undefined });
+  }
+
+  loadOrders(): void {
+    if (this.ordersLoading) return;
+    this.ordersLoading = true;
+    this.orderApi.list().subscribe({
+      next: values => {
+        this.ordersLoading = false;
+        this.orderError = '';
+        this.orders = values.map(value => this.mapOrder(value));
+      },
+      error: error => {
+        this.ordersLoading = false;
+        this.orderError = this.apiError(error, 'Live customer orders could not be loaded.');
+      }
+    });
+  }
+
+  openOrderDialog(): void {
+    this.orderForm = this.emptyOrder();
+    this.orderError = '';
+    this.orderDialogOpen = true;
+    if (!this.proposalWarehouses.length || !this.proposalSkus.length) this.loadProposalOptions();
+  }
+
+  closeOrderDialog(): void {
+    if (!this.orderSaving) this.orderDialogOpen = false;
+  }
+
+  submitOrder(): void {
+    if (this.orderSaving) return;
+    const form = this.orderForm;
+    if (!form.customerName.trim() || !form.customerCity.trim() || !form.channel || !form.warehouseId || !form.skuId || form.quantity < 1 || !form.promisedAt) {
+      this.orderError = 'Complete the customer, channel, warehouse, product, quantity and promised-time fields.';
+      return;
+    }
+    if (new Date(form.promisedAt).getTime() <= Date.now()) {
+      this.orderError = 'Promised time must be in the future.';
+      return;
+    }
+    const body: CreateCustomerOrderRequest = {
+      customerName: form.customerName.trim(), customerCity: form.customerCity.trim(), channel: form.channel,
+      warehouseId: form.warehouseId, skuId: form.skuId, quantity: form.quantity,
+      promisedAt: form.promisedAt,
+      ...(form.unitPrice !== undefined && form.unitPrice !== null ? { unitPrice: form.unitPrice } : {})
+    };
+    this.orderSaving = true;
+    this.orderError = '';
+    this.orderApi.create(body).subscribe({
+      next: detail => {
+        this.orderSaving = false;
+        const created = this.mapOrder(detail.order);
+        this.orders = [created, ...this.orders.filter(item => item.orderId !== created.orderId)];
+        this.orderDialogOpen = false;
+        this.showToast(`${created.id} created and persisted. Inventory has not been shipped or deducted.`);
+      },
+      error: error => {
+        this.orderSaving = false;
+        this.orderError = this.apiError(error, 'The customer order could not be created.');
+      }
+    });
   }
 
   loadTransferRecommendations(): void {
@@ -727,6 +823,22 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   private emptyProposal(type: ProposalType): ProposalForm {
     return { type, skuId: '', quantity: 1, sourceWarehouseId: '', destinationWarehouseId: '', supplierReference: '', reason: '', recommendationEvidence: '' };
+  }
+
+  private emptyOrder(): OrderForm {
+    const promised = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    promised.setMinutes(promised.getMinutes() - promised.getTimezoneOffset());
+    return { customerName: '', customerCity: '', channel: 'B2B Portal', warehouseId: '', skuId: '', quantity: 1, promisedAt: promised.toISOString().slice(0, 16) };
+  }
+
+  private mapOrder(value: CustomerOrderView): CustomerOrder {
+    return {
+      orderId: value.orderId, id: value.orderNumber, customer: value.customerName, city: value.customerCity,
+      channel: value.channel, warehouse: value.warehouseName, itemCount: value.itemCount, value: value.totalValue,
+      promisedDate: new Date(value.promisedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+      fulfillment: value.fulfilmentPercent, status: this.proposalStatus(value.status),
+      skuId: value.skuId, skuName: value.skuName, quantity: value.quantity
+    };
   }
 
   private warehouseId(label: string): string {

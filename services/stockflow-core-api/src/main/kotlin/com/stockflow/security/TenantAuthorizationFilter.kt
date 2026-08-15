@@ -46,6 +46,7 @@ class TenantAuthorizationFilter(
         if ((path.contains("/purchase-order") || path.contains("/purchase-orders/")) && request.method.equals("POST", true)) return "PURCHASE_EXECUTE"
         if (path.startsWith("/api/v1/forecast-operations") && request.method.equals("POST", true)) return "FORECAST_RUN"
         if (path.startsWith("/api/v1/replenishment")) return "FORECAST_READ"
+        if (path.startsWith("/api/v1/orders") && request.method.equals("POST", true)) return "ORDER_MANAGE"
         if (path.startsWith("/api/v1/actions/")) return null
         if (request.method.equals("GET", true)) return null
         return when {
