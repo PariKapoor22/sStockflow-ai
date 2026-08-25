@@ -11,7 +11,10 @@ import java.sql.ResultSet
 import java.util.UUID
 
 @Service
-class TransferExecutionService(private val jdbc: JdbcTemplate) {
+class TransferExecutionService(
+    private val jdbc: JdbcTemplate,
+    private val fleetbaseOrderLinks: FleetbaseOrderLinkService
+) {
     private val mapper = RowMapper { rs: ResultSet, _: Int -> rs.toExecution() }
 
     @Transactional
@@ -48,7 +51,7 @@ class TransferExecutionService(private val jdbc: JdbcTemplate) {
         val execution = requireExecution(actor, id)
         val allocations = jdbc.query("SELECT batch_number,quantity,expiry_date,unit_cost,currency FROM transfer_execution_allocation WHERE execution_id=? ORDER BY expiry_date", { rs, _ -> TransferAllocationView(rs.getString(1), rs.getLong(2), rs.getDate(3).toString(), rs.getBigDecimal(4), rs.getString(5)) }, id)
         val events = jdbc.query("SELECT event_id,from_status,to_status,changed_by,comment,occurred_at FROM transfer_execution_event WHERE execution_id=? ORDER BY occurred_at", { rs, _ -> TransferExecutionEventView(UUID.fromString(rs.getString(1)), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getTimestamp(6).toLocalDateTime()) }, id)
-        return TransferExecutionDetail(execution, allocations, events)
+        return TransferExecutionDetail(execution, allocations, events, fleetbaseOrderLinks.findForExecution(actor, id))
     }
 
     @Transactional
@@ -79,6 +82,7 @@ class TransferExecutionService(private val jdbc: JdbcTemplate) {
     fun dispatch(actor: TenantAccessContext, id: UUID, comment: String?): TransferExecutionDetail {
         val execution = lockExecution(actor, id); requireStatus(execution, "RESERVED")
         val allocations = jdbc.query("SELECT source_batch_inventory_id,quantity FROM transfer_execution_allocation WHERE execution_id=? FOR UPDATE", { rs, _ -> UUID.fromString(rs.getString(1)) to rs.getLong(2) }, id)
+        fleetbaseOrderLinks.dispatchRemoteOrderIfLinked(actor, id)
         allocations.forEach { (batchId, qty) ->
             val updated = jdbc.update("""UPDATE batch_inventory SET available_quantity=available_quantity-?,reserved_quantity=reserved_quantity-?,last_movement_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
                 WHERE batch_inventory_id=? AND reserved_quantity>=? AND available_quantity>=?""", qty, qty, batchId, qty, qty)
@@ -115,6 +119,7 @@ class TransferExecutionService(private val jdbc: JdbcTemplate) {
         if (execution.status !in setOf("PLANNED", "RESERVED")) throw ResponseStatusException(HttpStatus.CONFLICT, "Only planned or reserved executions can be cancelled")
         if (execution.status == "RESERVED") jdbc.query("SELECT source_batch_inventory_id,quantity FROM transfer_execution_allocation WHERE execution_id=? FOR UPDATE", { rs, _ -> UUID.fromString(rs.getString(1)) to rs.getLong(2) }, id).forEach { (batch, qty) -> jdbc.update("UPDATE batch_inventory SET reserved_quantity=reserved_quantity-?,updated_at=CURRENT_TIMESTAMP WHERE batch_inventory_id=? AND reserved_quantity>=?", qty, batch, qty) }
         jdbc.update("UPDATE transfer_execution SET status='CANCELLED',updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE execution_id=? AND version=?", id, execution.version)
+        jdbc.update("UPDATE fleetbase_order_link SET link_status='CANCELLED',updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE tenant_id=? AND transfer_execution_id=? AND link_status='PREPARED'", actor.tenantId, id)
         event(id, actor, execution.status, "CANCELLED", comment ?: "Execution cancelled")
         return detail(actor, id)
     }

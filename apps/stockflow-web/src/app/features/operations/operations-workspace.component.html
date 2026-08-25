@@ -49,13 +49,42 @@
         <div class="execution-panel" *ngIf="selectedExecution as detail">
           <header><div><span>TRANSFER EXECUTION</span><h3>{{ proposalStatus(detail.execution.status) }}</h3></div><strong>{{ detail.execution.quantity | number }} units</strong></header>
           <div class="execution-steps"><span [class.done]="detail.execution.status !== 'PLANNED'"><i>1</i>Reserved</span><span [class.done]="detail.execution.status === 'IN_TRANSIT' || detail.execution.status === 'RECEIVED'"><i>2</i>Dispatched</span><span [class.done]="detail.execution.status === 'RECEIVED'"><i>3</i>Received</span></div>
+          <div class="fleetbase-link-card" *ngIf="detail.fleetbaseOrderLink as link; else noFleetbaseLink">
+            <div><span>FLEETBASE ORDER LINK</span><strong>{{ link.fleetbaseInternalId }}</strong><small>{{ link.fleetbaseOrganizationId }} · {{ proposalStatus(link.status) }}</small></div>
+            <b [class.remote]="link.remoteWritePerformed">{{ link.status === 'DISPATCHED' ? 'Fleetbase dispatch confirmed' : (link.remoteWritePerformed ? 'Fleetbase order created · awaiting FEFO dispatch' : 'Prepared only · no remote write') }}</b>
+            <button type="button" *ngIf="(link.status === 'PREPARED' || link.status === 'FAILED') && (detail.execution.status === 'PLANNED' || detail.execution.status === 'RESERVED')" [disabled]="proposalSaving" (click)="createFleetbaseOrder()">{{ proposalSaving ? 'Creating…' : (link.status === 'FAILED' ? 'Retry order creation' : 'Create Fleetbase order') }}</button>
+          </div>
+          <ng-template #noFleetbaseLink>
+            <div class="fleetbase-link-empty" *ngIf="detail.execution.status === 'PLANNED' || detail.execution.status === 'RESERVED'">
+              <div><span>FLEETBASE HANDOFF</span><strong>Prepare an idempotent order link</strong><small>This saves the transfer-to-order identity without creating or dispatching a Fleetbase order.</small></div>
+              <button type="button" [disabled]="proposalSaving" (click)="prepareFleetbaseOrderLink()">{{ proposalSaving ? 'Preparing…' : 'Prepare link' }}</button>
+            </div>
+          </ng-template>
+          <div class="fleetbase-tracking-card" *ngIf="detail.fleetbaseOrderLink as link">
+            <header>
+              <div><span>LIVE FLEETBASE TRACKING</span><strong>{{ fleetbaseTracking?.remoteStatus || link.remoteStatus || 'Awaiting dispatch' }}</strong></div>
+              <div class="tracking-actions">
+                <button type="button" [disabled]="fleetbaseTrackingLoading || !link.remoteWritePerformed" (click)="refreshFleetbaseTracking(false)">{{ fleetbaseTrackingLoading ? 'Syncing…' : 'Refresh tracking' }}</button>
+                <button type="button" [disabled]="fleetbaseTrackingLoading || !link.remoteWritePerformed" (click)="refreshFleetbaseTracking(true)">Reconcile</button>
+              </div>
+            </header>
+            <div class="tracking-progress"><i [style.width.%]="fleetbaseTracking?.progressPercentage || link.progressPercentage || 0"></i></div>
+            <div class="tracking-metrics">
+              <p><span>Progress</span><strong>{{ (fleetbaseTracking?.progressPercentage || link.progressPercentage || 0) | number:'1.0-1' }}%</strong></p>
+              <p><span>Completion ETA</span><strong>{{ trackingDuration(fleetbaseTracking?.completionEtaSeconds || link.etaSeconds) }}</strong></p>
+              <p><span>Next destination</span><strong>{{ fleetbaseTracking?.currentDestination || 'Not reported' }}</strong></p>
+              <p><span>Reconciliation</span><strong [class.tracking-warning]="(fleetbaseTracking?.reconciliationStatus || link.reconciliationStatus) !== 'MATCHED'">{{ proposalStatus(fleetbaseTracking?.reconciliationStatus || link.reconciliationStatus) }}</strong></p>
+            </div>
+            <small *ngIf="fleetbaseTracking?.latitude !== undefined">Position {{ fleetbaseTracking?.latitude | number:'1.4-4' }}, {{ fleetbaseTracking?.longitude | number:'1.4-4' }} · Tracking {{ fleetbaseTracking?.trackingNumber || link.trackingNumber || link.fleetbaseOrderId }}</small>
+            <small *ngIf="fleetbaseTracking?.estimatedCompletionTime">Estimated completion {{ fleetbaseTracking?.estimatedCompletionTime | date:'medium' }}</small>
+          </div>
           <div class="allocation-list" *ngIf="detail.allocations.length"><span>FEFO BATCH ALLOCATIONS</span><p *ngFor="let allocation of detail.allocations"><strong>{{ allocation.batchNumber }}</strong><small>{{ allocation.quantity }} units · expires {{ allocation.expiryDate }}</small></p></div>
           <label class="review-comment"><span>Execution comment</span><textarea rows="2" [(ngModel)]="executionComment" placeholder="Operational note for the audit history"></textarea></label>
           <div class="receipt-fields" *ngIf="detail.execution.status === 'IN_TRANSIT'"><label><span>Actual transport cost</span><input type="number" min="0" [(ngModel)]="actualTransportCost"></label><label><span>Actual CO2e (kg)</span><input type="number" min="0" [(ngModel)]="actualCarbonKg"></label></div>
           <div class="execution-actions">
             <button type="button" *ngIf="detail.execution.status === 'PLANNED' || detail.execution.status === 'RESERVED'" (click)="transitionExecution('cancel')">Cancel execution</button>
             <button type="button" class="dialog-primary" *ngIf="detail.execution.status === 'PLANNED'" (click)="transitionExecution('reserve')">Reserve FEFO stock</button>
-            <button type="button" class="dialog-primary" *ngIf="detail.execution.status === 'RESERVED'" (click)="transitionExecution('dispatch')">Mark dispatched</button>
+            <button type="button" class="dialog-primary" *ngIf="detail.execution.status === 'RESERVED'" [disabled]="proposalSaving" (click)="transitionExecution('dispatch')">{{ detail.fleetbaseOrderLink?.status === 'CREATED' ? 'Dispatch Fleetbase order' : 'Mark dispatched' }}</button>
             <button type="button" class="dialog-primary" *ngIf="detail.execution.status === 'IN_TRANSIT'" (click)="transitionExecution('receive')">Confirm receipt</button>
           </div>
           <div class="execution-events"><span>EXECUTION AUDIT</span><p *ngFor="let event of detail.events"><strong>{{ proposalStatus(event.toStatus) }}</strong><small>{{ event.occurredAt | date:'medium' }} · {{ event.comment }}</small></p></div>

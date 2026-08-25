@@ -1,5 +1,6 @@
 package com.stockflow.common.errors
 
+import com.stockflow.fleetbase.FleetbaseIntegrationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -38,6 +39,10 @@ class ApiErrorHandler {
             "VALIDATION_FAILED",
             error.bindingResult.fieldErrors.joinToString("; ") { "${it.field}: ${it.defaultMessage}" }
         )
+
+    @ExceptionHandler(FleetbaseIntegrationException::class)
+    fun fleetbase(error: FleetbaseIntegrationException): ResponseEntity<ApiError> =
+        response(error.status, error.code, error.message)
 
     private fun response(status: HttpStatus, code: String, message: String): ResponseEntity<ApiError> =
         ResponseEntity.status(status).body(

@@ -18,6 +18,8 @@
     <java.version>17</java.version>
     <kotlin.version>2.4.10</kotlin.version>
     <kotlin.compiler.daemon>false</kotlin.compiler.daemon>
+    <!-- Flyway and the PostgreSQL-compatible test migrations are verified with H2 2.3.x. -->
+    <h2.version>2.3.232</h2.version>
   </properties>
 
   <dependencies>
@@ -123,6 +125,36 @@
             <version>${kotlin.version}</version>
           </dependency>
         </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>prepare-h2-compatible-migrations</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy todir="${project.build.outputDirectory}/db/h2migration">
+                  <fileset dir="${project.basedir}/src/main/resources/db/migration" />
+                </copy>
+                <replace dir="${project.build.outputDirectory}/db/h2migration"
+                         token="ON CONFLICT (permission_code) DO NOTHING"
+                         value="ON CONFLICT DO NOTHING" />
+                <replace dir="${project.build.outputDirectory}/db/h2migration"
+                         token="AS values("
+                         value="AS seed(" />
+                <replace dir="${project.build.outputDirectory}/db/h2migration"
+                         token="values."
+                         value="seed." />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

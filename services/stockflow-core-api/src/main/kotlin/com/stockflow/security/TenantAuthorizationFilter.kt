@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.MediaType
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.stereotype.Component
@@ -12,14 +13,34 @@ import java.time.Instant
 
 @Component
 class TenantAuthorizationFilter(
-    private val tenantSecurityService: TenantSecurityService
+    private val tenantSecurityService: TenantSecurityService,
+    @Value("\${stockflow.security.enabled:false}")
+    private val securityEnabled: Boolean
 ) : OncePerRequestFilter() {
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
-        request.method.equals("OPTIONS", true) || request.requestURI.startsWith("/actuator/") || request.requestURI == "/error"
+        request.method.equals("OPTIONS", true) || request.requestURI.startsWith("/actuator/") || request.requestURI == "/error" ||
+            (request.method.equals("POST", true) && request.requestURI == "/api/v1/integrations/fleetbase/webhooks")
 
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain) {
         val authentication = SecurityContextHolder.getContext().authentication as? JwtAuthenticationToken
         if (authentication == null) {
+            if (!securityEnabled && requiresDevelopmentContext(request.requestURI)) {
+                val tenantId = request.getHeader("X-Tenant-ID").orEmpty().trim()
+                val userId = request.getHeader("X-StockFlow-User-ID").orEmpty().trim().ifBlank { "local-prototype-user" }
+                val email = request.getHeader("X-StockFlow-User-Email")?.trim()?.takeIf { it.isNotBlank() }
+                try {
+                    request.setAttribute(
+                        TENANT_ACCESS_ATTRIBUTE,
+                        tenantSecurityService.developmentContext(tenantId, userId, email)
+                    )
+                } catch (error: IllegalArgumentException) {
+                    forbidden(response, "MISSING_TENANT", error.message ?: "X-Tenant-ID is required")
+                    return
+                } catch (error: TenantAccessDeniedException) {
+                    forbidden(response, "TENANT_ACCESS_DENIED", error.message ?: "Tenant access denied")
+                    return
+                }
+            }
             filterChain.doFilter(request, response)
             return
         }
@@ -34,6 +55,13 @@ class TenantAuthorizationFilter(
             forbidden(response, "TENANT_ACCESS_DENIED", error.message ?: "Tenant access denied")
         }
     }
+
+    private fun requiresDevelopmentContext(path: String): Boolean =
+        path.startsWith("/api/v1/actions") ||
+            path.startsWith("/api/v1/forecast-operations") ||
+            path.startsWith("/api/v1/replenishment") ||
+            path.startsWith("/api/v1/orders") ||
+            path.startsWith("/api/v1/security")
 
     private fun requiredPermission(request: HttpServletRequest): String? {
         val path = request.requestURI

@@ -11,6 +11,24 @@
   color: var(--op-text);
 }
 
+.fleetbase-link-card,.fleetbase-link-empty { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 15px 15px; padding:12px; border:1px solid #d9d2ff; border-radius:9px; background:#f8f6ff; }
+.fleetbase-link-card div,.fleetbase-link-empty div { display:grid; gap:4px; }
+.fleetbase-link-card span,.fleetbase-link-empty span { color:#6650db; font-size:7px; font-weight:900; letter-spacing:.1em; }
+.fleetbase-link-card strong,.fleetbase-link-empty strong { font-size:9px; }
+.fleetbase-link-card small,.fleetbase-link-empty small { color:var(--op-muted); font-size:7px; }
+.fleetbase-link-card b { padding:5px 8px; border-radius:999px; background:#eeeaff; color:#604ae8; font-size:7px; white-space:nowrap; }
+.fleetbase-link-card b.remote { background:#dff6eb; color:#16875a; }
+.fleetbase-link-card button { min-height:32px; padding:0 11px; border:1px solid #604ae8; border-radius:7px; background:#604ae8; color:#fff; font-size:8px; font-weight:900; white-space:nowrap; }
+.fleetbase-link-card button:disabled { opacity:.6; }
+.fleetbase-link-empty button { min-height:32px; padding:0 11px; border:1px solid #604ae8; border-radius:7px; background:#604ae8; color:#fff; font-size:8px; font-weight:900; white-space:nowrap; }
+.fleetbase-link-empty button:disabled { opacity:.6; }
+.fleetbase-tracking-card { margin:0 15px 15px; padding:12px; border:1px solid #d8e1ff; border-radius:9px; background:#f8faff; }
+.fleetbase-tracking-card > header { display:flex; align-items:center; justify-content:space-between; gap:12px; }.fleetbase-tracking-card header div:first-child { display:flex; flex-direction:column; gap:4px; }
+.fleetbase-tracking-card header span { color:#5b3ee5; font-size:7px; font-weight:900; letter-spacing:.1em; }.fleetbase-tracking-card header strong { font-size:9px; text-transform:capitalize; }
+.tracking-actions { display:flex; gap:6px; }.tracking-actions button { min-height:30px; border:1px solid #d7ddea; border-radius:7px; padding:0 9px; background:#fff; color:#4338ca; font-size:7px; font-weight:850; }.tracking-actions button:disabled { opacity:.55; }
+.tracking-progress { height:6px; margin:12px 0 9px; overflow:hidden; border-radius:999px; background:#e5e7eb; }.tracking-progress i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#5b3ee5,#2bb673); transition:width .25s ease; }
+.tracking-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }.tracking-metrics p { margin:0; display:flex; flex-direction:column; gap:4px; }.tracking-metrics span,.fleetbase-tracking-card > small { color:var(--op-muted); font-size:7px; }.tracking-metrics strong { overflow:hidden; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }.tracking-warning { color:#b54708; }.fleetbase-tracking-card > small { display:block; margin-top:8px; }
+
 .operations-page { position: relative; min-height: calc(100vh - 66px); padding: 28px 30px 48px; background: var(--op-bg); }
 .operations-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
 .eyebrow { color: #6c57f2; font-size: 10px; font-weight: 900; letter-spacing: .16em; }

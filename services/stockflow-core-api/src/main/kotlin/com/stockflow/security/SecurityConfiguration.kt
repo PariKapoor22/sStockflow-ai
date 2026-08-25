@@ -21,6 +21,7 @@ class SecurityConfiguration(
         .cors(Customizer.withDefaults())
         .authorizeHttpRequests {
             it.requestMatchers("/actuator/health", "/actuator/info", "/error").permitAll()
+            it.requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/integrations/fleetbase/webhooks").permitAll()
             it.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
             it.anyRequest().authenticated()
         }

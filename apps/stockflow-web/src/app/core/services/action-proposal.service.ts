@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { ActionProposal, ProposalHistory, PurchaseOrder, PurchaseOrderDetail, PurchaseProposalRequest, TransferExecution, TransferExecutionDetail, TransferProposalRequest } from '../models/action.models';
+import { ActionProposal, FleetbaseOrderLink, FleetbaseTracking, ProposalHistory, PurchaseOrder, PurchaseOrderDetail, PurchaseProposalRequest, TransferExecution, TransferExecutionDetail, TransferProposalRequest } from '../models/action.models';
 
 @Injectable({ providedIn: 'root' })
 export class ActionProposalService {
@@ -43,6 +43,22 @@ export class ActionProposalService {
   dispatchExecution(id: string, comment = ''): Observable<TransferExecutionDetail> { return this.executionTransition(id, 'dispatch', { comment }); }
   receiveExecution(id: string, comment = '', actualTransportCost?: number, actualCarbonKg?: number): Observable<TransferExecutionDetail> { return this.executionTransition(id, 'receive', { comment, actualTransportCost, actualCarbonKg }); }
   cancelExecution(id: string, comment = ''): Observable<TransferExecutionDetail> { return this.executionTransition(id, 'cancel', { comment }); }
+  prepareFleetbaseOrderLink(executionId: string): Observable<FleetbaseOrderLink> {
+    return this.http.post<FleetbaseOrderLink>(`${this.baseUrl}/transfer-executions/${executionId}/fleetbase-link`, {}, {
+      headers: this.tenantHeaders().set('Idempotency-Key', `web-fleetbase-link-${executionId}`)
+    });
+  }
+  createFleetbaseOrder(executionId: string): Observable<FleetbaseOrderLink> {
+    return this.http.post<FleetbaseOrderLink>(`${this.baseUrl}/transfer-executions/${executionId}/fleetbase-order`, {}, {
+      headers: this.tenantHeaders().set('Idempotency-Key', `web-fleetbase-create-${executionId}`)
+    });
+  }
+  fleetbaseTracking(executionId: string): Observable<FleetbaseTracking> {
+    return this.http.get<FleetbaseTracking>(`${this.baseUrl}/transfer-executions/${executionId}/fleetbase-tracking`, { headers: this.tenantHeaders() });
+  }
+  reconcileFleetbase(executionId: string): Observable<FleetbaseTracking> {
+    return this.http.post<FleetbaseTracking>(`${this.baseUrl}/transfer-executions/${executionId}/fleetbase-reconcile`, {}, { headers: this.tenantHeaders() });
+  }
 
   purchaseOrders(): Observable<PurchaseOrder[]> { return this.http.get<PurchaseOrder[]>(`${this.baseUrl}/purchase-orders`, { headers: this.tenantHeaders() }); }
   purchaseOrder(id: string): Observable<PurchaseOrderDetail> { return this.http.get<PurchaseOrderDetail>(`${this.baseUrl}/purchase-orders/${id}`, { headers: this.tenantHeaders() }); }

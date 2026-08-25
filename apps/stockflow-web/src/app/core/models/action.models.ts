@@ -70,7 +70,25 @@ export interface TransferExecution {
 }
 export interface TransferAllocation { batchNumber: string; quantity: number; expiryDate: string; unitCost: number; currency: string; }
 export interface TransferExecutionEvent { eventId: string; fromStatus?: TransferExecutionStatus; toStatus: TransferExecutionStatus; changedBy: string; comment?: string; occurredAt: string; }
-export interface TransferExecutionDetail { execution: TransferExecution; allocations: TransferAllocation[]; events: TransferExecutionEvent[]; }
+export type FleetbaseOrderLinkStatus = 'PREPARED' | 'CREATED' | 'DISPATCHED' | 'FAILED' | 'CANCELLED';
+export interface FleetbaseOrderLink {
+  linkId: string; tenantId: string; transferExecutionId: string; proposalId: string;
+  fleetbaseOrganizationId: string; fleetbaseOrderId?: string; fleetbaseInternalId: string;
+  vehicleId?: string; status: FleetbaseOrderLinkStatus; attemptCount: number;
+  lastErrorCode?: string; lastErrorMessage?: string; createdBy: string; createdAt: string;
+  updatedAt: string; remoteCreatedAt?: string; dispatchedAt?: string; remoteWritePerformed: boolean;
+  remoteStatus?: string; trackingNumber?: string; progressPercentage?: number; etaSeconds?: number;
+  latitude?: number; longitude?: number; lastTrackerAt?: string; lastReconciledAt?: string;
+  lastWebhookAt?: string; reconciliationStatus: string;
+}
+export interface FleetbaseTracking {
+  transferExecutionId: string; fleetbaseOrderId: string; remoteStatus?: string; trackingNumber?: string;
+  latitude?: number; longitude?: number; progressPercentage?: number; totalDistanceMeters?: number;
+  completedDistanceMeters?: number; currentDestinationEtaSeconds?: number; completionEtaSeconds?: number;
+  estimatedCompletionTime?: string; currentDestination?: string; etaByDestination: Record<string, number>;
+  reconciliationStatus: string; synchronizedAt: string;
+}
+export interface TransferExecutionDetail { execution: TransferExecution; allocations: TransferAllocation[]; events: TransferExecutionEvent[]; fleetbaseOrderLink?: FleetbaseOrderLink; }
 
 export type PurchaseOrderStatus = 'PO_CREATED' | 'SENT_TO_SUPPLIER' | 'ACKNOWLEDGED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED';
 export interface PurchaseOrder {

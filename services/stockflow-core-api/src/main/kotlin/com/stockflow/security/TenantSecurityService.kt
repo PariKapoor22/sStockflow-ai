@@ -32,6 +32,52 @@ class TenantSecurityService(
     private val bootstrapFirstUserAdmin: Boolean
 ) {
     @Transactional
+    fun developmentContext(tenantId: String, userId: String, email: String?): TenantAccessContext {
+        require(tenantId.isNotBlank()) { "X-Tenant-ID is required" }
+        require(userId.isNotBlank()) { "X-StockFlow-User-ID is required" }
+        val tenantExists = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM tenant WHERE tenant_id = ? AND active = TRUE",
+            Long::class.java,
+            tenantId
+        ) ?: 0L
+        if (tenantExists == 0L) throw TenantAccessDeniedException("Tenant '$tenantId' is not available")
+
+        val userExists = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM app_user WHERE user_id = ?",
+            Long::class.java,
+            userId
+        ) ?: 0L
+        if (userExists == 0L) {
+            jdbcTemplate.update(
+                "INSERT INTO app_user(user_id, email, display_name) VALUES (?, ?, ?)",
+                userId,
+                email,
+                email?.substringBefore('@') ?: "Local prototype user"
+            )
+        } else if (!email.isNullOrBlank()) {
+            jdbcTemplate.update(
+                "UPDATE app_user SET email = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+                email,
+                userId
+            )
+        }
+
+        // Local mode deliberately grants the complete permission set. Production mode never
+        // calls this path and continues to enforce validated JWT tenant memberships and RBAC.
+        return TenantAccessContext(
+            userId = userId,
+            email = email,
+            tenantId = tenantId,
+            roleCode = "LOCAL_ADMIN",
+            permissions = jdbcTemplate.query(
+                "SELECT permission_code FROM permission_definition",
+                { rs, _ -> rs.getString("permission_code") }
+            ).toSet(),
+            warehouseIds = emptySet()
+        )
+    }
+
+    @Transactional
     fun authorize(jwt: Jwt, tenantId: String, requiredPermission: String?): TenantAccessContext {
         require(tenantId.isNotBlank()) { "X-Tenant-ID is required" }
         val userId = jwt.subject ?: throw TenantAccessDeniedException("The access token has no subject")

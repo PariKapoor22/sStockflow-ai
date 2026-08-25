@@ -36,6 +36,7 @@ import { ReplenishmentPlan, TransferRecommendation } from '../../core/models/rep
 import { ReplenishmentService } from '../../core/services/replenishment.service';
 import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
+import { FleetWorkspaceComponent } from '../fleet/fleet-workspace.component';
 
 type ViewId =
   | 'dashboard'
@@ -49,6 +50,7 @@ type ViewId =
   | 'returns'
   | 'routes'
   | 'sustainability'
+  | 'fleet'
   | 'warehouses'
   | 'products'
   | 'batches'
@@ -109,7 +111,7 @@ interface DecisionRecommendationView {
 @Component({
   selector: 'sf-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent, AdminWorkspaceComponent],
+  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent, AdminWorkspaceComponent, FleetWorkspaceComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
@@ -302,6 +304,7 @@ export class DashboardComponent implements OnInit {
     {
       title: 'OPERATIONS',
       items: [
+        { label: 'Vehicle Fleet', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'fleet' },
         { label: 'Transfers', icon: 'assets/nav-icons/icons8-transfer-30.png', view: 'transfers' },
         { label: 'Route Optimization', icon: 'assets/nav-icons/img.icons8.com.png', view: 'routes' },
         { label: 'Sustainability', icon: 'assets/nav-icons/icons8-recycle-50.png', view: 'sustainability' },
@@ -709,6 +712,7 @@ export class DashboardComponent implements OnInit {
       returns: 'Returns',
       routes: 'Route Optimization',
       sustainability: 'Carbon & Waste Impact',
+      fleet: 'Vehicle Fleet',
       warehouses: 'Warehouses',
       products: 'Products & SKUs',
       batches: 'Batch Inventory',
@@ -744,6 +748,7 @@ export class DashboardComponent implements OnInit {
       'returns',
       'routes',
       'sustainability',
+      'fleet',
       'warehouses',
       'products',
       'batches',

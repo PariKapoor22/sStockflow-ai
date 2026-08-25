@@ -30,4 +30,9 @@ data class TransferExecutionView(
 
 data class TransferAllocationView(val batchNumber: String, val quantity: Long, val expiryDate: String, val unitCost: BigDecimal, val currency: String)
 data class TransferExecutionEventView(val eventId: UUID, val fromStatus: String?, val toStatus: String, val changedBy: String, val comment: String?, val occurredAt: LocalDateTime)
-data class TransferExecutionDetail(val execution: TransferExecutionView, val allocations: List<TransferAllocationView>, val events: List<TransferExecutionEventView>)
+data class TransferExecutionDetail(
+    val execution: TransferExecutionView,
+    val allocations: List<TransferAllocationView>,
+    val events: List<TransferExecutionEventView>,
+    val fleetbaseOrderLink: FleetbaseOrderLinkView?
+)

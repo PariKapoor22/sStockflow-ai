@@ -715,6 +715,12 @@
       </section>
     </section>
 
+    <sf-fleet-workspace
+      *ngIf="activeView === 'fleet'"
+      [tenantLabel]="currentTenantLabel()"
+      [tenantId]="selectedTenant"
+    ></sf-fleet-workspace>
+
     <sf-operations-workspace
       *ngIf="activeOperationView() as operationView"
       [view]="operationView"

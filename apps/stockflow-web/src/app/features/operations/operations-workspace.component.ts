@@ -3,7 +3,7 @@ import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject }
 import { FormsModule } from '@angular/forms';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
 import { CarbonApiService } from '../../core/services/carbon-api.service';
-import { ActionProposal, ProposalHistory, ProposalType, PurchaseOrder, PurchaseOrderDetail, TransferExecution, TransferExecutionDetail } from '../../core/models/action.models';
+import { ActionProposal, FleetbaseTracking, ProposalHistory, ProposalType, PurchaseOrder, PurchaseOrderDetail, TransferExecution, TransferExecutionDetail } from '../../core/models/action.models';
 import { ActionProposalService } from '../../core/services/action-proposal.service';
 import { SkuView, WarehouseView } from '../../core/models/foundation.models';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
@@ -175,6 +175,8 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   proposalSkus: SkuView[] = [];
   transferExecutions: TransferExecution[] = [];
   selectedExecution?: TransferExecutionDetail;
+  fleetbaseTracking?: FleetbaseTracking;
+  fleetbaseTrackingLoading = false;
   purchaseOrders: PurchaseOrder[] = [];
   selectedPurchaseOrder?: PurchaseOrderDetail;
   executionComment = '';
@@ -751,7 +753,16 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     });
   }
 
-  loadExecution(id: string): void { this.actionApi.execution(id).subscribe({ next: detail => this.selectedExecution = detail, error: error => this.proposalError = this.apiError(error, 'Execution details could not be loaded.') }); }
+  loadExecution(id: string): void {
+    this.fleetbaseTracking = undefined;
+    this.actionApi.execution(id).subscribe({
+      next: detail => {
+        this.selectedExecution = detail;
+        if (detail.fleetbaseOrderLink?.status === 'DISPATCHED') this.refreshFleetbaseTracking(false);
+      },
+      error: error => this.proposalError = this.apiError(error, 'Execution details could not be loaded.')
+    });
+  }
 
   transitionExecution(action: 'reserve' | 'dispatch' | 'receive' | 'cancel'): void {
     const detail = this.selectedExecution; if (!detail || this.proposalSaving) return;
@@ -762,9 +773,85 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       : action === 'receive' ? this.actionApi.receiveExecution(id, this.executionComment, this.actualTransportCost, this.actualCarbonKg)
       : this.actionApi.cancelExecution(id, this.executionComment);
     request.subscribe({
-      next: updated => { this.proposalSaving = false; this.selectedExecution = updated; this.upsertExecution(updated.execution); this.executionComment = ''; this.showToast(`Execution moved to ${this.proposalStatus(updated.execution.status)}.`); },
+      next: updated => {
+        this.proposalSaving = false;
+        this.selectedExecution = updated;
+        this.upsertExecution(updated.execution);
+        this.executionComment = '';
+        const fleetbaseDispatched = action === 'dispatch' && updated.fleetbaseOrderLink?.status === 'DISPATCHED';
+        this.showToast(fleetbaseDispatched ? 'FEFO stock consumed and Fleetbase dispatch confirmed.' : `Execution moved to ${this.proposalStatus(updated.execution.status)}.`);
+      },
       error: error => { this.proposalSaving = false; this.proposalError = this.apiError(error, 'Execution status could not be changed.'); }
     });
+  }
+
+  prepareFleetbaseOrderLink(): void {
+    const detail = this.selectedExecution;
+    if (!detail || detail.fleetbaseOrderLink || this.proposalSaving) return;
+    this.proposalSaving = true;
+    this.proposalError = '';
+    this.actionApi.prepareFleetbaseOrderLink(detail.execution.executionId).subscribe({
+      next: link => {
+        this.proposalSaving = false;
+        this.selectedExecution = { ...detail, fleetbaseOrderLink: link };
+        this.showToast('Fleetbase order linkage prepared. No Fleetbase order was created or dispatched.');
+      },
+      error: error => {
+        this.proposalSaving = false;
+        this.proposalError = this.apiError(error, 'Fleetbase order linkage could not be prepared.');
+      }
+    });
+  }
+
+  createFleetbaseOrder(): void {
+    const detail = this.selectedExecution;
+    if (!detail?.fleetbaseOrderLink || this.proposalSaving) return;
+    this.proposalSaving = true;
+    this.proposalError = '';
+    this.actionApi.createFleetbaseOrder(detail.execution.executionId).subscribe({
+      next: link => {
+        this.proposalSaving = false;
+        this.selectedExecution = { ...detail, fleetbaseOrderLink: link };
+        this.showToast('Fleetbase order created without dispatch. Reserve FEFO stock before dispatching it.');
+      },
+      error: error => {
+        this.proposalSaving = false;
+        this.proposalError = this.apiError(error, 'Fleetbase order could not be created.');
+        this.loadExecution(detail.execution.executionId);
+      }
+    });
+  }
+
+  refreshFleetbaseTracking(reconcile = false): void {
+    const detail = this.selectedExecution;
+    if (!detail?.fleetbaseOrderLink?.remoteWritePerformed || this.fleetbaseTrackingLoading) return;
+    this.fleetbaseTrackingLoading = true;
+    const request = reconcile
+      ? this.actionApi.reconcileFleetbase(detail.execution.executionId)
+      : this.actionApi.fleetbaseTracking(detail.execution.executionId);
+    request.subscribe({
+      next: tracking => {
+        this.fleetbaseTrackingLoading = false;
+        this.fleetbaseTracking = tracking;
+        this.loadExecutionLinkOnly(detail.execution.executionId);
+        if (reconcile) this.showToast(`Fleetbase reconciliation: ${this.proposalStatus(tracking.reconciliationStatus)}.`);
+      },
+      error: error => {
+        this.fleetbaseTrackingLoading = false;
+        this.proposalError = this.apiError(error, 'Fleetbase tracking could not be synchronized.');
+      }
+    });
+  }
+
+  trackingDuration(seconds?: number): string {
+    if (seconds === undefined || seconds === null) return 'Not available';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.ceil((seconds % 3600) / 60);
+    return hours ? `${hours}h ${minutes}m` : `${minutes} min`;
+  }
+
+  private loadExecutionLinkOnly(id: string): void {
+    this.actionApi.execution(id).subscribe({ next: detail => this.selectedExecution = detail });
   }
 
   executionFor(proposal: ActionProposal): TransferExecution | undefined { return this.transferExecutions.find(item => item.proposalId === proposal.proposalId); }
