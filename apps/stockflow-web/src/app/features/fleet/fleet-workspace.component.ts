@@ -5,21 +5,21 @@ import { FormsModule } from '@angular/forms';
 import { catchError, finalize, forkJoin, of, Subscription, timer } from 'rxjs';
 import { FleetbaseAuditSummary, FleetbaseIntegrationStatus, FleetbaseOrganization, FleetbaseVehicle } from '../../core/models/fleetbase.models';
 import { FleetbaseService } from '../../core/services/fleetbase.service';
-import { FleetGisMapComponent } from './fleet-gis-map.component';
+import { FleetMapShellComponent } from './fleet-map-shell.component';
 
 type FleetFilter = 'all' | 'online' | 'offline' | 'available';
 
 @Component({
   selector: 'sf-fleet-workspace',
   standalone: true,
-  imports: [CommonModule, FormsModule, FleetGisMapComponent],
+  imports: [CommonModule, FormsModule, FleetMapShellComponent],
   templateUrl: './fleet-workspace.component.html',
   styleUrl: './fleet-workspace.component.css'
 })
 export class FleetWorkspaceComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) tenantLabel = '';
   @Input({ required: true }) tenantId = '';
-  @ViewChild(FleetGisMapComponent) gisMap?: FleetGisMapComponent;
+  @ViewChild(FleetMapShellComponent) gisMap?: FleetMapShellComponent;
 
   integration?: FleetbaseIntegrationStatus;
   organization?: FleetbaseOrganization;

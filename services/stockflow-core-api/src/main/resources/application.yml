@@ -56,3 +56,8 @@ stockflow:
     webhook-secret: ${FLEETBASE_WEBHOOK_SECRET:}
     connect-timeout-seconds: ${FLEETBASE_CONNECT_TIMEOUT_SECONDS:5}
     read-timeout-seconds: ${FLEETBASE_READ_TIMEOUT_SECONDS:15}
+  google-maps:
+    api-key: ${GOOGLE_MAPS_BACKEND_API_KEY:}
+    routes-api-url: ${GOOGLE_MAPS_ROUTES_API_URL:https://routes.googleapis.com/directions/v2:computeRoutes}
+    connect-timeout-seconds: ${GOOGLE_MAPS_CONNECT_TIMEOUT_SECONDS:5}
+    read-timeout-seconds: ${GOOGLE_MAPS_READ_TIMEOUT_SECONDS:15}

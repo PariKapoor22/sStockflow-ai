@@ -1,0 +1,6 @@
+.map-loading,.map-load-error { position:absolute; z-index:500; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:9px; background:rgba(248,250,252,.92); color:#344054; }.map-loading i { width:28px; height:28px; border:3px solid #dbe3ef; border-top-color:#4285f4; border-radius:50%; animation:spin .8s linear infinite; }.map-loading strong,.map-load-error strong { font-size:11px; }.map-load-error span { max-width:460px; color:#b42318; font-size:9px; text-align:center; }.map-load-error small { color:#667085; font-size:8px; }
+.google-map-shell .gis-map { background:#e5e7eb; }
+.map-actions button:disabled { cursor:wait; opacity:.65; }
+.tracking-console .route-source { display:block; margin-top:7px; color:#cbd5e1; }
+.tracking-console .route-source b { color:#86efac; }
+.tracking-console .route-warning { display:block; margin-top:5px; color:#fbbf24; max-width:620px; }

@@ -4,13 +4,13 @@ import * as L from 'leaflet';
 import { FleetbaseVehicle } from '../../core/models/fleetbase.models';
 
 @Component({
-  selector: 'sf-fleet-gis-map',
+  selector: 'sf-leaflet-fleet-gis-map',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './fleet-gis-map.component.html',
   styleUrl: './fleet-gis-map.component.css'
 })
-export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy {
+export class LeafletFleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() vehicles: FleetbaseVehicle[] = [];
   @ViewChild('map', { static: true }) mapElement!: ElementRef<HTMLDivElement>;
 
