@@ -2,6 +2,7 @@ package com.stockflow.common.errors
 
 import com.stockflow.fleetbase.FleetbaseIntegrationException
 import com.stockflow.maps.GoogleRoutesException
+import com.stockflow.weather.GoogleWeatherException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -47,6 +48,10 @@ class ApiErrorHandler {
 
     @ExceptionHandler(GoogleRoutesException::class)
     fun googleRoutes(error: GoogleRoutesException): ResponseEntity<ApiError> =
+        response(error.status, error.code, error.message)
+
+    @ExceptionHandler(GoogleWeatherException::class)
+    fun googleWeather(error: GoogleWeatherException): ResponseEntity<ApiError> =
         response(error.status, error.code, error.message)
 
     private fun response(status: HttpStatus, code: String, message: String): ResponseEntity<ApiError> =

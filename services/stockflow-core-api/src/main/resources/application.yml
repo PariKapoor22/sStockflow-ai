@@ -61,3 +61,8 @@ stockflow:
     routes-api-url: ${GOOGLE_MAPS_ROUTES_API_URL:https://routes.googleapis.com/directions/v2:computeRoutes}
     connect-timeout-seconds: ${GOOGLE_MAPS_CONNECT_TIMEOUT_SECONDS:5}
     read-timeout-seconds: ${GOOGLE_MAPS_READ_TIMEOUT_SECONDS:15}
+  google-weather:
+    api-key: ${GOOGLE_WEATHER_API_KEY:${GOOGLE_MAPS_BACKEND_API_KEY:}}
+    api-url: ${GOOGLE_WEATHER_API_URL:https://weather.googleapis.com}
+    connect-timeout-seconds: ${GOOGLE_WEATHER_CONNECT_TIMEOUT_SECONDS:5}
+    read-timeout-seconds: ${GOOGLE_WEATHER_READ_TIMEOUT_SECONDS:15}

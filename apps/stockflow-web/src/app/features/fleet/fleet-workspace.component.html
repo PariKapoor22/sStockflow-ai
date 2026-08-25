@@ -127,6 +127,29 @@
       </button>
       <p class="prototype-disclosure" *ngIf="!hasVehiclePosition(vehicle)">This vehicle has not reported a valid GPS position. The button starts clearly labelled prototype coordinates for the SIH demonstration.</p>
     </section>
+    <section class="weather-risk-card">
+      <header>
+        <div><span>WEATHER-AWARE ROUTE INTELLIGENCE</span><h3>Arrival forecast & disruption risk</h3></div>
+        <b *ngIf="weatherForecast as forecast" [class.moderate]="forecast.riskLevel === 'MODERATE'" [class.high]="forecast.riskLevel === 'HIGH'">{{ forecast.riskLevel }} RISK</b>
+      </header>
+      <div class="weather-loading" *ngIf="weatherLoading"><i></i><span>Matching Google hourly weather to route ETA…</span></div>
+      <div class="weather-error" *ngIf="weatherError && !weatherLoading"><strong>Forecast unavailable</strong><span>{{ weatherError }}</span><button type="button" (click)="loadWeatherForecast(vehicle)">Retry</button></div>
+      <ng-container *ngIf="weatherForecast as forecast">
+        <div class="weather-summary">
+          <img *ngIf="forecast.iconUrl" [src]="forecast.iconUrl" alt="" />
+          <div><strong>{{ forecast.temperatureCelsius | number:'1.0-0' }}°C</strong><span>{{ forecast.condition }}</span><small>{{ forecast.locationLabel }} · ETA {{ prototypeEta(vehicle) }}</small></div>
+          <div class="risk-score"><strong>{{ forecast.riskScore }}</strong><span>/100</span><small>route risk</small></div>
+        </div>
+        <div class="weather-grid">
+          <article><span>Rain chance</span><strong>{{ forecast.precipitationProbabilityPercent }}%</strong><small>{{ forecast.precipitationMillimeters | number:'1.1-1' }} mm expected</small></article>
+          <article><span>Thunderstorm</span><strong>{{ forecast.thunderstormProbabilityPercent }}%</strong><small>At predicted arrival</small></article>
+          <article><span>Wind / gust</span><strong>{{ forecast.windSpeedKph | number:'1.0-0' }} / {{ forecast.windGustKph | number:'1.0-0' }}</strong><small>km/h</small></article>
+          <article><span>Visibility</span><strong>{{ forecast.visibilityKm | number:'1.1-1' }} km</strong><small>{{ forecast.humidityPercent }}% humidity</small></article>
+        </div>
+        <div class="weather-advice"><strong>Operational assessment</strong><p>{{ forecast.operationalAdvice }}</p></div>
+        <footer><span>{{ forecast.forecastTime ? ('Forecast hour ' + (forecast.forecastTime | date:'short')) : 'Hourly forecast' }}</span><small>{{ forecast.attribution }}</small></footer>
+      </ng-container>
+    </section>
     <div class="next-phase"><strong>Live operations connected</strong><p>Vehicle registry, transfer order creation, FEFO-gated dispatch, tracker/ETA synchronization, signed webhooks and reconciliation are now implemented.</p></div>
   </aside>
 </section>

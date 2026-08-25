@@ -4,7 +4,9 @@ import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChil
 import { FormsModule } from '@angular/forms';
 import { catchError, finalize, forkJoin, of, Subscription, timer } from 'rxjs';
 import { FleetbaseAuditSummary, FleetbaseIntegrationStatus, FleetbaseOrganization, FleetbaseVehicle } from '../../core/models/fleetbase.models';
+import { RouteWeatherForecast } from '../../core/models/google-weather.models';
 import { FleetbaseService } from '../../core/services/fleetbase.service';
+import { GoogleWeatherService } from '../../core/services/google-weather.service';
 import { FleetMapShellComponent } from './fleet-map-shell.component';
 
 type FleetFilter = 'all' | 'online' | 'offline' | 'available';
@@ -30,11 +32,17 @@ export class FleetWorkspaceComponent implements OnInit, OnChanges, OnDestroy {
   filter: FleetFilter = 'all';
   loading = false;
   error = '';
+  weatherForecast?: RouteWeatherForecast;
+  weatherLoading = false;
+  weatherError = '';
   lastUpdated?: Date;
   private liveSync?: Subscription;
   private positionSyncing = false;
 
-  constructor(private readonly fleetbase: FleetbaseService) {}
+  constructor(
+    private readonly fleetbase: FleetbaseService,
+    private readonly googleWeather: GoogleWeatherService
+  ) {}
 
   ngOnInit(): void {
     this.refresh();
@@ -118,6 +126,7 @@ export class FleetWorkspaceComponent implements OnInit, OnChanges, OnDestroy {
 
   selectVehicle(vehicle: FleetbaseVehicle): void {
     this.selectedVehicle = vehicle;
+    this.loadWeatherForecast(vehicle);
   }
 
   closeDetails(): void {
@@ -148,11 +157,32 @@ export class FleetWorkspaceComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   prototypeEta(vehicle: FleetbaseVehicle): string {
-    if (!this.hasVehiclePosition(vehicle)) return '1 hr 24 min';
+    const minutes = this.prototypeEtaMinutes(vehicle);
+    return minutes >= 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${minutes} min`;
+  }
+
+  prototypeEtaMinutes(vehicle: FleetbaseVehicle): number {
+    if (!this.hasVehiclePosition(vehicle)) return 84;
     const remaining = this.distanceKm(vehicle.latitude!, vehicle.longitude!, 25.5788, 91.8933);
     const speed = Math.max(vehicle.speed || 46, 25);
-    const minutes = Math.max(1, Math.round(remaining / speed * 60));
-    return minutes >= 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${minutes} min`;
+    return Math.max(1, Math.round(remaining / speed * 60));
+  }
+
+  loadWeatherForecast(vehicle: FleetbaseVehicle): void {
+    this.weatherLoading = true;
+    this.weatherError = '';
+    this.weatherForecast = undefined;
+    this.googleWeather.routeForecast(25.5788, 91.8933, this.prototypeEtaMinutes(vehicle), 'Shillong relief hub')
+      .pipe(finalize(() => this.weatherLoading = false))
+      .subscribe({
+        next: forecast => this.weatherForecast = forecast,
+        error: (error: HttpErrorResponse) => {
+          const upstream = error.error as { message?: string } | null;
+          this.weatherError = upstream?.message || (error.status === 0
+            ? 'StockFlow could not reach the weather backend.'
+            : `Weather forecast could not be loaded (HTTP ${error.status}).`);
+        }
+      });
   }
 
   prototypeDistance(vehicle: FleetbaseVehicle): string {
