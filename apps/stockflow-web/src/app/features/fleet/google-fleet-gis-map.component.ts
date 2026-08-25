@@ -3,7 +3,9 @@ import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, Simp
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 import { firstValueFrom } from 'rxjs';
 import { FleetbaseVehicle } from '../../core/models/fleetbase.models';
+import { HazardAlert, HazardAlertLocation } from '../../core/models/google-weather.models';
 import { GoogleRoutesService } from '../../core/services/google-routes.service';
+import { GoogleWeatherService } from '../../core/services/google-weather.service';
 
 type DemoMode = 'idle' | 'running' | 'paused' | 'completed';
 
@@ -30,6 +32,10 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   routeSource = 'Waiting for Google Routes API';
   routeDurationSeconds = 0;
   routeDistanceMeters = 0;
+  hazardAlerts: HazardAlert[] = [];
+  hazardLoading = false;
+  hazardError = '';
+  hazardLocationsMonitored = 0;
 
   private map?: google.maps.Map;
   private infoWindow?: google.maps.InfoWindow;
@@ -38,6 +44,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   private demoMarker?: google.maps.Marker;
   private demoBaseRoute?: google.maps.Polyline;
   private demoTravelledRoute?: google.maps.Polyline;
+  private hazardOverlays: Array<google.maps.Polygon | google.maps.Marker> = [];
   private readonly fallbackRoute: google.maps.LatLngLiteral[] = [
     { lat: 26.1445, lng: 91.7362 },
     { lat: 26.0368, lng: 91.8856 },
@@ -49,7 +56,10 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   private demoRoute: google.maps.LatLngLiteral[] = [...this.fallbackRoute];
   private routeSignature = '';
 
-  constructor(private readonly googleRoutes: GoogleRoutesService) {}
+  constructor(
+    private readonly googleRoutes: GoogleRoutesService,
+    private readonly googleWeather: GoogleWeatherService
+  ) {}
 
   get positionedVehicles(): FleetbaseVehicle[] {
     return this.vehicles.filter(vehicle => this.hasUsablePosition(vehicle));
@@ -57,6 +67,14 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
 
   get waitingVehicles(): number {
     return this.vehicles.length - this.positionedVehicles.length;
+  }
+
+  get activeHazards(): number {
+    return this.hazardAlerts.filter(alert => alert.phase === 'ACTIVE').length;
+  }
+
+  get forecastHazards(): number {
+    return this.hazardAlerts.filter(alert => alert.phase === 'FORECAST').length;
   }
 
   get demoEtaMinutes(): number {
@@ -90,6 +108,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
     this.demoMarker?.setMap(null);
     this.demoBaseRoute?.setMap(null);
     this.demoTravelledRoute?.setMap(null);
+    this.clearHazardOverlays();
   }
 
   async startDemo(vehicle?: FleetbaseVehicle): Promise<void> {
@@ -193,6 +212,26 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
     this.map.fitBounds(bounds, 50);
   }
 
+  async loadHazardAlerts(): Promise<void> {
+    if (!this.map || this.hazardLoading) return;
+    this.hazardLoading = true;
+    this.hazardError = '';
+    const locations = this.hazardMonitoringLocations();
+    try {
+      const response = await firstValueFrom(this.googleWeather.hazardAlerts(locations));
+      this.hazardAlerts = response.alerts;
+      this.hazardLocationsMonitored = response.monitoredLocations;
+      this.renderHazardAlerts();
+    } catch (error: any) {
+      this.hazardAlerts = [];
+      this.hazardLocationsMonitored = locations.length;
+      this.clearHazardOverlays();
+      this.hazardError = error?.error?.message || 'Google Public Alerts could not be loaded.';
+    } finally {
+      this.hazardLoading = false;
+    }
+  }
+
   private async initializeMap(): Promise<void> {
     try {
       if (!this.apiKey) throw new Error('Google Maps browser key is not configured.');
@@ -215,6 +254,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
       this.addGisLayers();
       this.renderVehicles();
       this.loading = false;
+      await this.loadHazardAlerts();
     } catch (error) {
       this.loading = false;
       this.mapError = error instanceof Error ? error.message : 'Google Maps could not be loaded.';
@@ -223,27 +263,6 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
 
   private addGisLayers(): void {
     if (!this.map) return;
-    const risks = [
-      { name: 'Assam flood watch', position: { lat: 26.37, lng: 92.68 }, radius: 42000, level: 'High', color: '#ef4444' },
-      { name: 'Meghalaya landslide watch', position: { lat: 25.48, lng: 91.35 }, radius: 28000, level: 'Medium', color: '#f59e0b' },
-      { name: 'Sikkim slope-risk watch', position: { lat: 27.32, lng: 88.58 }, radius: 21000, level: 'High', color: '#ef4444' }
-    ];
-    risks.forEach(risk => {
-      const circle = new google.maps.Circle({
-        map: this.map,
-        center: risk.position,
-        radius: risk.radius,
-        strokeColor: risk.color,
-        strokeWeight: 2,
-        fillColor: risk.color,
-        fillOpacity: .14
-      });
-      circle.addListener('click', (event: google.maps.MapMouseEvent) => this.openInfo(
-        event.latLng ?? risk.position,
-        `<strong>${risk.name}</strong><br>${risk.level} demo risk overlay<br><small>Connect forecast APIs for live scoring.</small>`
-      ));
-    });
-
     const assets = [
       { name: 'Guwahati logistics hub', position: { lat: 26.1445, lng: 91.7362 }, detail: 'Assam · Accessible' },
       { name: 'Shillong corridor checkpoint', position: { lat: 25.5788, lng: 91.8933 }, detail: 'Meghalaya · Monitoring' },
@@ -259,6 +278,97 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
       { points: [{ lat: 26.1445, lng: 91.7362 }, { lat: 25.91, lng: 91.88 }, { lat: 25.5788, lng: 91.8933 }], color: '#5b3ee5' },
       { points: [{ lat: 26.1445, lng: 91.7362 }, { lat: 25.62, lng: 92.82 }, { lat: 24.817, lng: 93.9368 }], color: '#2563eb' }
     ].forEach(corridor => new google.maps.Polyline({ map: this.map, path: corridor.points, strokeColor: corridor.color, strokeWeight: 4, strokeOpacity: .72 }));
+  }
+
+  private renderHazardAlerts(): void {
+    if (!this.map) return;
+    this.clearHazardOverlays();
+    this.hazardAlerts.forEach(alert => {
+      const paths = this.geoJsonPaths(alert.polygonGeoJson);
+      const color = this.hazardColor(alert);
+      if (paths.length) {
+        paths.forEach(path => {
+          const polygon = new google.maps.Polygon({
+            map: this.map,
+            paths: path,
+            strokeColor: color,
+            strokeOpacity: alert.phase === 'FORECAST' ? .65 : .95,
+            strokeWeight: alert.phase === 'FORECAST' ? 2 : 3,
+            fillColor: color,
+            fillOpacity: alert.phase === 'FORECAST' ? .10 : .20,
+            zIndex: 20
+          });
+          polygon.addListener('click', (event: google.maps.MapMouseEvent) => this.openInfo(
+            event.latLng ?? { lat: alert.matchedLatitude, lng: alert.matchedLongitude },
+            this.hazardPopup(alert)
+          ));
+          this.hazardOverlays.push(polygon);
+        });
+      } else {
+        const marker = new google.maps.Marker({
+          map: this.map,
+          position: { lat: alert.matchedLatitude, lng: alert.matchedLongitude },
+          title: alert.title,
+          label: { text: '!', color: '#ffffff', fontWeight: '700' },
+          icon: this.circleIcon(color, 17),
+          zIndex: 40
+        });
+        marker.addListener('click', () => this.openInfo(marker.getPosition()!, this.hazardPopup(alert)));
+        this.hazardOverlays.push(marker);
+      }
+    });
+  }
+
+  private hazardMonitoringLocations(): HazardAlertLocation[] {
+    const candidates: HazardAlertLocation[] = [
+      { latitude: 26.1445, longitude: 91.7362 },
+      { latitude: 25.5788, longitude: 91.8933 },
+      { latitude: 27.187, longitude: 88.505 },
+      { latitude: 24.817, longitude: 93.9368 },
+      ...this.positionedVehicles.map(vehicle => ({ latitude: vehicle.latitude!, longitude: vehicle.longitude! }))
+    ];
+    return candidates.filter((location, index, all) =>
+      all.findIndex(other => Math.abs(other.latitude - location.latitude) < .001 && Math.abs(other.longitude - location.longitude) < .001) === index
+    ).slice(0, 8);
+  }
+
+  private geoJsonPaths(value: string | null): google.maps.LatLngLiteral[][][] {
+    if (!value) return [];
+    try {
+      const geometry = JSON.parse(value);
+      const polygons = geometry?.type === 'Polygon'
+        ? [geometry.coordinates]
+        : geometry?.type === 'MultiPolygon' ? geometry.coordinates : [];
+      return polygons.map((polygon: number[][][]) => polygon.map((ring: number[][]) =>
+        ring.filter(point => Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1]))
+          .map(point => ({ lat: point[1], lng: point[0] }))
+      )).filter((polygon: google.maps.LatLngLiteral[][]) => polygon.some(ring => ring.length >= 3));
+    } catch {
+      return [];
+    }
+  }
+
+  private hazardColor(alert: HazardAlert): string {
+    if (alert.severity === 'EXTREME' || alert.severity === 'SEVERE') return '#dc2626';
+    return alert.hazardType === 'LANDSLIDE' ? '#f59e0b' : '#2563eb';
+  }
+
+  private hazardPopup(alert: HazardAlert): string {
+    const source = alert.dataSourceUri
+      ? `<a href="${this.escape(alert.dataSourceUri)}" target="_blank" rel="noopener">${this.escape(alert.dataSourceName)}</a>`
+      : this.escape(alert.dataSourceName);
+    const timing = alert.phase === 'FORECAST' ? 'Future/expected alert' : 'Active alert';
+    const description = alert.description ? `<br><small>${this.escape(alert.description.slice(0, 420)).replace(/\n/g, '<br>')}</small>` : '';
+    const instruction = alert.instruction ? `<br><b>Action:</b> ${this.escape(alert.instruction.slice(0, 280))}` : '';
+    return `<strong>${this.escape(alert.title)}</strong><br>` +
+      `${this.escape(alert.hazardType)} · ${this.escape(alert.severity)} · ${timing}<br>` +
+      `${this.escape(alert.areaName)}${description}${instruction}<br>` +
+      `<small>Source: ${source}</small>`;
+  }
+
+  private clearHazardOverlays(): void {
+    this.hazardOverlays.forEach(overlay => overlay.setMap(null));
+    this.hazardOverlays = [];
   }
 
   private renderVehicles(): void {

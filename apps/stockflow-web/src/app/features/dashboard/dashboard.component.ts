@@ -168,6 +168,7 @@ export class DashboardComponent implements OnInit {
   private readonly copilotConversationId = `stockflow-${crypto.randomUUID?.() ?? Date.now()}`;
   globalSearch = '';
   sidebarCollapsed = true;
+  sidebarHoverExpanded = false;
   isPillHovered = false;
   private pillHoverTimeout?: any;
 
@@ -470,7 +471,18 @@ export class DashboardComponent implements OnInit {
   }
 
   toggleSidebar(): void {
+    this.sidebarHoverExpanded = false;
     this.sidebarCollapsed = !this.sidebarCollapsed;
+  }
+
+  expandSidebarOnHover(): void {
+    if (this.sidebarCollapsed && window.innerWidth > 900) {
+      this.sidebarHoverExpanded = true;
+    }
+  }
+
+  collapseSidebarAfterHover(): void {
+    this.sidebarHoverExpanded = false;
   }
 
 

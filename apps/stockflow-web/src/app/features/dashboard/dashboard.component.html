@@ -1,5 +1,8 @@
-<div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed" [class.dark-theme]="darkMode">
-  <aside class="sidebar">
+<div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed && !sidebarHoverExpanded" [class.dark-theme]="darkMode">
+  <aside
+    class="sidebar"
+    (mouseenter)="expandSidebarOnHover()"
+    (mouseleave)="collapseSidebarAfterHover()">
     <div class="brand">
       <div class="brand-mark"><span></span><span></span><span></span></div>
       <div class="brand-copy">

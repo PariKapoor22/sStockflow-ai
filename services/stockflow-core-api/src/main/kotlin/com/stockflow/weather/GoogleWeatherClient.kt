@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClientResponseException
 import tools.jackson.databind.JsonNode
 import java.net.http.HttpClient
 import java.time.Duration
+import java.time.Instant
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -25,6 +26,10 @@ class GoogleWeatherClient(
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(connectTimeoutSeconds.coerceIn(1, 60))).build()
     ).apply { setReadTimeout(Duration.ofSeconds(readTimeoutSeconds.coerceIn(1, 120))) }
     private val client = RestClient.builder().baseUrl(apiUrl.trimEnd('/')).requestFactory(requestFactory).build()
+
+    private val supportedHazards = setOf(
+        "COASTAL_FLOOD", "FLASH_FLOOD", "FLOOD", "MUDDY_FLOOD", "RIVER_FLOODING", "STORM_SURGE", "LANDSLIDE"
+    )
 
     fun routeForecast(latitude: Double, longitude: Double, etaMinutes: Int, locationLabel: String): RouteWeatherForecastView {
         if (apiKey.isBlank()) throw GoogleWeatherException(
@@ -57,6 +62,84 @@ class GoogleWeatherClient(
             "Google Weather API did not return an hourly forecast for this route"
         )
         return toView(forecasts[selectedHour.coerceAtMost(forecasts.size() - 1)], locationLabel)
+    }
+
+    fun hazardAlerts(locations: List<HazardAlertLocation>): HazardAlertsView {
+        requireConfigured()
+        val regionCodes = linkedSetOf<String>()
+        val alerts = linkedMapOf<String, HazardAlertView>()
+        locations.forEach { location ->
+            val response = request {
+                client.get()
+                    .uri { builder -> builder
+                        .path("/v1/publicAlerts:lookup")
+                        .queryParam("location.latitude", location.latitude)
+                        .queryParam("location.longitude", location.longitude)
+                        .queryParam("languageCode", "en")
+                        .build() }
+                    .header(HttpHeaders.ACCEPT, "application/json")
+                    .header("X-Goog-Api-Key", apiKey)
+                    .retrieve()
+                    .body(JsonNode::class.java)
+            }
+            response.path("regionCode").asText().takeIf { it.isNotBlank() }?.let(regionCodes::add)
+            val weatherAlerts = response.path("weatherAlerts")
+            if (weatherAlerts.isArray) weatherAlerts.forEach { alert ->
+                val eventType = alert.path("eventType").asText()
+                if (eventType in supportedHazards) {
+                    val view = toHazardAlert(alert, eventType, location)
+                    alerts.putIfAbsent(view.id, view)
+                }
+            }
+        }
+        return HazardAlertsView(
+            alerts = alerts.values.toList(),
+            count = alerts.size,
+            monitoredLocations = locations.size,
+            regionCodes = regionCodes
+        )
+    }
+
+    private fun requireConfigured() {
+        if (apiKey.isBlank()) throw GoogleWeatherException(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "GOOGLE_WEATHER_NOT_CONFIGURED",
+            "Google Weather API is not configured on the StockFlow server"
+        )
+    }
+
+    private fun toHazardAlert(alert: JsonNode, eventType: String, location: HazardAlertLocation): HazardAlertView {
+        val startTime = alert.path("startTime").asText().takeIf { it.isNotBlank() }
+        val phase = startTime?.let { runCatching { Instant.parse(it) }.getOrNull() }
+            ?.takeIf { it.isAfter(Instant.now()) }
+            ?.let { "FORECAST" } ?: "ACTIVE"
+        val dataSource = alert.path("dataSource")
+        val instruction = alert.path("instruction").takeIf { it.isArray }
+            ?.joinToString(" ") { it.asText() }
+            ?.takeIf { it.isNotBlank() }
+        val id = alert.path("alertId").asText().ifBlank {
+            "$eventType:${alert.path("areaName").asText()}:$startTime"
+        }
+        return HazardAlertView(
+            id = id,
+            title = alert.path("alertTitle").path("text").asText().ifBlank { eventType.replace('_', ' ') },
+            eventType = eventType,
+            hazardType = if (eventType == "LANDSLIDE") "LANDSLIDE" else "FLOOD",
+            areaName = alert.path("areaName").asText().ifBlank { "Affected area" },
+            polygonGeoJson = alert.path("polygon").asText().takeIf { it.isNotBlank() },
+            severity = alert.path("severity").asText().ifBlank { "UNKNOWN" },
+            certainty = alert.path("certainty").asText().ifBlank { "UNKNOWN" },
+            urgency = alert.path("urgency").asText().ifBlank { "UNKNOWN" },
+            description = alert.path("description").asText().takeIf { it.isNotBlank() }?.take(2000),
+            instruction = instruction?.take(1000),
+            startTime = startTime,
+            expirationTime = alert.path("expirationTime").asText().takeIf { it.isNotBlank() },
+            phase = phase,
+            matchedLatitude = location.latitude,
+            matchedLongitude = location.longitude,
+            dataSourceName = dataSource.path("name").asText().ifBlank { dataSource.path("publisher").asText().ifBlank { "Official alert authority" } },
+            dataSourceUri = dataSource.path("authorityUri").asText().takeIf { it.startsWith("https://") }
+        )
     }
 
     private fun toView(hour: JsonNode, locationLabel: String): RouteWeatherForecastView {
