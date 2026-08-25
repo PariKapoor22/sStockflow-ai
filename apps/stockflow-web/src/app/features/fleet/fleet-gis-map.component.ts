@@ -20,6 +20,7 @@ export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy
   private readonly infrastructureLayer = L.layerGroup();
   private readonly routeLayer = L.layerGroup();
   private readonly demoLayer = L.layerGroup();
+  private readonly vehicleMarkers = new Map<string, L.Marker>();
   private demoTimer?: number;
   private readonly demoRoute: L.LatLngTuple[] = [
     [26.1445, 91.7362],
@@ -34,6 +35,7 @@ export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy
   demoProgress = 0;
   demoSpeed = 46;
   demoPosition: L.LatLng = L.latLng(this.demoRoute[0]);
+  demoVehicleName = 'StockFlow Prototype Truck';
 
   get positionedVehicles(): FleetbaseVehicle[] {
     return this.vehicles.filter(vehicle => this.hasUsablePosition(vehicle));
@@ -72,7 +74,8 @@ export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy
     this.map?.remove();
   }
 
-  startDemo(): void {
+  startDemo(vehicle?: FleetbaseVehicle): void {
+    if (vehicle) this.demoVehicleName = vehicle.name || vehicle.plateNumber || vehicle.internalId || 'StockFlow Prototype Truck';
     if (this.demoMode === 'completed') this.resetDemo(false);
     this.demoMode = 'running';
     this.renderDemoPosition();
@@ -103,6 +106,17 @@ export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy
     this.demoPosition = L.latLng(this.demoRoute[0]);
     this.demoLayer.clearLayers();
     if (returnToNetwork) this.fitToNetwork();
+  }
+
+  trackVehicle(vehicle: FleetbaseVehicle): void {
+    this.mapElement.nativeElement.closest('.gis-shell')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (this.hasUsablePosition(vehicle)) {
+      this.resetDemo(false);
+      this.map?.setView([vehicle.latitude!, vehicle.longitude!], 13, { animate: true });
+      window.setTimeout(() => this.vehicleMarkers.get(vehicle.id)?.openPopup(), 450);
+    } else {
+      this.startDemo(vehicle);
+    }
   }
 
   fitToNetwork(): void {
@@ -185,10 +199,11 @@ export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private renderVehicles(): void {
     this.vehicleLayer.clearLayers();
+    this.vehicleMarkers.clear();
     this.positionedVehicles.forEach(vehicle => {
       const status = vehicle.online ? 'Online' : (vehicle.status || 'Offline');
       const speed = vehicle.speed === null || vehicle.speed === undefined ? 'Not reported' : `${vehicle.speed.toFixed(0)} km/h`;
-      L.marker([vehicle.latitude!, vehicle.longitude!], {
+      const marker = L.marker([vehicle.latitude!, vehicle.longitude!], {
         icon: this.divIcon(vehicle.online ? 'gps-vehicle-marker online' : 'gps-vehicle-marker', '&#128666;'),
         title: vehicle.name || vehicle.plateNumber || vehicle.id
       }).bindPopup(
@@ -197,6 +212,7 @@ export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy
         `Status: ${this.escape(status)} · Speed: ${speed}<br>` +
         `<small>Fleetbase GPS${vehicle.positionUpdatedAt ? ` · ${this.escape(vehicle.positionUpdatedAt)}` : ''}</small>`
       ).addTo(this.vehicleLayer);
+      this.vehicleMarkers.set(vehicle.id, marker);
     });
   }
 
@@ -210,7 +226,7 @@ export class FleetGisMapComponent implements AfterViewInit, OnChanges, OnDestroy
       icon: this.divIcon('gps-vehicle-marker online demo-pulse', '&#128666;'),
       title: 'StockFlow Prototype Truck'
     }).bindPopup(
-      `<strong>StockFlow Prototype Truck</strong><br>` +
+      `<strong>${this.escape(this.demoVehicleName)}</strong><br>` +
       `Accelerated live-tracking demo<br>` +
       `Speed: ${this.demoSpeed} km/h · Progress: ${this.demoProgress.toFixed(0)}%<br>` +
       `<small>Next: ${this.nextCheckpoint}</small>`

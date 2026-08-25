@@ -102,6 +102,31 @@
       <div><dt>Vehicle type</dt><dd>{{ vehicle.type || 'Not provided' }}</dd></div>
       <div><dt>Payload capacity</dt><dd>{{ vehicle.payloadCapacity ? (vehicle.payloadCapacity | number) + ' kg' : 'Not configured' }}</dd></div>
     </dl>
+    <section class="vehicle-live-card">
+      <header>
+        <div><span>LIVE VEHICLE TELEMETRY</span><h3>Tracking & route status</h3></div>
+        <b [class.live]="hasVehiclePosition(vehicle)"><i></i>{{ hasVehiclePosition(vehicle) ? 'GPS connected' : 'Prototype ready' }}</b>
+      </header>
+      <div class="telemetry-grid">
+        <article><span>Route ETA</span><strong>{{ prototypeEta(vehicle) }}</strong><small>Shillong relief hub</small></article>
+        <article><span>Remaining</span><strong>{{ prototypeDistance(vehicle) }}</strong><small>Guwahati → Shillong</small></article>
+        <article><span>Speed</span><strong>{{ vehicle.speed !== null && vehicle.speed !== undefined ? (vehicle.speed | number:'1.0-0') + ' km/h' : '46 km/h' }}</strong><small>{{ hasVehiclePosition(vehicle) ? 'Fleetbase telemetry' : 'Prototype speed' }}</small></article>
+        <article><span>Heading</span><strong>{{ vehicleHeading(vehicle) }}</strong><small>Vehicle bearing</small></article>
+      </div>
+      <div class="route-progress-label"><span>Corridor progress</span><strong>{{ prototypeProgress(vehicle) }}%</strong></div>
+      <div class="route-progress"><i [style.width.%]="prototypeProgress(vehicle)"></i></div>
+      <dl class="tracking-details">
+        <div><dt>GPS position</dt><dd>{{ vehicleCoordinates(vehicle) }}</dd></div>
+        <div><dt>Next checkpoint</dt><dd>Nongpoh accessibility post</dd></div>
+        <div><dt>Last GPS update</dt><dd>{{ vehicle.positionUpdatedAt ? (vehicle.positionUpdatedAt | date:'medium') : 'No Fleetbase position received' }}</dd></div>
+      </dl>
+      <button type="button" class="track-on-map" (click)="showVehicleTracking(vehicle)">
+        <span>&#10148;</span>
+        <span><strong>Show live tracking on map</strong><small>{{ hasVehiclePosition(vehicle) ? 'Focus the current Fleetbase GPS position' : 'Start the accelerated prototype route' }}</small></span>
+        <b>&#8250;</b>
+      </button>
+      <p class="prototype-disclosure" *ngIf="!hasVehiclePosition(vehicle)">This vehicle has not reported a valid GPS position. The button starts clearly labelled prototype coordinates for the SIH demonstration.</p>
+    </section>
     <div class="next-phase"><strong>Live operations connected</strong><p>Vehicle registry, transfer order creation, FEFO-gated dispatch, tracker/ETA synchronization, signed webhooks and reconciliation are now implemented.</p></div>
   </aside>
 </section>

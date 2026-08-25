@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { catchError, finalize, forkJoin, of, Subscription, timer } from 'rxjs';
 import { FleetbaseAuditSummary, FleetbaseIntegrationStatus, FleetbaseOrganization, FleetbaseVehicle } from '../../core/models/fleetbase.models';
@@ -19,6 +19,7 @@ type FleetFilter = 'all' | 'online' | 'offline' | 'available';
 export class FleetWorkspaceComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) tenantLabel = '';
   @Input({ required: true }) tenantId = '';
+  @ViewChild(FleetGisMapComponent) gisMap?: FleetGisMapComponent;
 
   integration?: FleetbaseIntegrationStatus;
   organization?: FleetbaseOrganization;
@@ -123,6 +124,50 @@ export class FleetWorkspaceComponent implements OnInit, OnChanges, OnDestroy {
     this.selectedVehicle = undefined;
   }
 
+  showVehicleTracking(vehicle: FleetbaseVehicle): void {
+    this.closeDetails();
+    window.setTimeout(() => this.gisMap?.trackVehicle(vehicle), 80);
+  }
+
+  hasVehiclePosition(vehicle: FleetbaseVehicle): boolean {
+    return vehicle.latitude !== null && vehicle.latitude !== undefined
+      && vehicle.longitude !== null && vehicle.longitude !== undefined
+      && Number.isFinite(vehicle.latitude) && Number.isFinite(vehicle.longitude)
+      && !(vehicle.latitude === 0 && vehicle.longitude === 0);
+  }
+
+  vehicleCoordinates(vehicle: FleetbaseVehicle): string {
+    return this.hasVehiclePosition(vehicle)
+      ? `${vehicle.latitude!.toFixed(5)}, ${vehicle.longitude!.toFixed(5)}`
+      : 'Awaiting first GPS fix';
+  }
+
+  vehicleHeading(vehicle: FleetbaseVehicle): string {
+    if (vehicle.heading === null || vehicle.heading === undefined) return 'Not reported';
+    return `${Math.round(vehicle.heading)}° ${this.cardinalDirection(vehicle.heading)}`;
+  }
+
+  prototypeEta(vehicle: FleetbaseVehicle): string {
+    if (!this.hasVehiclePosition(vehicle)) return '1 hr 24 min';
+    const remaining = this.distanceKm(vehicle.latitude!, vehicle.longitude!, 25.5788, 91.8933);
+    const speed = Math.max(vehicle.speed || 46, 25);
+    const minutes = Math.max(1, Math.round(remaining / speed * 60));
+    return minutes >= 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${minutes} min`;
+  }
+
+  prototypeDistance(vehicle: FleetbaseVehicle): string {
+    const distance = this.hasVehiclePosition(vehicle)
+      ? this.distanceKm(vehicle.latitude!, vehicle.longitude!, 25.5788, 91.8933)
+      : 68;
+    return `${Math.round(distance)} km`;
+  }
+
+  prototypeProgress(vehicle: FleetbaseVehicle): number {
+    if (!this.hasVehiclePosition(vehicle)) return 0;
+    const remaining = this.distanceKm(vehicle.latitude!, vehicle.longitude!, 25.5788, 91.8933);
+    return Math.max(0, Math.min(100, Math.round((1 - remaining / 68) * 100)));
+  }
+
   vehicleTitle(vehicle: FleetbaseVehicle): string {
     return vehicle.name || vehicle.plateNumber || vehicle.internalId || 'Unnamed vehicle';
   }
@@ -130,6 +175,20 @@ export class FleetWorkspaceComponent implements OnInit, OnChanges, OnDestroy {
   vehicleSpecification(vehicle: FleetbaseVehicle): string {
     const specification = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ');
     return specification || vehicle.type || 'Vehicle specification not provided';
+  }
+
+  private cardinalDirection(heading: number): string {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    return directions[Math.round((((heading % 360) + 360) % 360) / 45) % 8];
+  }
+
+  private distanceKm(latitude1: number, longitude1: number, latitude2: number, longitude2: number): number {
+    const radians = (degrees: number) => degrees * Math.PI / 180;
+    const latitudeDelta = radians(latitude2 - latitude1);
+    const longitudeDelta = radians(longitude2 - longitude1);
+    const a = Math.sin(latitudeDelta / 2) ** 2
+      + Math.cos(radians(latitude1)) * Math.cos(radians(latitude2)) * Math.sin(longitudeDelta / 2) ** 2;
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   private errorMessage(error: HttpErrorResponse): string {

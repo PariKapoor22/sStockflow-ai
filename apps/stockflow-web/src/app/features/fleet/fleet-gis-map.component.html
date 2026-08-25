@@ -21,7 +21,7 @@
       <article><i class="asset"></i><span><strong>4</strong> GIS checkpoints</span></article>
     </div>
     <div class="tracking-console" *ngIf="demoMode !== 'idle'">
-      <div class="tracking-title"><i [class.paused]="demoMode === 'paused'"></i><strong>{{ demoMode === 'completed' ? 'Prototype delivery complete' : 'Prototype GPS stream' }}</strong><b>{{ demoMode }}</b></div>
+      <div class="tracking-title"><i [class.paused]="demoMode === 'paused'"></i><strong>{{ demoMode === 'completed' ? demoVehicleName + ' delivered' : demoVehicleName + ' · prototype GPS' }}</strong><b>{{ demoMode }}</b></div>
       <div class="tracking-grid">
         <span><small>Speed</small><strong>{{ demoSpeed }} km/h</strong></span>
         <span><small>Progress</small><strong>{{ demoProgress | number:'1.0-0' }}%</strong></span>
