@@ -11,7 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ReplenishmentSummary } from '../../core/models/replenishment.models';
 import { ReplenishmentService } from '../../core/services/replenishment.service';
 import { CustomerOrderService } from '../../core/services/customer-order.service';
-import { CreateCustomerOrderRequest, CustomerOrderView } from '../../core/models/customer-order.models';
+import { CreateCustomerOrderRequest, CustomerOrderDetail, CustomerOrderView } from '../../core/models/customer-order.models';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -61,11 +61,22 @@ interface CustomerOrder {
   itemCount: number;
   value: number;
   promisedDate: string;
+  promisedAt?: string;
   fulfillment: number;
   status: string;
   skuId?: string;
   skuName?: string;
   quantity?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  version?: number;
+}
+
+interface OrderBoardStage {
+  status: string;
+  title: string;
+  description: string;
+  number: string;
 }
 
 interface OrderForm {
@@ -198,7 +209,20 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   orderActionId = '';
   orderError = '';
   orderDialogOpen = false;
+  orderDisplayMode: 'board' | 'table' = 'board';
+  orderDetailOpen = false;
+  orderDetailLoading = false;
+  orderDetailError = '';
+  selectedOrder?: CustomerOrder;
+  selectedOrderDetail?: CustomerOrderDetail;
   orderForm: OrderForm = this.emptyOrder();
+  readonly orderBoardStages: OrderBoardStage[] = [
+    { status: 'Allocated', title: 'Allocated', description: 'Inventory secured', number: '01' },
+    { status: 'Picking', title: 'Picking', description: 'Warehouse execution', number: '02' },
+    { status: 'Ready to ship', title: 'Ready to ship', description: 'Dispatch queue', number: '03' },
+    { status: 'Shipped', title: 'Shipped', description: 'Carrier handoff', number: '04' },
+    { status: 'On hold', title: 'On hold', description: 'Needs attention', number: '!' }
+  ];
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -411,6 +435,37 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     return this.orders.filter(item => item.status === status).length;
   }
 
+  ordersForStage(status: string): CustomerOrder[] {
+    return this.filteredOrders().filter(item => item.status === status);
+  }
+
+  orderProgress(status: string): number {
+    const values: Record<string, number> = { Allocated: 18, Picking: 52, 'Ready to ship': 82, Shipped: 100, 'On hold': 8, Cancelled: 0 };
+    return values[status] ?? 0;
+  }
+
+  orderNextAction(status: string): string {
+    const labels: Record<string, string> = {
+      Allocated: 'Start picking',
+      Picking: 'Mark ready',
+      'Ready to ship': 'Confirm shipment',
+      'On hold': 'Resume order',
+      Shipped: 'Completed',
+      Cancelled: 'Cancelled'
+    };
+    return labels[status] ?? 'Advance';
+  }
+
+  orderCanAdvance(item: CustomerOrder): boolean {
+    return Boolean(item.orderId) && !['Shipped', 'Cancelled'].includes(item.status) && !this.orderActionId;
+  }
+
+  orderIsLate(item: CustomerOrder): boolean {
+    if (!item.promisedDate || item.status === 'Shipped' || item.status === 'Cancelled') return false;
+    const timestamp = Date.parse(item.promisedAt || item.promisedDate);
+    return Number.isFinite(timestamp) && timestamp < Date.now();
+  }
+
   statusClass(value: string): string {
     return value.toLowerCase().replaceAll(' ', '-');
   }
@@ -459,6 +514,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
         this.orderActionId = '';
         const updated = this.mapOrder(detail.order);
         this.orders = this.orders.map(candidate => candidate.orderId === updated.orderId ? updated : candidate);
+        if (this.selectedOrder?.orderId === updated.orderId) {
+          this.selectedOrder = updated;
+          this.selectedOrderDetail = detail;
+        }
         this.showToast(`${updated.id} moved to ${updated.status}.`);
       },
       error: error => {
@@ -764,6 +823,34 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     });
   }
 
+  openOrderDetail(item: CustomerOrder): void {
+    this.selectedOrder = item;
+    this.selectedOrderDetail = undefined;
+    this.orderDetailError = '';
+    this.orderDetailOpen = true;
+    if (!item.orderId) return;
+    this.orderDetailLoading = true;
+    this.orderApi.detail(item.orderId).subscribe({
+      next: detail => {
+        this.orderDetailLoading = false;
+        this.selectedOrderDetail = detail;
+        this.selectedOrder = this.mapOrder(detail.order);
+      },
+      error: error => {
+        this.orderDetailLoading = false;
+        this.orderDetailError = this.apiError(error, 'Order history could not be loaded.');
+      }
+    });
+  }
+
+  closeOrderDetail(): void {
+    this.orderDetailOpen = false;
+    this.orderDetailLoading = false;
+    this.orderDetailError = '';
+    this.selectedOrder = undefined;
+    this.selectedOrderDetail = undefined;
+  }
+
   transitionExecution(action: 'reserve' | 'dispatch' | 'receive' | 'cancel'): void {
     const detail = this.selectedExecution; if (!detail || this.proposalSaving) return;
     this.proposalSaving = true; this.proposalError = '';
@@ -923,8 +1010,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       orderId: value.orderId, id: value.orderNumber, customer: value.customerName, city: value.customerCity,
       channel: value.channel, warehouse: value.warehouseName, itemCount: value.itemCount, value: value.totalValue,
       promisedDate: new Date(value.promisedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+      promisedAt: value.promisedAt,
       fulfillment: value.fulfilmentPercent, status: this.proposalStatus(value.status),
-      skuId: value.skuId, skuName: value.skuName, quantity: value.quantity
+      skuId: value.skuId, skuName: value.skuName, quantity: value.quantity,
+      createdAt: value.createdAt, updatedAt: value.updatedAt, version: value.version
     };
   }
 

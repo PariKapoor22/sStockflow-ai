@@ -17,6 +17,20 @@
     <div #map class="gis-map" aria-label="Google map of North Eastern Region fleet and accessibility"></div>
     <div class="map-loading" *ngIf="loading"><i></i><strong>Loading Google Maps…</strong></div>
     <div class="map-load-error" *ngIf="mapError"><strong>Google Maps unavailable</strong><span>{{ mapError }}</span><small>Use the OpenStreetMap fallback above or verify the browser-key restrictions.</small></div>
+    <section class="google-layer-control" *ngIf="!mapError && !loading" aria-label="Google map layers">
+      <button type="button" class="layer-control-toggle" [attr.aria-expanded]="layersPanelOpen" (click)="layersPanelOpen = !layersPanelOpen">
+        <span><i></i><strong>Map layers</strong></span><b>{{ layersPanelOpen ? '−' : '+' }}</b>
+      </button>
+      <div class="layer-control-body" *ngIf="layersPanelOpen">
+        <label *ngFor="let layer of mapLayers">
+          <input type="checkbox" [checked]="layer.enabled" (change)="toggleLayer(layer.key)">
+          <i [class]="layer.tone"></i>
+          <span><strong>{{ layer.label }}</strong><small>{{ layer.description }}</small></span>
+          <b>{{ layerCount(layer.key) }}</b>
+        </label>
+        <footer><button type="button" (click)="setAllLayers(true)">Show all</button><button type="button" (click)="setAllLayers(false)">Hide all</button></footer>
+      </div>
+    </section>
     <div class="map-status" *ngIf="!mapError">
       <article><i class="live"></i><span><strong>{{ positionedVehicles.length }}</strong> GPS positions</span></article>
       <article><i class="waiting"></i><span><strong>{{ waitingVehicles }}</strong> awaiting GPS</span></article>
