@@ -287,7 +287,7 @@
           <div class="table-scroll">
             <table>
               <thead><tr><th>SKU</th><th>Warehouse</th><th class="numeric">Sales qty</th><th class="numeric">Avg/day</th><th class="numeric">Returns</th><th class="numeric">Lost sales</th><th class="numeric">Sales value</th></tr></thead>
-              <tbody><tr *ngFor="let item of demandSkus"><td><strong>{{ item.skuName }}</strong><small>{{ item.skuId }}</small></td><td><strong>{{ item.warehouseName }}</strong><small>{{ item.warehouseId }}</small></td><td class="numeric">{{ item.salesQuantity | number }}</td><td class="numeric">{{ item.averageDailyDemand | number:'1.0-2' }}</td><td class="numeric">{{ item.returnQuantity | number }}</td><td class="numeric" [class.negative-text]="item.lostSalesQuantity > 0">{{ item.lostSalesQuantity | number }}</td><td class="numeric">{{ item.grossSalesValue | currency:'INR':'symbol':'1.0-0' }}</td></tr></tbody>
+              <tbody><tr *ngFor="let item of demandSkus"><td><strong>{{ item.skuName }}</strong><small>{{ item.skuId }}</small></td><td><strong>{{ item.warehouseName }}</strong><small>{{ warehouseDisplayId(item.warehouseId) }}</small></td><td class="numeric">{{ item.salesQuantity | number }}</td><td class="numeric">{{ item.averageDailyDemand | number:'1.0-2' }}</td><td class="numeric">{{ item.returnQuantity | number }}</td><td class="numeric" [class.negative-text]="item.lostSalesQuantity > 0">{{ item.lostSalesQuantity | number }}</td><td class="numeric">{{ item.grossSalesValue | currency:'INR':'symbol':'1.0-0' }}</td></tr></tbody>
             </table>
           </div>
         </article>
@@ -329,7 +329,7 @@
                   <td><span [class]="'severity-pill ' + risk.severity.toLowerCase()">{{ risk.severity }}</span></td>
                   <td><strong>{{ riskTypeLabel(risk.riskType) }}</strong><small>{{ risk.riskId }}</small></td>
                   <td><strong>{{ risk.skuName }}</strong><small>{{ risk.skuId }}{{ risk.batchNumber ? ' · ' + risk.batchNumber : '' }}</small></td>
-                  <td><strong>{{ risk.warehouseName }}</strong><small>{{ risk.warehouseId }}</small></td>
+                  <td><strong>{{ risk.warehouseName }}</strong><small>{{ warehouseDisplayId(risk.warehouseId) }}</small></td>
                   <td class="numeric">{{ risk.usableQuantity | number }}</td>
                   <td class="numeric">{{ risk.sales30 | number }}</td>
                   <td class="numeric">{{ risk.daysOfCover === null ? '—' : (risk.daysOfCover | number:'1.1-1') }}</td>
@@ -440,7 +440,7 @@
           <article *ngFor="let warehouse of filteredWarehouses()" class="card warehouse-card">
             <div class="warehouse-card-header">
               <div class="warehouse-symbol"></div>
-              <div><span>{{ warehouse.warehouseId }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('warehouses'), warehouse.warehouseId)">Updated</em></span><h2>{{ warehouse.warehouseName }}</h2><p>{{ warehouse.city }}, {{ warehouse.state }}, {{ warehouse.country }}</p></div>
+              <div><span>{{ warehouseDisplayId(warehouse.warehouseId) }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('warehouses'), warehouse.warehouseId)">Updated</em></span><h2>{{ warehouse.warehouseName }}</h2><p>{{ warehouse.city }}, {{ warehouse.state }}, {{ warehouse.country }}</p></div>
               <div class="warehouse-card-actions"><span class="cold-chain-pill" [class.active]="warehouse.coldChainAvailable">{{ warehouse.coldChainAvailable ? 'Cold chain' : 'Standard' }}</span><button type="button" class="record-edit-button" (click)="startWarehouseEdit(warehouse)">Edit</button></div>
             </div>
             <div class="warehouse-stat-grid">
@@ -548,7 +548,7 @@
                   <td><span [class]="'batch-status ' + operationalStatusClass(batch)">{{ batchOperationalStatus(batch) }}</span></td>
                   <td><strong>{{ batch.batchNumber }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('batches'), batch.batchInventoryId)">Updated</em></strong><small>Snapshot: {{ batch.snapshotDate }}</small></td>
                   <td><strong>{{ batch.skuId }}</strong><small>{{ batch.unitCost | currency:batch.currency:'symbol':'1.2-2' }} per unit</small></td>
-                  <td><strong>{{ batch.warehouseId }}</strong><small>{{ batch.storageConditionCode }}</small></td>
+                  <td><strong>{{ warehouseDisplayId(batch.warehouseId) }}</strong><small>{{ batch.storageConditionCode }}</small></td>
                   <td class="numeric">{{ batch.availableQuantity | number }}</td>
                   <td class="numeric">{{ batch.reservedQuantity | number }}</td>
                   <td class="numeric">{{ batch.blockedQuantity | number }}</td>
@@ -641,7 +641,7 @@
         <header><div><span>PROTOTYPE EDITOR</span><h2>{{ activeEditor === 'warehouse' ? 'Edit warehouse' : activeEditor === 'sku' ? 'Edit SKU policy' : 'Adjust batch inventory' }}</h2><p>Changes are validated, saved in this browser and reflected across related prototype screens.</p></div><button type="button" (click)="cancelEditor()" aria-label="Close editor">×</button></header>
 
         <form *ngIf="activeEditor === 'warehouse' && warehouseDraft as draft" class="master-editor-form" (ngSubmit)="saveWarehouseEdit()">
-          <div class="editor-id"><span>Warehouse ID</span><strong>{{ draft.warehouseId }}</strong></div>
+          <div class="editor-id"><span>Warehouse ID</span><strong>{{ warehouseDisplayId(draft.warehouseId) }}</strong></div>
           <label class="full"><span>Warehouse name</span><input name="warehouseName" [(ngModel)]="draft.warehouseName" required></label>
           <label><span>City</span><input name="warehouseCity" [(ngModel)]="draft.city" required></label>
           <label><span>State</span><input name="warehouseState" [(ngModel)]="draft.state" required></label>
@@ -667,7 +667,7 @@
 
         <form *ngIf="activeEditor === 'batch' && batchDraft as draft" class="master-editor-form" (ngSubmit)="saveBatchEdit()">
           <div class="editor-id"><span>Batch</span><strong>{{ draft.batchNumber }} · {{ draft.skuId }}</strong></div>
-          <div class="editor-context full"><span>{{ draft.warehouseId }}</span><small>Current calculated signal: {{ batchOperationalStatus(draft) }}</small></div>
+          <div class="editor-context full"><span>{{ warehouseDisplayId(draft.warehouseId) }}</span><small>Current calculated signal: {{ batchOperationalStatus(draft) }}</small></div>
           <label><span>Available quantity</span><input name="batchAvailable" type="number" min="0" step="1" [(ngModel)]="draft.availableQuantity"></label>
           <label><span>Reserved quantity</span><input name="batchReserved" type="number" min="0" step="1" [(ngModel)]="draft.reservedQuantity"></label>
           <label><span>Blocked quantity</span><input name="batchBlocked" type="number" min="0" step="1" [(ngModel)]="draft.blockedQuantity"></label>

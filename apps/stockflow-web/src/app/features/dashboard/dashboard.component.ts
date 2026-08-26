@@ -714,6 +714,15 @@ export class DashboardComponent implements OnInit {
     return type.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, value => value.toUpperCase());
   }
 
+  warehouseDisplayId(warehouseId: string): string {
+    const northeastAliases: Record<string, string> = {
+      'WH-CHENNAI': 'WH-GUWAHATI',
+      'WH-BENGALURU': 'WH-SHILLONG',
+      'WH-HYDERABAD': 'WH-IMPHAL'
+    };
+    return northeastAliases[warehouseId] ?? warehouseId;
+  }
+
   pageTitle(): string {
     const titles: Record<ViewId, string> = {
       dashboard: 'Dashboard',
