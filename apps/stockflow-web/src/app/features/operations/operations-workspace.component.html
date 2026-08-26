@@ -174,7 +174,8 @@
 
   <div class="prototype-note">
     <span>INTERACTIVE PROTOTYPE</span>
-    <p *ngIf="view !== 'transfers' && view !== 'purchase'">Built for {{ tenantLabel }} with representative operational data. Changes are saved in this browser and remain after refresh.</p>
+    <p *ngIf="view !== 'transfers' && view !== 'purchase' && view !== 'orders'">Built for {{ tenantLabel }} with representative operational data. Changes are saved in this browser and remain after refresh.</p>
+    <p *ngIf="view === 'orders'">Orders, lifecycle transitions and audit history are persisted through the secured StockFlow Orders API.</p>
     <p *ngIf="view === 'transfers' || view === 'purchase'">Recommendations are representative; proposals and approval history are persisted through the secured StockFlow Action API.</p>
     <div class="prototype-save-state"><i></i><strong>{{ prototype.changeCount() }} saved changes</strong><small *ngIf="prototype.lastUpdatedAt()">Updated {{ prototype.lastUpdatedAt() | date:'shortTime' }}</small></div>
   </div>
@@ -255,15 +256,7 @@
       <section class="route-design-grid">
         <article class="panel route-map-panel">
           <div class="panel-heading"><div><span>SELECTED PLAN · {{ selectedRoute().id }}</span><h2>{{ selectedRoute().lane }}</h2><p>Capacity-aware stop sequence and transfer consolidation preview</p></div><span class="optimization-badge">{{ selectedRoute().baselineKm - selectedRoute().optimizedKm }} km saved</span></div>
-          <div class="route-map-canvas">
-            <div class="map-chip"><i></i>Optimized sequence</div>
-            <div class="map-route">
-              <ng-container *ngFor="let stop of selectedRoute().stops; let index = index; let last = last">
-                <div class="map-stop" [class.destination]="last"><i>{{ index + 1 }}</i><span><strong>{{ stop }}</strong><small>{{ index === 0 ? 'Dispatch and load' : last ? 'Final receiving node' : 'Consolidation stop' }}</small></span></div>
-                <span class="map-connector" *ngIf="!last"><b></b><em>{{ index === 0 ? 'Priority lane' : 'Final leg' }}</em></span>
-              </ng-container>
-            </div>
-          </div>
+          <sf-route-optimization-map [routeId]="selectedRoute().id" [stops]="selectedRouteMapStops()"></sf-route-optimization-map>
           <div class="route-summary-strip">
             <span><small>Optimized distance</small><strong>{{ selectedRoute().optimizedKm }} km</strong><small *ngIf="selectedRoute().matrixProvider">{{ selectedRoute().matrixProvider!.replaceAll('_', ' ') }}</small></span>
             <span><small>Planned duration</small><strong>{{ selectedRoute().duration }}</strong><small *ngIf="selectedRoute().arrivalTime">arrival {{ selectedRoute().arrivalTime }}</small></span>

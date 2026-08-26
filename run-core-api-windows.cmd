@@ -1,6 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+call "%~dp0load-env-windows.cmd"
 call "%~dp0configure-maven-windows.cmd"
 if errorlevel 1 (
   echo ============================================================

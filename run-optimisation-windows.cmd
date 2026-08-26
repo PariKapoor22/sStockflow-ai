@@ -1,5 +1,6 @@
 @echo off
 setlocal
+call "%~dp0load-env-windows.cmd"
 cd /d "%~dp0services\optimisation-service"
 where uv >nul 2>nul
 if errorlevel 1 (

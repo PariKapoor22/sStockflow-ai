@@ -345,6 +345,8 @@ def _assign_fleet(routes: list[dict[str, Any]], objective: str, vehicle_filter: 
     variables: dict[tuple[int, int], pywraplp.Variable] = {}
     for job_index, job in enumerate(routes):
         for vehicle_index, vehicle in enumerate(routes):
+            if job.get("lockVehicle", False) and vehicle_index != job_index:
+                continue
             if _vehicle_allowed(job, vehicle, vehicle_filter):
                 variables[job_index, vehicle_index] = solver.BoolVar(f"assign_{job_index}_{vehicle_index}")
     for job_index in range(len(routes)):

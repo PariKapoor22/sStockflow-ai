@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CARBON_API_BASE_URL } from '../config/api.config';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface RouteOptimisationInput {
   id: string;
@@ -24,6 +24,7 @@ export interface RouteOptimisationInput {
   landslideRisk?: number;
   roadBlockRisk?: number;
   roadClosed?: boolean;
+  lockVehicle?: boolean;
 }
 
 export interface RouteStopInput {
@@ -77,7 +78,7 @@ export class CarbonApiService {
   constructor(private readonly http: HttpClient) {}
 
   optimiseRoutes(objective: string, vehicleType: string, routes: RouteOptimisationInput[]): Observable<RouteOptimisationResponse> {
-    return this.http.post<RouteOptimisationResponse>(`${CARBON_API_BASE_URL}/api/v1/routes/optimise`, {
+    return this.http.post<RouteOptimisationResponse>(`${API_BASE_URL}/api/v1/routes/optimise`, {
       objective,
       vehicleType,
       routes
@@ -85,7 +86,7 @@ export class CarbonApiService {
   }
 
   updateRouteStatus(runId: string, routeId: string, status: 'APPROVED' | 'IN_TRANSIT' | 'DELIVERED'): Observable<OptimisedRoute> {
-    return this.http.post<OptimisedRoute>(`${CARBON_API_BASE_URL}/api/v1/routes/runs/${runId}/routes/${routeId}/status`, {
+    return this.http.post<OptimisedRoute>(`${API_BASE_URL}/api/v1/routes/runs/${runId}/routes/${routeId}/status`, {
       status
     }, { headers: this.tenantHeaders() });
   }

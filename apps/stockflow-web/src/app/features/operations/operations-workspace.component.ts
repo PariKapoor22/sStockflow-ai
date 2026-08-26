@@ -12,6 +12,7 @@ import { ReplenishmentSummary } from '../../core/models/replenishment.models';
 import { ReplenishmentService } from '../../core/services/replenishment.service';
 import { CustomerOrderService } from '../../core/services/customer-order.service';
 import { CreateCustomerOrderRequest, CustomerOrderDetail, CustomerOrderView } from '../../core/models/customer-order.models';
+import { OptimizedRouteMapStop, RouteOptimizationMapComponent } from './route-optimization-map.component';
 
 export type OperationView = 'transfers' | 'purchase' | 'orders' | 'returns' | 'routes' | 'sustainability';
 
@@ -156,7 +157,7 @@ interface ProposalForm {
 @Component({
   selector: 'sf-operations-workspace',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouteOptimizationMapComponent],
   templateUrl: './operations-workspace.component.html',
   styleUrl: './operations-workspace.component.css'
 })
@@ -245,6 +246,8 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     'Coimbatore West': { latitude: 11.0168, longitude: 76.9558, floodRisk: 0.08, landslideRisk: 0.12, roadBlockRisk: 0.05 },
     'Mandya Drop': { latitude: 12.5218, longitude: 76.8951, floodRisk: 0.05, landslideRisk: 0.04, roadBlockRisk: 0.04 }
   };
+  private routeMapStopsSignature = '';
+  private routeMapStopsCache: OptimizedRouteMapStop[] = [];
   readonly orderBoardStages: OrderBoardStage[] = [
     { status: 'Allocated', title: 'Allocated', description: 'Inventory secured', number: '01' },
     { status: 'Picking', title: 'Picking', description: 'Warehouse execution', number: '02' },
@@ -428,6 +431,18 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     return this.routePlans.find(item => item.id === this.selectedRouteId) ?? this.routePlans[0];
   }
 
+  selectedRouteMapStops(): OptimizedRouteMapStop[] {
+    const route = this.selectedRoute();
+    const signature = `${route.id}:${route.stops.join('|')}`;
+    if (signature === this.routeMapStopsSignature) return this.routeMapStopsCache;
+    this.routeMapStopsSignature = signature;
+    this.routeMapStopsCache = route.stops.map(name => {
+      const profile = this.routeStopProfiles[name];
+      return { name, latitude: profile.latitude, longitude: profile.longitude };
+    });
+    return this.routeMapStopsCache;
+  }
+
   totalOptimizedKm(): number {
     return this.routePlans.reduce((sum, item) => sum + item.optimizedKm, 0);
   }
@@ -600,7 +615,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.selectedRouteId = item.id;
   }
 
-  optimizeRoutes(): void {
+  optimizeRoutes(afterSuccess?: () => void): void {
     if (this.routeOptimizationRunning) return;
     this.routeOptimizationRunning = true;
     this.routeRejected = [];
@@ -612,7 +627,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
         loadKg: route.loadKg, capacityKg: route.capacityKg, baselineKm: route.baselineKm,
         priority: route.priority, status: route.status,
         stopDetails: this.routeStopDetails(route, departureMinutes, promisedDeliveryMinutes),
-        vehicleAvailable: route.status !== 'Delivered',
+        // Plan lifecycle and live fleet availability are separate concerns. These
+        // prototype vehicles remain eligible when an older plan was completed.
+        vehicleAvailable: true,
+        lockVehicle: true,
         coldChainRequired: route.id === 'RTE-302',
         coldChainAvailable: true,
         departureMinutes,
@@ -666,10 +684,11 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
         });
         this.routeOptimizationRunning = false;
         this.showToast(`${response.routes.length} routes solved by OR-Tools${response.rejected.length ? `; ${response.rejected.length} rejected by constraints` : ''}.`);
+        afterSuccess?.();
       },
-      error: () => {
+      error: error => {
         this.routeOptimizationRunning = false;
-        this.showToast('The route and carbon backend could not be reached. Existing route values were preserved.');
+        this.showToast(this.apiError(error, 'The route optimisation backend could not be reached. Start it with RUN_ALL_WINDOWS.cmd and retry.'));
       }
     });
   }
@@ -691,7 +710,11 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       });
       return;
     }
-    this.completeRouteStatusChange(item, targetStatus);
+    this.showToast(`${item.id} is not persisted yet. Recalculating it before the status change…`);
+    this.optimizeRoutes(() => {
+      const persisted = this.routePlans.find(route => route.id === item.id);
+      if (persisted?.optimizationRunId) this.advanceRoute(persisted);
+    });
   }
 
   private completeRouteStatusChange(item: RoutePlan, targetStatus: string): void {

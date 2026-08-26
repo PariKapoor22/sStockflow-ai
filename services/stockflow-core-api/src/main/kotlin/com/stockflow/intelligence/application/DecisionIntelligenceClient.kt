@@ -9,6 +9,8 @@ import tools.jackson.databind.JsonNode
 import java.net.http.HttpClient
 import java.math.BigDecimal
 import java.time.Duration
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 
 @Component
 class DecisionIntelligenceClient(
@@ -60,6 +62,54 @@ class DecisionIntelligenceClient(
             logger.warn("PyOD service unavailable; returning rule-based risks without anomaly scores: {}", error.message)
             null
         }
+    }
+
+    fun optimiseRoutes(tenantId: String, request: JsonNode): JsonNode {
+        requireDecisionService()
+        return callRouteService("recalculate route candidates") {
+            client.post().uri("/api/v1/routes/optimise")
+                .header("X-Tenant-ID", tenantId)
+                .body(request).retrieve().body(JsonNode::class.java)
+        }
+    }
+
+    fun updateRouteStatus(
+        tenantId: String,
+        actorId: String,
+        runId: String,
+        routeId: String,
+        request: JsonNode
+    ): JsonNode {
+        requireDecisionService()
+        return callRouteService("update the route status") {
+            client.post().uri("/api/v1/routes/runs/{runId}/routes/{routeId}/status", runId, routeId)
+                .header("X-Tenant-ID", tenantId)
+                .header("X-User-ID", actorId)
+                .body(request).retrieve().body(JsonNode::class.java)
+        }
+    }
+
+    private fun requireDecisionService() {
+        if (!enabled) throw ResponseStatusException(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "Route optimisation is disabled. Start StockFlow with RUN_ALL_WINDOWS.cmd."
+        )
+    }
+
+    private fun callRouteService(operation: String, call: () -> JsonNode?): JsonNode = try {
+        call() ?: throw ResponseStatusException(
+            HttpStatus.BAD_GATEWAY,
+            "The route optimisation service returned an empty response."
+        )
+    } catch (error: ResponseStatusException) {
+        throw error
+    } catch (error: Exception) {
+        logger.warn("Route optimisation service could not {}: {}", operation, error.message)
+        throw ResponseStatusException(
+            HttpStatus.BAD_GATEWAY,
+            "The route optimisation service could not $operation. Confirm that port 8102 is running.",
+            error
+        )
     }
 }
 

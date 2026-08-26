@@ -22,7 +22,7 @@ app.add_middleware(
     ).split(",") if item.strip()],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization", "X-Tenant-ID"],
+    allow_headers=["Content-Type", "Authorization", "X-Tenant-ID", "X-User-ID"],
 )
 
 
@@ -142,6 +142,7 @@ class VehicleRouteCandidate(BaseModel):
     landslideRisk: float = Field(default=0, ge=0, le=1)
     roadBlockRisk: float = Field(default=0, ge=0, le=1)
     roadClosed: bool = False
+    lockVehicle: bool = False
 
 
 class VehicleRoutingRequest(BaseModel):

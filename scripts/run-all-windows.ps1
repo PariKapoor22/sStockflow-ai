@@ -167,7 +167,7 @@ try {
     Wait-ForUrl 'Optimisation service' 'http://127.0.0.1:8102/health' 180
 
     Write-Step 'Starting the Spring Boot API (startup tests skipped; use the individual launcher to test)...'
-    Start-StockFlowService 'core-api' 'run-core-api-windows.cmd' 8080 'set "STOCKFLOW_SKIP_TESTS=true"' | Out-Null
+    Start-StockFlowService 'core-api' 'run-core-api-windows.cmd' 8080 'set "STOCKFLOW_SKIP_TESTS=true" && set "STOCKFLOW_DECISION_INTELLIGENCE_ENABLED=true"' | Out-Null
     Wait-ForUrl 'Core API' 'http://127.0.0.1:8080/actuator/health/liveness' 300
 
     Write-Step 'Starting the Angular website...'

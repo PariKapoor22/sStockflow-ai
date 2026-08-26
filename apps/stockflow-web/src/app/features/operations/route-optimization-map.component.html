@@ -1,0 +1,15 @@
+<div class="route-map-shell">
+  <div #routeMap class="route-google-map" aria-label="Google map showing the selected optimized route"></div>
+  <div class="route-map-sequence" *ngIf="stops.length">
+    <ng-container *ngFor="let stop of stops; let index = index; let last = last">
+      <span><b>{{ index + 1 }}</b>{{ stop.name }}</span><i *ngIf="!last">→</i>
+    </ng-container>
+  </div>
+  <div class="route-map-state loading" *ngIf="loading"><span></span> Loading optimized road route…</div>
+  <div class="route-map-state error" *ngIf="error">
+    <strong>Road route unavailable</strong>
+    <span>{{ error }}</span>
+    <button type="button" (click)="retry()">Retry</button>
+  </div>
+  <div class="route-map-source"><i></i>{{ routeSource }}</div>
+</div>

@@ -123,6 +123,15 @@ When `GOOGLE_MAPS_BACKEND_API_KEY` is defined, vehicle routing uses a Google
 Routes traffic matrix. Otherwise it uses a labelled geodesic fallback. A
 caller may also submit a road graph with closures and hazard scores.
 
+Configure that backend key once from the project root. The prompt hides the
+key and writes it to the Git-ignored `.env` file; Windows launchers load it
+automatically on future starts:
+
+```cmd
+configure-google-maps-windows.cmd
+RUN_ALL_WINDOWS.cmd
+```
+
 Live hazard model outputs are optional and must be supplied as GeoJSON feeds:
 
 ```cmd
