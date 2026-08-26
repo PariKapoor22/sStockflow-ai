@@ -3,7 +3,7 @@ import requests
 
 
 # ============================================================
-# NORTH-EAST INDIA STOCKFLOW AI
+# STOCKFLOW AI - NORTH-EAST INDIA LOGISTICS
 # ============================================================
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
@@ -12,27 +12,23 @@ TENANT_ID = "demo"
 
 
 # ============================================================
-# NORTH-EAST REGION ROUTE
+# ROUTE OPTIMIZATION
 # ============================================================
 
 def optimize_route():
-    """
-    North-East India logistics scenario.
-
-    Guwahati, Assam -> Imphal, Manipur
-
-    The optimizer evaluates alternative road corridors
-    using distance, duration, hazards, vehicle constraints,
-    carbon and cost.
-    """
 
     payload = {
         "objective": "Safest route",
         "vehicleType": "cold-chain-electric",
 
         "routes": [
+
+            # ------------------------------------------------
+            # ROUTE 1: GUWAHATI -> JOWAI -> IMPHAL
+            # ------------------------------------------------
             {
-                "id": "NER-GHY-IMPHAL",
+                "id": "NER-GHY-JOWAI-IMPHAL",
+
                 "lane": "Guwahati-Imphal",
 
                 "stops": [
@@ -43,48 +39,85 @@ def optimize_route():
 
                 "vehicle": "cold-chain-electric",
 
-                # Cargo
                 "loadKg": 800,
                 "capacityKg": 1200,
 
-                # Baseline distance
-                "baselineKm": 520,
+                "baselineKm": 540,
 
-                # Priority
                 "priority": "High",
 
                 "status": "Draft",
 
-                # Pickup / delivery
                 "pickupNode": "Guwahati",
                 "deliveryNode": "Imphal",
 
-                # Vehicle
                 "vehicleAvailable": True,
 
-                # Cold chain
                 "coldChainRequired": True,
                 "coldChainAvailable": True,
 
-                # Warehouse
                 "warehouseStockKg": 1200,
 
-                # Delivery window
-                "promisedDeliveryMinutes": 1080,
+                # 08:00 departure
+                # Delivery promised by 20:00
+                "promisedDeliveryMinutes": 1200,
+                "departureMinutes": 480
+            },
+
+
+            # ------------------------------------------------
+            # ROUTE 2: GUWAHATI -> DIMAPUR -> IMPHAL
+            # ------------------------------------------------
+            {
+                "id": "NER-GHY-DIMAPUR-IMPHAL",
+
+                "lane": "Guwahati-Imphal",
+
+                "stops": [
+                    "Guwahati",
+                    "Dimapur",
+                    "Imphal"
+                ],
+
+                "vehicle": "cold-chain-electric",
+
+                "loadKg": 800,
+                "capacityKg": 1200,
+
+                "baselineKm": 500,
+
+                "priority": "High",
+
+                "status": "Draft",
+
+                "pickupNode": "Guwahati",
+                "deliveryNode": "Imphal",
+
+                "vehicleAvailable": True,
+
+                "coldChainRequired": True,
+                "coldChainAvailable": True,
+
+                "warehouseStockKg": 1200,
+
+                "promisedDeliveryMinutes": 1200,
                 "departureMinutes": 480
             }
         ],
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # NORTH-EAST ROAD NETWORK
         #
-        # These are prototype/demo hazard values.
-        # Replace them with live hazard-service data later.
-        # ----------------------------------------------------
+        # Prototype hazard values.
+        # These can later be replaced by live hazard data.
+        # ====================================================
 
         "roadNetwork": [
 
-            # Corridor 1
+            # ------------------------------------------------
+            # GUWAHATI -> JOWAI
+            # ------------------------------------------------
             {
                 "fromNode": "Guwahati",
                 "toNode": "Jowai",
@@ -99,6 +132,10 @@ def optimize_route():
                 "roadBlockRisk": 0.05
             },
 
+
+            # ------------------------------------------------
+            # JOWAI -> IMPHAL
+            # ------------------------------------------------
             {
                 "fromNode": "Jowai",
                 "toNode": "Imphal",
@@ -113,7 +150,10 @@ def optimize_route():
                 "roadBlockRisk": 0.06
             },
 
-            # Alternative corridor
+
+            # ------------------------------------------------
+            # GUWAHATI -> DIMAPUR
+            # ------------------------------------------------
             {
                 "fromNode": "Guwahati",
                 "toNode": "Dimapur",
@@ -128,6 +168,10 @@ def optimize_route():
                 "roadBlockRisk": 0.15
             },
 
+
+            # ------------------------------------------------
+            # DIMAPUR -> IMPHAL
+            # ------------------------------------------------
             {
                 "fromNode": "Dimapur",
                 "toNode": "Imphal",
@@ -144,6 +188,11 @@ def optimize_route():
         ]
     }
 
+
+    # ========================================================
+    # CALL STOCKFLOW OPTIMIZER
+    # ========================================================
+
     response = requests.post(
         f"{CARBON_URL}/api/v1/routes/optimise",
         json=payload,
@@ -159,50 +208,58 @@ def optimize_route():
 
 
 # ============================================================
-# QWEN3
+# QWEN3 EXPLANATION
 # ============================================================
 
 def ask_qwen(route_result):
 
     prompt = f"""
 You are StockFlow AI, a logistics optimization assistant
-specialized in supply-chain movement across India's
-North-East Region.
+for supply-chain movement in India's North-East Region.
 
-The deterministic StockFlow route optimizer produced
-the following result:
+The deterministic StockFlow route optimizer produced this
+result:
 
 {json.dumps(route_result, indent=2)}
 
-Explain the recommendation to a logistics manager.
+Explain the result to a logistics manager.
 
-Focus on:
+Cover these points:
 
 1. Recommended North-East route
-2. Pickup and delivery locations
-3. Distance
-4. Travel duration
-5. ETA
-6. Delivery-window feasibility
-7. Vehicle capacity
-8. Vehicle availability
-9. Cold-chain compatibility
-10. Warehouse stock
-11. Flood risk
-12. Landslide risk
-13. Road-block risk
-14. Transport cost
-15. CO2 emissions
-16. Green Score
-17. Route Score
-18. Why this route was selected
+2. Pickup location
+3. Delivery location
+4. Distance
+5. Travel duration
+6. ETA
+7. Delivery-window feasibility
+8. Vehicle payload capacity
+9. Vehicle availability
+10. Cold-chain requirement and compatibility
+11. Warehouse stock availability
+12. Flood risk
+13. Landslide risk
+14. Road-block risk
+15. Transport cost
+16. CO2 emissions
+17. Green Score
+18. Route Score
+19. Why the route was selected
 
-Explain why the selected route is preferable
-for North-East logistics.
+Compare rejected routes if they exist.
 
-Use ONLY values present in the optimizer result.
+Explain how the optimizer balances safety,
+delivery feasibility, cost and sustainability.
 
-Do not invent values.
+IMPORTANT:
+
+- Use ONLY values present in the optimizer result.
+- Do NOT invent missing values.
+- If a value is missing, say "Not provided".
+- If bestRoute is null, clearly state that no feasible
+  route was selected.
+- Mention that the route requires human approval
+  before dispatch.
 
 Keep the explanation professional and concise.
 """
@@ -217,8 +274,8 @@ Keep the explanation professional and concise.
                     "role": "system",
                     "content": (
                         "You are StockFlow AI, "
-                        "a North-East India logistics "
-                        "optimization assistant."
+                        "a professional North-East India "
+                        "logistics optimization assistant."
                     )
                 },
                 {
@@ -245,38 +302,45 @@ Keep the explanation professional and concise.
     if content:
         return content.strip()
 
-    if "response" in data:
-        return str(data["response"]).strip()
-
-    return "Qwen did not return an explanation."
+    return "Qwen3 did not return an explanation."
 
 
 # ============================================================
-# MAIN
+# MAIN PROGRAM
 # ============================================================
 
 if __name__ == "__main__":
 
     print()
-    print("=" * 65)
+    print("=" * 70)
     print("       STOCKFLOW AI - NORTH-EAST INDIA LOGISTICS")
-    print("=" * 65)
+    print("=" * 70)
 
     print()
-    print("Route: Guwahati, Assam -> Imphal, Manipur")
-    print("Cargo: 800 kg cold-chain shipment")
+    print("Origin      : Guwahati, Assam")
+    print("Destination : Imphal, Manipur")
+    print("Cargo       : 800 kg")
+    print("Priority    : High")
+    print("Vehicle     : Cold-chain electric")
+    print("Departure   : 08:00")
+    print("Deadline    : 20:00")
     print()
+
+    # --------------------------------------------------------
+    # RUN OPTIMIZER
+    # --------------------------------------------------------
 
     try:
+
         result = optimize_route()
 
     except requests.exceptions.ConnectionError:
 
+        print()
         print("ERROR: StockFlow Carbon Service is not running.")
         print()
-        print(
-            "Start it with:"
-        )
+        print("Start it using:")
+        print()
         print(
             "python -m uvicorn "
             "stockflow_carbon.main:app "
@@ -285,21 +349,24 @@ if __name__ == "__main__":
 
         raise SystemExit(1)
 
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as error:
 
+        print()
         print("ERROR communicating with StockFlow:")
-        print(e)
+        print(error)
 
         raise SystemExit(1)
 
+
     # --------------------------------------------------------
-    # OPTIMIZER RESULT
+    # DISPLAY OPTIMIZER RESULT
     # --------------------------------------------------------
 
     print()
-    print("=" * 65)
-    print("                  OPTIMIZER RESULT")
-    print("=" * 65)
+    print("=" * 70)
+    print("                    OPTIMIZER RESULT")
+    print("=" * 70)
+    print()
 
     print(
         json.dumps(
@@ -308,35 +375,122 @@ if __name__ == "__main__":
         )
     )
 
+
     # --------------------------------------------------------
-    # QWEN EXPLANATION
+    # DISPLAY BEST ROUTE
     # --------------------------------------------------------
 
     print()
-    print("=" * 65)
-    print("                  QWEN3 EXPLANATION")
-    print("=" * 65)
+    print("=" * 70)
+    print("                     ROUTE SUMMARY")
+    print("=" * 70)
+
+    best_route_id = result.get("bestRoute")
+
+    if best_route_id:
+
+        print()
+        print(f"Best Route : {best_route_id}")
+
+        routes = result.get("routes", [])
+
+        for route in routes:
+
+            if route.get("id") == best_route_id:
+
+                print(
+                    f"Route      : "
+                    f"{' -> '.join(route.get('routeNodes', []))}"
+                )
+
+                print(
+                    f"Distance   : "
+                    f"{route.get('optimizedKm', 'Not provided')} km"
+                )
+
+                print(
+                    f"Duration   : "
+                    f"{route.get('duration', 'Not provided')}"
+                )
+
+                print(
+                    f"ETA        : "
+                    f"{route.get('eta', 'Not provided')}"
+                )
+
+                print(
+                    f"Cost       : "
+                    f"₹{route.get('costInr', 'Not provided')}"
+                )
+
+                print(
+                    f"CO2        : "
+                    f"{route.get('co2Kg', 'Not provided')} kg"
+                )
+
+                print(
+                    f"Risk       : "
+                    f"{route.get('riskPenalty', 'Not provided')}"
+                )
+
+                print(
+                    f"Green Score: "
+                    f"{route.get('greenScore', 'Not provided')}"
+                )
+
+                print(
+                    f"Route Score: "
+                    f"{route.get('routeScore', 'Not provided')}"
+                )
+
+                break
+
+    else:
+
+        print()
+        print("No feasible route was selected.")
+
+
+    # --------------------------------------------------------
+    # QWEN3 EXPLANATION
+    # --------------------------------------------------------
+
+    print()
+    print("=" * 70)
+    print("                    QWEN3 EXPLANATION")
+    print("=" * 70)
+    print()
 
     try:
 
         explanation = ask_qwen(result)
 
-        print()
         print(explanation)
 
     except requests.exceptions.ConnectionError:
 
         print("ERROR: Ollama is not running.")
+        print()
+        print("Start Ollama and make sure Qwen3 is installed:")
+        print()
+        print("ollama list")
+
         raise SystemExit(1)
 
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as error:
 
+        print()
         print("ERROR communicating with Qwen3:")
-        print(e)
+        print(error)
 
         raise SystemExit(1)
+
+
+    # --------------------------------------------------------
+    # COMPLETE
+    # --------------------------------------------------------
 
     print()
-    print("=" * 65)
-    print("                       COMPLETE")
-    print("=" * 65)
+    print("=" * 70)
+    print("                         COMPLETE")
+    print("=" * 70)
