@@ -37,7 +37,6 @@ import { ReplenishmentService } from '../../core/services/replenishment.service'
 import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 import { FleetWorkspaceComponent } from '../fleet/fleet-workspace.component';
-import { DisasterMonitorWorkspaceComponent } from '../disaster-monitor/disaster-monitor-workspace.component';
 
 type ViewId =
   | 'dashboard'
@@ -58,8 +57,7 @@ type ViewId =
   | 'users'
   | 'settings'
   | 'integrations'
-  | 'activity'
-  | 'disaster-monitor';
+  | 'activity';
 
 interface NavigationItem {
   label: string;
@@ -113,7 +111,7 @@ interface DecisionRecommendationView {
 @Component({
   selector: 'sf-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent, AdminWorkspaceComponent, FleetWorkspaceComponent, DisasterMonitorWorkspaceComponent],
+  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent, AdminWorkspaceComponent, FleetWorkspaceComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
@@ -301,8 +299,7 @@ export class DashboardComponent implements OnInit {
         { label: 'Demand Forecast', icon: 'assets/nav-icons/icons8-graph-50.png', view: 'demand' },
         { label: 'Inventory Analytics', icon: 'assets/nav-icons/icons8-analysis-50.png', view: 'inventory' },
         { label: 'Risk & Alerts', icon: 'assets/nav-icons/icons8-risk-30.png', view: 'risks' },
-        { label: 'Recommendations', icon: 'assets/nav-icons/icons8-recommendation-30.png', view: 'recommendations' },
-        { label: 'Disaster Monitor', icon: 'assets/nav-icons/icons8-data-protection-30.png', view: 'disaster-monitor' }
+        { label: 'Recommendations', icon: 'assets/nav-icons/icons8-recommendation-30.png', view: 'recommendations' }
       ]
     },
     {
@@ -743,8 +740,7 @@ export class DashboardComponent implements OnInit {
       users: 'Users & Roles',
       settings: 'Settings',
       integrations: 'Data Imports',
-      activity: 'Demo Activity',
-      'disaster-monitor': 'Disaster Monitor'
+      activity: 'Demo Activity'
     };
     return titles[this.activeView];
   }
@@ -780,8 +776,7 @@ export class DashboardComponent implements OnInit {
       'users',
       'settings',
       'integrations',
-      'activity',
-      'disaster-monitor'
+      'activity'
     ].includes(this.activeView);
   }
 
