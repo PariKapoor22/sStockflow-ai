@@ -5,7 +5,7 @@ import { PrototypeStateService } from '../../core/services/prototype-state.servi
 import { CarbonApiService } from '../../core/services/carbon-api.service';
 import { ActionProposal, FleetbaseTracking, ProposalHistory, ProposalType, PurchaseOrder, PurchaseOrderDetail, TransferExecution, TransferExecutionDetail } from '../../core/models/action.models';
 import { ActionProposalService } from '../../core/services/action-proposal.service';
-import { SkuView, WarehouseView } from '../../core/models/foundation.models';
+import { BatchInventoryView, SkuView, WarehouseView } from '../../core/models/foundation.models';
 import { FoundationDataService } from '../../core/services/foundation-data.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ReplenishmentSummary } from '../../core/models/replenishment.models';
@@ -184,6 +184,9 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   proposalForm: ProposalForm = this.emptyProposal('TRANSFER');
   proposalWarehouses: WarehouseView[] = [];
   proposalSkus: SkuView[] = [];
+  orderInventoryBatches: BatchInventoryView[] = [];
+  orderAvailabilityLoading = false;
+  orderAvailabilityLoaded = false;
   transferExecutions: TransferExecution[] = [];
   selectedExecution?: TransferExecutionDetail;
   fleetbaseTracking?: FleetbaseTracking;
@@ -216,6 +219,11 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   selectedOrder?: CustomerOrder;
   selectedOrderDetail?: CustomerOrderDetail;
   orderForm: OrderForm = this.emptyOrder();
+  private readonly standardCustomerCities = [
+    'Agartala', 'Aizawl', 'Bengaluru', 'Chennai', 'Coimbatore', 'Dibrugarh',
+    'Gangtok', 'Guwahati', 'Hyderabad', 'Imphal', 'Itanagar', 'Kohima',
+    'Mysuru', 'Shillong', 'Silchar'
+  ];
   readonly orderBoardStages: OrderBoardStage[] = [
     { status: 'Allocated', title: 'Allocated', description: 'Inventory secured', number: '01' },
     { status: 'Picking', title: 'Picking', description: 'Warehouse execution', number: '02' },
@@ -223,6 +231,35 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     { status: 'Shipped', title: 'Shipped', description: 'Carrier handoff', number: '04' },
     { status: 'On hold', title: 'On hold', description: 'Needs attention', number: '!' }
   ];
+
+  get customerCityOptions(): string[] {
+    const warehouseCities = this.proposalWarehouses.map(warehouse => warehouse.city);
+    const orderCities = this.orders.map(order => order.city);
+    return [...new Set([...this.standardCustomerCities, ...warehouseCities, ...orderCities]
+      .map(city => city?.trim())
+      .filter((city): city is string => Boolean(city)))]
+      .sort((left, right) => left.localeCompare(right));
+  }
+
+  get selectedOrderAvailableUnits(): number | null {
+    if (!this.orderAvailabilityLoaded || !this.orderForm.warehouseId || !this.orderForm.skuId) return null;
+    const matches = this.orderInventoryBatches.filter(batch =>
+      batch.warehouseId === this.orderForm.warehouseId && batch.skuId === this.orderForm.skuId
+    );
+    if (!matches.length) return 0;
+    const latestSnapshot = matches.reduce(
+      (latest, batch) => batch.snapshotDate > latest ? batch.snapshotDate : latest,
+      matches[0].snapshotDate
+    );
+    return matches
+      .filter(batch => batch.snapshotDate === latestSnapshot)
+      .reduce((total, batch) => total + Math.max(0, Number(batch.usableQuantity)), 0);
+  }
+
+  get orderQuantityExceedsAvailability(): boolean {
+    const available = this.selectedOrderAvailableUnits;
+    return available !== null && Number(this.orderForm.quantity) > available;
+  }
   private toastTimer?: number;
 
   transfers: TransferPlan[] = [
@@ -655,6 +692,18 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   loadProposalOptions(): void {
     this.foundationApi.warehouses().subscribe({ next: values => this.proposalWarehouses = values, error: () => undefined });
     this.foundationApi.skus().subscribe({ next: values => this.proposalSkus = values, error: () => undefined });
+    this.orderAvailabilityLoading = true;
+    this.foundationApi.batches().subscribe({
+      next: values => {
+        this.orderInventoryBatches = values;
+        this.orderAvailabilityLoaded = true;
+        this.orderAvailabilityLoading = false;
+      },
+      error: () => {
+        this.orderAvailabilityLoaded = false;
+        this.orderAvailabilityLoading = false;
+      }
+    });
   }
 
   loadExecutions(): void {
@@ -681,7 +730,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     this.orderForm = this.emptyOrder();
     this.orderError = '';
     this.orderDialogOpen = true;
-    if (!this.proposalWarehouses.length || !this.proposalSkus.length) this.loadProposalOptions();
+    if (!this.proposalWarehouses.length || !this.proposalSkus.length || !this.orderAvailabilityLoaded) this.loadProposalOptions();
   }
 
   closeOrderDialog(): void {
@@ -693,6 +742,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     const form = this.orderForm;
     if (!form.customerName.trim() || !form.customerCity.trim() || !form.channel || !form.warehouseId || !form.skuId || form.quantity < 1 || !form.promisedAt) {
       this.orderError = 'Complete the customer, channel, warehouse, product, quantity and promised-time fields.';
+      return;
+    }
+    if (this.orderQuantityExceedsAvailability) {
+      this.orderError = `Requested quantity exceeds available inventory. Only ${this.selectedOrderAvailableUnits?.toLocaleString() ?? 0} usable units are available for this product at the selected warehouse.`;
       return;
     }
     if (new Date(form.promisedAt).getTime() <= Date.now()) {
