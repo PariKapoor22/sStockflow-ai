@@ -1,2 +1,2 @@
 transfer_id,origin_city,destination_city,units,route_id,vehicle_id,approved_at,status
-TR-DEMO-001,Chennai,Bengaluru,900,R-CHN-BLR-GREEN,TRUCK-01,2026-08-06 10:00,APPROVED
+TR-DEMO-001,Guwahati,Shillong,900,R-GHY-SHL-SAFE,TRUCK-01,2026-08-06 10:00,APPROVED

@@ -3,11 +3,11 @@
   "error_count": 0,
   "errors": [],
   "row_counts": {
-    "sales": 1320,
-    "batches": 45,
+    "sales": 2200,
+    "batches": 84,
     "purchase_orders": 1
   },
   "tenant_count": 3,
-  "warehouse_count": 6,
+  "warehouse_count": 10,
   "sku_count": 12
 }

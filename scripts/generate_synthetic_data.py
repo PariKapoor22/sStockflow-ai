@@ -5,21 +5,21 @@ from pathlib import Path
 import yaml
 
 CITIES = [
-    ("CHENNAI", "Chennai", "Tamil Nadu", 13.0827, 80.2707),
-    ("BENGALURU", "Bengaluru", "Karnataka", 12.9716, 77.5946),
-    ("HYDERABAD", "Hyderabad", "Telangana", 17.3850, 78.4867),
-    ("DELHI", "Delhi", "Delhi", 28.6139, 77.2090),
-    ("MUMBAI", "Mumbai", "Maharashtra", 19.0760, 72.8777),
-    ("PUNE", "Pune", "Maharashtra", 18.5204, 73.8567),
-    ("KOLKATA", "Kolkata", "West Bengal", 22.5726, 88.3639),
-    ("KOCHI", "Kochi", "Kerala", 9.9312, 76.2673),
-    ("AHMEDABAD", "Ahmedabad", "Gujarat", 23.0225, 72.5714),
-    ("JAIPUR", "Jaipur", "Rajasthan", 26.9124, 75.7873),
+    ("GUWAHATI", "Guwahati", "Assam", 26.1445, 91.7362),
+    ("SHILLONG", "Shillong", "Meghalaya", 25.5788, 91.8933),
+    ("IMPHAL", "Imphal", "Manipur", 24.8170, 93.9368),
+    ("AGARTALA", "Agartala", "Tripura", 23.8315, 91.2868),
+    ("DIMAPUR", "Dimapur", "Nagaland", 25.9091, 93.7266),
+    ("AIZAWL", "Aizawl", "Mizoram", 23.7271, 92.7176),
+    ("GANGTOK", "Gangtok", "Sikkim", 27.3389, 88.6065),
+    ("ITANAGAR", "Itanagar", "Arunachal Pradesh", 27.0844, 93.6053),
+    ("DIBRUGARH", "Dibrugarh", "Assam", 27.4728, 94.9120),
+    ("SILCHAR", "Silchar", "Assam", 24.8333, 92.7789),
 ]
 TENANTS = [
-    ("TEN-ACME-PHARMA", "Acme Pharma Distribution", "PHARMA"),
-    ("TEN-FRESH-MART", "FreshMart Wholesale", "SUPERMARKET"),
-    ("TEN-URBAN-TRADE", "Urban Trade Distribution", "MERCHANDISE"),
+    ("TEN-ACME-PHARMA", "NER Medical Relief Network", "PHARMA"),
+    ("TEN-FRESH-MART", "NER Essential Supplies Network", "SUPERMARKET"),
+    ("TEN-URBAN-TRADE", "NER Community Distribution", "MERCHANDISE"),
 ]
 
 def save_csv(path: Path, rows: list[dict], fields: list[str]) -> None:
@@ -56,7 +56,7 @@ def main() -> None:
     for idx in range(retailer_count):
         wh=warehouses[idx % len(warehouses)]
         rtype={"PHARMA":"PHARMACY","SUPERMARKET":"SUPERMARKET","MERCHANDISE":"GENERAL_STORE"}[next(v for t,n,v in TENANTS if t==wh['tenant_id'])]
-        retailers.append({"retailer_id":f"RET-{idx+1:03d}","tenant_id":wh['tenant_id'],"retailer_name":f"Demo Retailer {idx+1:03d}","retailer_type":rtype,"warehouse_id":wh['warehouse_id'],"city":wh['city'],"region":"INDIA","credit_days":rng.choice([15,30,45]),"active":"true"})
+        retailers.append({"retailer_id":f"RET-{idx+1:03d}","tenant_id":wh['tenant_id'],"retailer_name":f"NER Relief Retailer {idx+1:03d}","retailer_type":rtype,"warehouse_id":wh['warehouse_id'],"city":wh['city'],"region":"NORTHEAST_INDIA","credit_days":rng.choice([15,30,45]),"active":"true"})
     skus=[]
     profiles=['STABLE','SEASONAL','PROMOTION_SENSITIVE','WEATHER_SENSITIVE','INTERMITTENT','ERRATIC']
     vertical_counts=config['vertical_distribution']
@@ -81,7 +81,7 @@ def main() -> None:
                 seasonal=1+0.18*math.sin(2*math.pi*day_idx/365)
                 noise=max(rng.gauss(1,config['sales']['random_noise_stddev']),0.2)
                 true=max(round(base*weekly*seasonal*noise),0)
-                stockout=(sku['sku_id']=='SKU-PARA-650' and wh['warehouse_id']=='WH-BENGALURU' and current> end-timedelta(days=12)) or rng.random()<0.01
+                stockout=(sku['sku_id']=='SKU-PARA-650' and wh['warehouse_id']=='WH-SHILLONG' and current> end-timedelta(days=12)) or rng.random()<0.01
                 fulfilled=round(true*rng.uniform(.45,.85)) if stockout else true
                 lost=max(true-fulfilled,0)
                 sales.append({"sales_date":current.isoformat(),"tenant_id":sku['tenant_id'],"warehouse_id":wh['warehouse_id'],"retailer_id":"","sku_id":sku['sku_id'],"ordered_quantity":true,"fulfilled_quantity":fulfilled,"sales_quantity":fulfilled,"return_quantity":0,"lost_sales_quantity":lost,"unit_selling_price":sku['selling_price'],"promotion_id":"","stockout_flag":str(stockout).lower()})
@@ -93,11 +93,11 @@ def main() -> None:
                 expiry=''
                 if sku['fefo_required']=='true': expiry=(as_of+timedelta(days=rng.randint(25,600))).isoformat()
                 qty=rng.randint(100,3000)
-                if sku['sku_id']=='SKU-PARA-650' and wh['warehouse_id']=='WH-CHENNAI' and batch_idx==0:
+                if sku['sku_id']=='SKU-PARA-650' and wh['warehouse_id']=='WH-GUWAHATI' and batch_idx==0:
                     qty=2450; expiry=(as_of+timedelta(days=45)).isoformat(); batch='B2456'
                 else: batch=f"B{rng.randint(1000,9999)}"
                 batches.append({"snapshot_date":as_of.isoformat(),"tenant_id":sku['tenant_id'],"warehouse_id":wh['warehouse_id'],"sku_id":sku['sku_id'],"batch_number":batch,"manufacture_date":(as_of-timedelta(days=180)).isoformat() if expiry else '',"expiry_date":expiry,"available_quantity":qty,"reserved_quantity":rng.randint(0,min(qty,100)),"blocked_quantity":0,"unit_cost":sku['unit_cost'],"currency":"INR","storage_condition_code":"AMBIENT","last_movement_at":datetime.combine(as_of-timedelta(days=rng.randint(0,20)),datetime.min.time(),tzinfo=timezone.utc).isoformat().replace('+00:00','Z')})
-    pos=[{"purchase_order_id":"PO-2026-007823","tenant_id":"TEN-ACME-PHARMA","supplier_id":"SUP-001","warehouse_id":"WH-BENGALURU","sku_id":"SKU-PARA-650","order_date":(as_of-timedelta(days=2)).isoformat(),"expected_delivery_date":(as_of+timedelta(days=10)).isoformat(),"ordered_quantity":1500,"received_quantity":0,"open_quantity":1500,"unit_purchase_price":18.25,"currency":"INR","status":"OPEN","buyer_id":"USR-BUYER-01"}]
+    pos=[{"purchase_order_id":"PO-2026-007823","tenant_id":"TEN-ACME-PHARMA","supplier_id":"SUP-001","warehouse_id":"WH-SHILLONG","sku_id":"SKU-PARA-650","order_date":(as_of-timedelta(days=2)).isoformat(),"expected_delivery_date":(as_of+timedelta(days=10)).isoformat(),"ordered_quantity":1500,"received_quantity":0,"open_quantity":1500,"unit_purchase_price":18.25,"currency":"INR","status":"OPEN","buyer_id":"USR-BUYER-01"}]
     routes=[]
     for a in warehouses:
         for b in warehouses:

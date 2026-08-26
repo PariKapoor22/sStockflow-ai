@@ -23,14 +23,16 @@ VEHICLE_COST_INR_PER_KM = {
     "petrol": 45.0,
 }
 KNOWN_COORDINATES = {
-    "Chennai Central": (13.0827, 80.2707),
-    "Bengaluru North": (13.0358, 77.5970),
-    "Mysuru DC": (12.2958, 76.6394),
-    "Hyderabad Hub": (17.3850, 78.4867),
-    "Nellore Cross-dock": (14.4426, 79.9865),
-    "Salem Hub": (11.6643, 78.1460),
-    "Coimbatore West": (11.0168, 76.9558),
-    "Mandya Drop": (12.5218, 76.8951),
+    "Guwahati Central": (26.1445, 91.7362),
+    "Shillong Hub": (25.5788, 91.8933),
+    "Silchar DC": (24.8333, 92.7789),
+    "Imphal Hub": (24.8170, 93.9368),
+    "Jorabat Cross-dock": (26.1058, 91.9792),
+    "Nongpoh Checkpoint": (25.9023, 91.8760),
+    "Kolasib Checkpoint": (24.2246, 92.6760),
+    "Aizawl Hub": (23.7271, 92.7176),
+    "Nagaon Cross-dock": (26.3464, 92.6840),
+    "Dimapur Drop": (25.9091, 93.7266),
 }
 
 

@@ -84,8 +84,8 @@ def test_ortools_vrp_sequences_stops_and_reports_constraints(monkeypatch):
         "objective": "Safest route",
         "vehicleType": "All eligible vehicles",
         "routes": [{
-            "id": "RTE-TEST", "lane": "Chennai regional delivery",
-            "stops": ["Chennai Central", "Coimbatore West", "Salem Hub", "Bengaluru North"],
+            "id": "RTE-TEST", "lane": "Guwahati regional relief delivery",
+            "stops": ["Guwahati Central", "Nongpoh Checkpoint", "Jorabat Cross-dock", "Shillong Hub"],
             "vehicle": "12T electric truck", "loadKg": 9000, "capacityKg": 12000,
             "baselineKm": 900, "priority": "Critical", "status": "Draft",
             "departureMinutes": 360, "promisedDeliveryMinutes": 1800,
@@ -98,9 +98,9 @@ def test_ortools_vrp_sequences_stops_and_reports_constraints(monkeypatch):
     assert result["solver"] == "GOOGLE_OR_TOOLS_GUIDED_LOCAL_SEARCH"
     assert result["rejected"] == []
     route = result["routes"][0]
-    assert route["stops"][0] == "Chennai Central"
-    assert route["stops"][-1] == "Bengaluru North"
-    assert sorted(route["stops"]) == sorted(["Chennai Central", "Coimbatore West", "Salem Hub", "Bengaluru North"])
+    assert route["stops"][0] == "Guwahati Central"
+    assert route["stops"][-1] == "Shillong Hub"
+    assert sorted(route["stops"]) == sorted(["Guwahati Central", "Nongpoh Checkpoint", "Jorabat Cross-dock", "Shillong Hub"])
     assert route["matrixProvider"] == "GEODESIC_1_18_FALLBACK"
     assert "DELIVERY_TIME_WINDOWS" in route["constraintsChecked"]
     assert route["optimizedKm"] > 0
@@ -112,10 +112,10 @@ def test_vrp_rejects_capacity_and_cold_chain_violations(monkeypatch):
         "objective": "Balanced cost and carbon",
         "vehicleType": "All eligible vehicles",
         "routes": [
-            {"id": "OVER", "lane": "Over capacity", "stops": ["Chennai Central", "Salem Hub"],
+            {"id": "OVER", "lane": "Over capacity", "stops": ["Guwahati Central", "Nongpoh Checkpoint"],
              "vehicle": "diesel truck", "loadKg": 12001, "capacityKg": 12000, "baselineKm": 350,
              "coldChainAvailable": False},
-            {"id": "COLD", "lane": "Cold chain", "stops": ["Chennai Central", "Salem Hub"],
+            {"id": "COLD", "lane": "Cold chain", "stops": ["Guwahati Central", "Nongpoh Checkpoint"],
              "vehicle": "diesel truck", "loadKg": 1000, "capacityKg": 12000, "baselineKm": 350,
              "coldChainRequired": True, "coldChainAvailable": False},
         ],

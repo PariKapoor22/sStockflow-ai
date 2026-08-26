@@ -230,9 +230,9 @@ class Sprint1DemandDemoDataInitializer(
 
     private companion object {
         val demoWarehouses = listOf(
-            WarehouseSeed("WH-CHENNAI", "Chennai", "RET-DEMO-CHENNAI", "Chennai Care Network"),
-            WarehouseSeed("WH-BENGALURU", "Bengaluru", "RET-DEMO-BENGALURU", "Bengaluru Health Network"),
-            WarehouseSeed("WH-HYDERABAD", "Hyderabad", "RET-DEMO-HYDERABAD", "Hyderabad Medical Network")
+            WarehouseSeed("WH-CHENNAI", "Guwahati", "RET-DEMO-CHENNAI", "Brahmaputra Care Network"),
+            WarehouseSeed("WH-BENGALURU", "Shillong", "RET-DEMO-BENGALURU", "Meghalaya Health Network"),
+            WarehouseSeed("WH-HYDERABAD", "Imphal", "RET-DEMO-HYDERABAD", "Manipur Medical Network")
         )
 
         val demoSkus = listOf(

@@ -1,7 +1,11 @@
 warehouse_id,tenant_id,warehouse_name,city,state,latitude,longitude,capacity_units,cold_chain_available,active
-WH-CHENNAI,TEN-ACME-PHARMA,Chennai Regional Warehouse,Chennai,Tamil Nadu,13.0827,80.2707,280000,true,true
-WH-BENGALURU,TEN-ACME-PHARMA,Bengaluru Regional Warehouse,Bengaluru,Karnataka,12.9716,77.5946,380000,true,true
-WH-HYDERABAD,TEN-ACME-PHARMA,Hyderabad Regional Warehouse,Hyderabad,Telangana,17.385,78.4867,470000,true,true
-WH-DELHI,TEN-FRESH-MART,Delhi Regional Warehouse,Delhi,Delhi,28.6139,77.209,360000,false,true
-WH-MUMBAI,TEN-FRESH-MART,Mumbai Regional Warehouse,Mumbai,Maharashtra,19.076,72.8777,450000,false,true
-WH-PUNE,TEN-URBAN-TRADE,Pune Regional Warehouse,Pune,Maharashtra,18.5204,73.8567,320000,false,true
+WH-GUWAHATI,TEN-ACME-PHARMA,Guwahati Regional Warehouse,Guwahati,Assam,26.1445,91.7362,280000,true,true
+WH-SHILLONG,TEN-ACME-PHARMA,Shillong Regional Warehouse,Shillong,Meghalaya,25.5788,91.8933,380000,true,true
+WH-IMPHAL,TEN-ACME-PHARMA,Imphal Regional Warehouse,Imphal,Manipur,24.817,93.9368,470000,true,true
+WH-AGARTALA,TEN-ACME-PHARMA,Agartala Regional Warehouse,Agartala,Tripura,23.8315,91.2868,360000,true,true
+WH-DIMAPUR,TEN-FRESH-MART,Dimapur Regional Warehouse,Dimapur,Nagaland,25.9091,93.7266,450000,false,true
+WH-AIZAWL,TEN-FRESH-MART,Aizawl Regional Warehouse,Aizawl,Mizoram,23.7271,92.7176,320000,false,true
+WH-GANGTOK,TEN-FRESH-MART,Gangtok Regional Warehouse,Gangtok,Sikkim,27.3389,88.6065,540000,false,true
+WH-ITANAGAR,TEN-URBAN-TRADE,Itanagar Regional Warehouse,Itanagar,Arunachal Pradesh,27.0844,93.6053,450000,false,true
+WH-DIBRUGARH,TEN-URBAN-TRADE,Dibrugarh Regional Warehouse,Dibrugarh,Assam,27.4728,94.912,470000,false,true
+WH-SILCHAR,TEN-URBAN-TRADE,Silchar Regional Warehouse,Silchar,Assam,24.8333,92.7789,540000,false,true

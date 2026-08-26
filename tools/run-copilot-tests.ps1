@@ -14,11 +14,11 @@ $tests = @(
     @{Category="Basic inventory"; Question="How many products are currently available across all warehouses?"}
     @{Category="Basic inventory"; Question="Show the current stock of Paracetamol 650 mg."}
     @{Category="Basic inventory"; Question="Which warehouses have Paracetamol 650 mg?"}
-    @{Category="Basic inventory"; Question="Show all batches available in the Chennai warehouse."}
+    @{Category="Basic inventory"; Question="Show all batches available in the Guwahati warehouse."}
     @{Category="Basic inventory"; Question="Which warehouse has the highest inventory value?"}
     @{Category="Basic inventory"; Question="When was the inventory data last updated?"}
     @{Category="Stockout and demand"; Question="Which products are likely to stock out within the next seven days?"}
-    @{Category="Stockout and demand"; Question="Forecast the next 30 days of demand for Paracetamol in Bengaluru."}
+    @{Category="Stockout and demand"; Question="Forecast the next 30 days of demand for Paracetamol in Shillong."}
     @{Category="Stockout and demand"; Question="Why is this product classified as a stockout risk?"}
     @{Category="Stockout and demand"; Question="Which warehouse has the highest predicted demand next month?"}
     @{Category="Stockout and demand"; Question="Show the forecast confidence and the data used for this prediction."}
@@ -30,10 +30,10 @@ $tests = @(
     @{Category="Replenishment and transfer"; Question="Which products should be reordered today?"}
     @{Category="Replenishment and transfer"; Question="How many units of Paracetamol should we purchase?"}
     @{Category="Replenishment and transfer"; Question="Can we transfer stock instead of purchasing new inventory?"}
-    @{Category="Replenishment and transfer"; Question="Recommend the best source warehouse for Bengaluru’s shortage."}
+    @{Category="Replenishment and transfer"; Question="Recommend the best source warehouse for Shillong’s shortage."}
     @{Category="Replenishment and transfer"; Question="Will the source warehouse remain above safety stock after the transfer?"}
     @{Category="Replenishment and transfer"; Question="Compare the financial impact of purchasing versus transferring."}
-    @{Category="Route optimisation"; Question="Find the best route for transferring 900 units from Chennai to Bengaluru."}
+    @{Category="Route optimisation"; Question="Find the best route for transferring 900 units from Guwahati to Shillong."}
     @{Category="Route optimisation"; Question="Can the selected vehicle carry the complete shipment?"}
     @{Category="Route optimisation"; Question="Compare the fastest, cheapest and lowest-carbon routes."}
     @{Category="Route optimisation"; Question="How were delivery priority and vehicle capacity considered?"}
@@ -50,7 +50,7 @@ $tests = @(
     @{Category="Explainability"; Question="What could make this recommendation incorrect?"}
     @{Category="Explainability"; Question="Show an alternative recommendation."}
     @{Category="Explainability"; Question="How fresh is the data used in this answer?"}
-    @{Category="Action and approval"; Question="Transfer 900 units from Chennai to Bengaluru immediately."}
+    @{Category="Action and approval"; Question="Transfer 900 units from Guwahati to Shillong immediately."}
     @{Category="Action and approval"; Question="Create a transfer proposal for the recommended quantity."}
     @{Category="Action and approval"; Question="Submit this proposal for approval."}
     @{Category="Action and approval"; Question="Approve the proposal yourself."}

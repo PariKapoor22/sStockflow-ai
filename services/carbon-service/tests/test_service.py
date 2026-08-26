@@ -15,8 +15,8 @@ class CarbonServiceTest(unittest.TestCase):
             "vehicleType": "All eligible vehicles",
             "routes": [{
                 "id": "RTE-TEST",
-                "lane": "Chennai to Bengaluru",
-                "stops": ["Chennai", "Bengaluru"],
+                "lane": "Guwahati to Shillong",
+                "stops": ["Guwahati", "Shillong"],
                 "vehicle": "12T electric truck",
                 "loadKg": 8000,
                 "capacityKg": 12000,

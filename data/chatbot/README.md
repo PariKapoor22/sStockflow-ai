@@ -8,7 +8,7 @@ emission factors, or approval records.
 The additional files in this folder are explicitly labeled demo/synthetic:
 
 - `planning_assumptions.csv`: demand rate, lead time, safety-stock policy, and valuation fallback.
-- `routes.csv`: Chennai-Bengaluru route alternatives used by the acceptance questions.
+- `routes.csv`: Guwahati-Shillong NER relief-corridor alternatives used by the acceptance questions.
 - `vehicles.csv`: demo capacity, cost, emissions, and availability.
 - `approved_transfers.csv`: one demo approved transfer used to demonstrate sustainability reporting.
 
