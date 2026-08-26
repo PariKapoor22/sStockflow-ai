@@ -32,8 +32,8 @@ class DevelopmentActionAuthorizationTest(
                 {
                   "skuId": "SKU-PARA-650",
                   "quantity": 10,
-                  "sourceWarehouseId": "WH-CHENNAI",
-                  "destinationWarehouseId": "WH-BENGALURU",
+                  "sourceWarehouseId": "WH-GUWAHATI",
+                  "destinationWarehouseId": "WH-SHILLONG",
                   "currency": "INR",
                   "reason": "Validate local proposal authorization"
                 }

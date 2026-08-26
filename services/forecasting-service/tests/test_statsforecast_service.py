@@ -19,7 +19,7 @@ def test_candidate_endpoint_returns_governed_metrics_and_horizon() -> None:
         headers={"X-Tenant-ID": "TEN-ACME-PHARMA"},
         json={
             "tenantId": "TEN-ACME-PHARMA",
-            "warehouseId": "WH-CHENNAI",
+            "warehouseId": "WH-GUWAHATI",
             "skuId": "SKU-PARA-650",
             "modelHistory": history,
             "actualHistory": history,
@@ -46,7 +46,7 @@ def test_tenant_header_must_match_body() -> None:
         headers={"X-Tenant-ID": "TEN-OTHER"},
         json={
             "tenantId": "TEN-ACME-PHARMA",
-            "warehouseId": "WH-CHENNAI",
+            "warehouseId": "WH-GUWAHATI",
             "skuId": "SKU-PARA-650",
             "modelHistory": [10] * 28,
             "actualHistory": [10] * 28,
@@ -75,7 +75,7 @@ def test_all_supported_statsforecast_models_can_be_evaluated_independently() -> 
             headers={"X-Tenant-ID": "TEN-ACME-PHARMA"},
             json={
                 "tenantId": "TEN-ACME-PHARMA",
-                "warehouseId": "WH-CHENNAI",
+                "warehouseId": "WH-GUWAHATI",
                 "skuId": "SKU-PARA-650",
                 "modelHistory": history,
                 "actualHistory": history,

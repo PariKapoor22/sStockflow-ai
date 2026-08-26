@@ -11,7 +11,7 @@ echo StockFlow AI Forecasting API Verification
 echo ============================================================
 echo.
 echo Tenant       : %TENANT_ID%
-echo Warehouse    : WH-CHENNAI
+echo Warehouse    : WH-GUWAHATI
 echo SKU          : SKU-PARA-650
 echo Horizon      : 7 days
 echo History      : 180 days
@@ -23,7 +23,7 @@ curl -sS -o "%RESPONSE_FILE%" -w "%%{http_code}" ^
   -X POST ^
   -H "Content-Type: application/json" ^
   -H "X-Tenant-ID: %TENANT_ID%" ^
-  -d "{\"horizonDays\":7,\"historyDays\":180,\"warehouseId\":\"WH-CHENNAI\",\"skuId\":\"SKU-PARA-650\"}" ^
+  -d "{\"horizonDays\":7,\"historyDays\":180,\"warehouseId\":\"WH-GUWAHATI\",\"skuId\":\"SKU-PARA-650\"}" ^
   "%BASE_URL%/api/v1/forecasts/runs" > "%STATUS_FILE%"
 
 set "HTTP_STATUS="
@@ -45,7 +45,7 @@ if not "%HTTP_STATUS%"=="201" (
 echo 2. Reading latest forecast...
 curl -sS -i ^
   -H "X-Tenant-ID: %TENANT_ID%" ^
-  "%BASE_URL%/api/v1/forecasts/latest?warehouseId=WH-CHENNAI&skuId=SKU-PARA-650"
+  "%BASE_URL%/api/v1/forecasts/latest?warehouseId=WH-GUWAHATI&skuId=SKU-PARA-650"
 
 echo.
 echo.

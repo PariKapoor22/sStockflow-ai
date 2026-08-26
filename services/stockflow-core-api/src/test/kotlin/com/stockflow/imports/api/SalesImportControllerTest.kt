@@ -65,12 +65,12 @@ class SalesImportControllerTest(
         val files = linkedMapOf(
             "data/synthetic/reference/retailers.csv" to """
                 retailer_id,tenant_id,retailer_name,retailer_type,warehouse_id,city,region,credit_days,active
-                RET-TEST-001,TEN-ACME-PHARMA,Test Pharmacy,PHARMACY,WH-CHENNAI,Chennai,SOUTH,30,true
+                RET-TEST-001,TEN-ACME-PHARMA,Test Pharmacy,PHARMACY,WH-GUWAHATI,Guwahati,NORTHEAST,30,true
             """.trimIndent(),
             "data/synthetic/transactions/sales_history.csv" to """
                 sales_date,tenant_id,warehouse_id,retailer_id,sku_id,ordered_quantity,fulfilled_quantity,sales_quantity,return_quantity,lost_sales_quantity,unit_selling_price,promotion_id,stockout_flag
-                2026-07-01,TEN-ACME-PHARMA,WH-CHENNAI,RET-TEST-001,SKU-PARA-650,20,20,20,0,0,100.00,,false
-                2026-07-02,TEN-ACME-PHARMA,WH-CHENNAI,RET-TEST-001,SKU-PARA-650,15,10,10,0,5,100.00,,true
+                2026-07-01,TEN-ACME-PHARMA,WH-GUWAHATI,RET-TEST-001,SKU-PARA-650,20,20,20,0,0,100.00,,false
+                2026-07-02,TEN-ACME-PHARMA,WH-GUWAHATI,RET-TEST-001,SKU-PARA-650,15,10,10,0,5,100.00,,true
             """.trimIndent()
         )
         val output = ByteArrayOutputStream()

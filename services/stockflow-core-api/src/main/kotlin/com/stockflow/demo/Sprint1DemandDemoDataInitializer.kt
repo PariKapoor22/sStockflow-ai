@@ -99,7 +99,7 @@ class Sprint1DemandDemoDataInitializer(
             """MERGE INTO retailer (
                 retailer_id, tenant_id, retailer_name, retailer_type, warehouse_id,
                 city, region, credit_days, active, updated_at
-            ) KEY(retailer_id) VALUES (?, ?, ?, 'HOSPITAL_NETWORK', ?, ?, 'SOUTH', 30, TRUE, CURRENT_TIMESTAMP)""".trimIndent(),
+            ) KEY(retailer_id) VALUES (?, ?, ?, 'HOSPITAL_NETWORK', ?, ?, 'NORTHEAST', 30, TRUE, CURRENT_TIMESTAMP)""".trimIndent(),
             demoWarehouses.map {
                 arrayOf<Any>(it.retailerId, tenantId, it.retailerName, it.id, it.city)
             }
@@ -230,9 +230,9 @@ class Sprint1DemandDemoDataInitializer(
 
     private companion object {
         val demoWarehouses = listOf(
-            WarehouseSeed("WH-CHENNAI", "Guwahati", "RET-DEMO-CHENNAI", "Brahmaputra Care Network"),
-            WarehouseSeed("WH-BENGALURU", "Shillong", "RET-DEMO-BENGALURU", "Meghalaya Health Network"),
-            WarehouseSeed("WH-HYDERABAD", "Imphal", "RET-DEMO-HYDERABAD", "Manipur Medical Network")
+            WarehouseSeed("WH-GUWAHATI", "Guwahati", "RET-DEMO-GUWAHATI", "Brahmaputra Care Network"),
+            WarehouseSeed("WH-SHILLONG", "Shillong", "RET-DEMO-SHILLONG", "Meghalaya Health Network"),
+            WarehouseSeed("WH-IMPHAL", "Imphal", "RET-DEMO-IMPHAL", "Manipur Medical Network")
         )
 
         val demoSkus = listOf(

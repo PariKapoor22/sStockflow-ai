@@ -83,7 +83,7 @@ class ImportControllerTest(
             """.trimIndent(),
             "data/synthetic/reference/warehouses.csv" to """
                 warehouse_id,tenant_id,warehouse_name,city,state,latitude,longitude,capacity_units,cold_chain_available,active
-                WH-IMPORT,TEN-IMPORT-DEMO,Import Warehouse,Chennai,Tamil Nadu,13.0827,80.2707,1000,true,true
+                WH-IMPORT,TEN-IMPORT-DEMO,Import Warehouse,Guwahati,Assam,26.1445,91.7362,1000,true,true
             """.trimIndent(),
             "data/synthetic/reference/products.csv" to """
                 product_id,tenant_id,product_name,category,vertical,criticality,shelf_life_controlled,cold_chain_required,active

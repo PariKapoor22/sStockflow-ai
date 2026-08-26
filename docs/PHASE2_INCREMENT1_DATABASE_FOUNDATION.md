@@ -117,10 +117,10 @@ curl -H "X-Tenant-ID: TEN-ACME-PHARMA" http://localhost:8080/api/v1/skus
 ### Batch inventory
 
 ```cmd
-curl -H "X-Tenant-ID: TEN-ACME-PHARMA" "http://localhost:8080/api/v1/inventory/batches?warehouseId=WH-CHENNAI&skuId=SKU-PARA-650"
+curl -H "X-Tenant-ID: TEN-ACME-PHARMA" "http://localhost:8080/api/v1/inventory/batches?warehouseId=WH-GUWAHATI&skuId=SKU-PARA-650"
 ```
 
-The Chennai B2456 record should return:
+The Guwahati B2456 record should return:
 
 ```text
 Available: 2,450

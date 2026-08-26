@@ -67,7 +67,7 @@ Run one warehouse and SKU:
 curl -X POST ^
   -H "Content-Type: application/json" ^
   -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  -d "{\"asOfDate\":\"2026-07-26\",\"horizonDays\":30,\"historyDays\":180,\"warehouseId\":\"WH-CHENNAI\",\"skuId\":\"SKU-PARA-650\"}" ^
+  -d "{\"asOfDate\":\"2026-07-26\",\"horizonDays\":30,\"historyDays\":180,\"warehouseId\":\"WH-GUWAHATI\",\"skuId\":\"SKU-PARA-650\"}" ^
   "http://localhost:8080/api/v1/forecasts/runs"
 ```
 

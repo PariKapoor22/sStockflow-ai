@@ -46,7 +46,7 @@ class CustomerOrderControllerTest(
                 "customerName":"API Test Pharmacy",
                 "customerCity":"Shillong",
                 "channel":"API",
-                "warehouseId":"WH-CHENNAI",
+                "warehouseId":"WH-GUWAHATI",
                 "skuId":"SKU-PARA-650",
                 "quantity":10,
                 "promisedAt":"2027-01-15T10:00:00"

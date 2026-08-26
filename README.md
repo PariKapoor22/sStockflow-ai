@@ -659,7 +659,7 @@ Read a position diagnostic:
 ```cmd
 curl ^
   -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "http://localhost:8080/api/v1/forecasts/diagnostics/WH-CHENNAI/SKU-PARA-650"
+  "http://localhost:8080/api/v1/forecasts/diagnostics/WH-GUWAHATI/SKU-PARA-650"
 ```
 
 ---

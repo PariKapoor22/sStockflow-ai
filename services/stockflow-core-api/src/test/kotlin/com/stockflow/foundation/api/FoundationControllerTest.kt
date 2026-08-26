@@ -32,7 +32,7 @@ class FoundationControllerTest(
     fun `batch API calculates usable quantity`() {
         mockMvc.get("/api/v1/inventory/batches") {
             header("X-Tenant-ID", "TEN-ACME-PHARMA")
-            param("warehouseId", "WH-CHENNAI")
+            param("warehouseId", "WH-GUWAHATI")
             param("skuId", "SKU-PARA-650")
         }.andExpect {
             status { isOk() }

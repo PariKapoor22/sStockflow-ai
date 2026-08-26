@@ -712,12 +712,7 @@ export class DashboardComponent implements OnInit {
   }
 
   warehouseDisplayId(warehouseId: string): string {
-    const northeastAliases: Record<string, string> = {
-      'WH-CHENNAI': 'WH-GUWAHATI',
-      'WH-BENGALURU': 'WH-SHILLONG',
-      'WH-HYDERABAD': 'WH-IMPHAL'
-    };
-    return northeastAliases[warehouseId] ?? warehouseId;
+    return warehouseId;
   }
 
   pageTitle(): string {

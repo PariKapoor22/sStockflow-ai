@@ -42,15 +42,15 @@ class FleetbaseOrderLinkServiceTest {
                 proposal_id,tenant_id,proposal_type,status,sku_id,quantity,source_warehouse_id,
                 destination_warehouse_id,currency,reason,idempotency_key,created_by
             ) VALUES (?, 'TEN-ACME-PHARMA', 'TRANSFER', 'APPROVED', 'SKU-PARA-650', 10,
-                'WH-CHENNAI', 'WH-BENGALURU', 'INR', 'Fleetbase linkage test', ?, ?)""",
+                'WH-GUWAHATI', 'WH-SHILLONG', 'INR', 'Fleetbase linkage test', ?, ?)""",
             proposalId, "test-proposal-$proposalId", userId
         )
         jdbc.update(
             """INSERT INTO transfer_execution(
                 execution_id,tenant_id,proposal_id,status,sku_id,source_warehouse_id,
                 destination_warehouse_id,quantity,vehicle_reference,idempotency_key,created_by
-            ) VALUES (?, 'TEN-ACME-PHARMA', ?, 'PLANNED', 'SKU-PARA-650', 'WH-CHENNAI',
-                'WH-BENGALURU', 10, 'vehicle_test', ?, ?)""",
+            ) VALUES (?, 'TEN-ACME-PHARMA', ?, 'PLANNED', 'SKU-PARA-650', 'WH-GUWAHATI',
+                'WH-SHILLONG', 10, 'vehicle_test', ?, ?)""",
             executionId, proposalId, "test-execution-$executionId", userId
         )
         val actor = TenantAccessContext(
@@ -92,15 +92,15 @@ class FleetbaseOrderLinkServiceTest {
                 proposal_id,tenant_id,proposal_type,status,sku_id,quantity,source_warehouse_id,
                 destination_warehouse_id,currency,reason,idempotency_key,created_by
             ) VALUES (?, 'TEN-ACME-PHARMA', 'TRANSFER', 'APPROVED', 'SKU-PARA-650', 1,
-                'WH-CHENNAI', 'WH-BENGALURU', 'INR', 'No Fleetbase link', ?, ?)""",
+                'WH-GUWAHATI', 'WH-SHILLONG', 'INR', 'No Fleetbase link', ?, ?)""",
             proposalId, "stockflow-only-proposal-$proposalId", userId
         )
         jdbc.update(
             """INSERT INTO transfer_execution(
                 execution_id,tenant_id,proposal_id,status,sku_id,source_warehouse_id,
                 destination_warehouse_id,quantity,idempotency_key,created_by
-            ) VALUES (?, 'TEN-ACME-PHARMA', ?, 'RESERVED', 'SKU-PARA-650', 'WH-CHENNAI',
-                'WH-BENGALURU', 1, ?, ?)""",
+            ) VALUES (?, 'TEN-ACME-PHARMA', ?, 'RESERVED', 'SKU-PARA-650', 'WH-GUWAHATI',
+                'WH-SHILLONG', 1, ?, ?)""",
             executionId, proposalId, "stockflow-only-execution-$executionId", userId
         )
         val actor = TenantAccessContext(userId, "stockflow-only@stockflow.local", "TEN-ACME-PHARMA", "LOGISTICS_MANAGER", setOf("TRANSFER_EXECUTE"), emptySet())
@@ -119,15 +119,15 @@ class FleetbaseOrderLinkServiceTest {
                 proposal_id,tenant_id,proposal_type,status,sku_id,quantity,source_warehouse_id,
                 destination_warehouse_id,currency,reason,idempotency_key,created_by
             ) VALUES (?, 'TEN-ACME-PHARMA', 'TRANSFER', 'APPROVED', 'SKU-PARA-650', 25,
-                'WH-CHENNAI', 'WH-BENGALURU', 'INR', 'Fleetbase remote create test', ?, ?)""",
+                'WH-GUWAHATI', 'WH-SHILLONG', 'INR', 'Fleetbase remote create test', ?, ?)""",
             proposalId, "test-create-proposal-$proposalId", userId
         )
         jdbc.update(
             """INSERT INTO transfer_execution(
                 execution_id,tenant_id,proposal_id,status,sku_id,source_warehouse_id,
                 destination_warehouse_id,quantity,vehicle_reference,idempotency_key,created_by
-            ) VALUES (?, 'TEN-ACME-PHARMA', ?, 'PLANNED', 'SKU-PARA-650', 'WH-CHENNAI',
-                'WH-BENGALURU', 25, 'vehicle_test', ?, ?)""",
+            ) VALUES (?, 'TEN-ACME-PHARMA', ?, 'PLANNED', 'SKU-PARA-650', 'WH-GUWAHATI',
+                'WH-SHILLONG', 25, 'vehicle_test', ?, ?)""",
             executionId, proposalId, "test-create-execution-$executionId", userId
         )
         val actor = TenantAccessContext(userId, "fleetbase-create@stockflow.local", "TEN-ACME-PHARMA", "LOGISTICS_MANAGER", setOf("TRANSFER_EXECUTE"), emptySet())
@@ -160,7 +160,7 @@ class FleetbaseOrderLinkServiceTest {
 
         val batchId = jdbc.queryForObject(
             """SELECT batch_inventory_id FROM batch_inventory WHERE tenant_id='TEN-ACME-PHARMA'
-               AND warehouse_id='WH-CHENNAI' AND sku_id='SKU-PARA-650' ORDER BY expiry_date LIMIT 1""",
+               AND warehouse_id='WH-GUWAHATI' AND sku_id='SKU-PARA-650' ORDER BY expiry_date LIMIT 1""",
             UUID::class.java
         )!!
         jdbc.update("UPDATE transfer_execution SET status='RESERVED' WHERE execution_id=?", executionId)

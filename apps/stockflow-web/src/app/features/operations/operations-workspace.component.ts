@@ -909,7 +909,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   openPurchaseProposal(item: PurchasePlan): void {
     this.proposalForm = {
       ...this.emptyProposal('PURCHASE'), skuId: item.sku, quantity: item.quantity,
-      destinationWarehouseId: item.warehouseId ?? 'WH-CHENNAI', supplierReference: item.supplier, unitCost: item.unitCost,
+      destinationWarehouseId: item.warehouseId ?? 'WH-GUWAHATI', supplierReference: item.supplier, unitCost: item.unitCost,
       reason: `${item.risk} stock risk with ${item.coverDays} days of cover remaining.`,
       recommendationEvidence: `${item.id}; ${item.explanation ?? `forecast confidence ${item.confidence}%; need by ${item.needBy}; lead time ${item.leadTimeDays} days.`}`
     };
@@ -1181,7 +1181,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   }
 
   private warehouseId(label: string): string {
-    const ids: Record<string, string> = { 'Guwahati Central': 'WH-CHENNAI', 'Shillong Hub': 'WH-BENGALURU', 'Imphal Hub': 'WH-HYDERABAD', 'Silchar DC': 'WH-CHENNAI', 'Aizawl Hub': 'WH-HYDERABAD', 'Dimapur Drop': 'WH-BENGALURU' };
+    const ids: Record<string, string> = { 'Guwahati Central': 'WH-GUWAHATI', 'Shillong Hub': 'WH-SHILLONG', 'Imphal Hub': 'WH-IMPHAL', 'Silchar DC': 'WH-SILCHAR', 'Aizawl Hub': 'WH-AIZAWL', 'Dimapur Drop': 'WH-DIMAPUR' };
     return ids[label] ?? label;
   }
 

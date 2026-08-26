@@ -30,7 +30,7 @@ class ForecastControllerTest(
             """INSERT INTO retailer
                (retailer_id, tenant_id, retailer_name, retailer_type, warehouse_id, city, region, credit_days, active)
                VALUES ('RET-FORECAST-001', 'TEN-ACME-PHARMA', 'Forecast Test Retailer', 'PHARMACY',
-                       'WH-CHENNAI', 'Chennai', 'SOUTH', 30, TRUE)"""
+                       'WH-GUWAHATI', 'Guwahati', 'NORTHEAST', 30, TRUE)"""
         )
 
         val start = LocalDate.of(2026, 5, 28)
@@ -46,7 +46,7 @@ class ForecastControllerTest(
                    (sales_history_id, sales_date, tenant_id, warehouse_id, retailer_id, sku_id,
                     ordered_quantity, fulfilled_quantity, sales_quantity, return_quantity,
                     lost_sales_quantity, unit_selling_price, promotion_id, stockout_flag)
-                   VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-CHENNAI', 'RET-FORECAST-001', 'SKU-PARA-650',
+                   VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-GUWAHATI', 'RET-FORECAST-001', 'SKU-PARA-650',
                            ?, ?, ?, 0, 0, ?, NULL, FALSE)""",
                 UUID.randomUUID(), Date.valueOf(salesDate), quantity, quantity, quantity, BigDecimal("25.00")
             )
@@ -60,7 +60,7 @@ class ForecastControllerTest(
                   "asOfDate": "2026-07-26",
                   "horizonDays": 7,
                   "historyDays": 60,
-                  "warehouseId": "WH-CHENNAI",
+                  "warehouseId": "WH-GUWAHATI",
                   "skuId": "SKU-PARA-650"
                 }
             """.trimIndent()
@@ -76,11 +76,11 @@ class ForecastControllerTest(
 
         mockMvc.get("/api/v1/forecasts/latest") {
             header("X-Tenant-ID", "TEN-ACME-PHARMA")
-            param("warehouseId", "WH-CHENNAI")
+            param("warehouseId", "WH-GUWAHATI")
             param("skuId", "SKU-PARA-650")
         }.andExpect {
             status { isOk() }
-            jsonPath("$[0].warehouseId") { value("WH-CHENNAI") }
+            jsonPath("$[0].warehouseId") { value("WH-GUWAHATI") }
             jsonPath("$[0].skuId") { value("SKU-PARA-650") }
             jsonPath("$[0].horizonDays") { value(7) }
             jsonPath("$[0].forecastValues.length()") { value(7) }
@@ -148,11 +148,11 @@ class ForecastControllerTest(
             jsonPath("$[0].averageDemandInterval") { exists() }
         }
 
-        mockMvc.get("/api/v1/forecasts/diagnostics/WH-CHENNAI/SKU-PARA-650") {
+        mockMvc.get("/api/v1/forecasts/diagnostics/WH-GUWAHATI/SKU-PARA-650") {
             header("X-Tenant-ID", "TEN-ACME-PHARMA")
         }.andExpect {
             status { isOk() }
-            jsonPath("$.warehouseId") { value("WH-CHENNAI") }
+            jsonPath("$.warehouseId") { value("WH-GUWAHATI") }
             jsonPath("$.skuId") { value("SKU-PARA-650") }
         }
 
@@ -174,7 +174,7 @@ class ForecastControllerTest(
             """INSERT INTO retailer
                (retailer_id, tenant_id, retailer_name, retailer_type, warehouse_id, city, region, credit_days, active)
                VALUES ('RET-SPARSE-001', 'TEN-ACME-PHARMA', 'Sparse Test Retailer', 'PHARMACY',
-                       'WH-BENGALURU', 'Bengaluru', 'SOUTH', 30, TRUE)"""
+                       'WH-SHILLONG', 'Shillong', 'NORTHEAST', 30, TRUE)"""
         )
 
         listOf(
@@ -187,7 +187,7 @@ class ForecastControllerTest(
                    (sales_history_id, sales_date, tenant_id, warehouse_id, retailer_id, sku_id,
                     ordered_quantity, fulfilled_quantity, sales_quantity, return_quantity,
                     lost_sales_quantity, unit_selling_price, promotion_id, stockout_flag)
-                   VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-BENGALURU', 'RET-SPARSE-001', 'SKU-PARA-650',
+                   VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-SHILLONG', 'RET-SPARSE-001', 'SKU-PARA-650',
                            20, 20, 20, 0, 0, 25.00, NULL, FALSE)""",
                 UUID.randomUUID(), Date.valueOf(salesDate)
             )
@@ -201,7 +201,7 @@ class ForecastControllerTest(
                   "asOfDate": "2026-07-15",
                   "horizonDays": 7,
                   "historyDays": 60,
-                  "warehouseId": "WH-BENGALURU",
+                  "warehouseId": "WH-SHILLONG",
                   "skuId": "SKU-PARA-650"
                 }
             """.trimIndent()
