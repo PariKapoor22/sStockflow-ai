@@ -59,8 +59,8 @@ export class RouteOptimizationMapComponent implements AfterViewInit, OnChanges, 
         await importLibrary('maps');
       }
       this.map = new google.maps.Map(this.mapElement.nativeElement, {
-        center: { lat: 15.4, lng: 78.5 },
-        zoom: 5,
+        center: { lat: 25.75, lng: 92.1 },
+        zoom: 7,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         mapTypeControl: true,
         streetViewControl: false,
@@ -129,7 +129,7 @@ export class RouteOptimizationMapComponent implements AfterViewInit, OnChanges, 
     } catch (error: any) {
       if (version !== this.renderVersion) return;
       this.renderFallbackLine();
-      this.routeSource = 'Straight-line preview';
+      this.routeSource = 'Northeast corridor demo preview';
       this.error = error?.error?.message || error?.message || 'The Google road route could not be loaded from the backend.';
     } finally {
       if (version === this.renderVersion) this.loading = false;
@@ -138,7 +138,7 @@ export class RouteOptimizationMapComponent implements AfterViewInit, OnChanges, 
 
   private renderFallbackLine(): void {
     if (!this.map || this.stops.length < 2) return;
-    const path = this.stops.map(stop => ({ lat: stop.latitude, lng: stop.longitude }));
+    const path = this.northeastDemoPath();
     const bounds = new google.maps.LatLngBounds();
     path.forEach(point => bounds.extend(point));
     this.routeLines.push(new google.maps.Polyline({
@@ -164,6 +164,31 @@ export class RouteOptimizationMapComponent implements AfterViewInit, OnChanges, 
       }
     })));
     this.fitRoute(bounds, this.renderVersion);
+  }
+
+  private northeastDemoPath(): google.maps.LatLngLiteral[] {
+    const examples: Record<string, google.maps.LatLngLiteral[]> = {
+      'RTE-301': [
+        { lat: 26.1445, lng: 91.7362 }, // Guwahati
+        { lat: 26.1058, lng: 91.9792 }, // Jorabat
+        { lat: 25.9023, lng: 91.8760 }, // Nongpoh
+        { lat: 25.6758, lng: 91.8933 }, // Umiam
+        { lat: 25.5788, lng: 91.8933 }  // Shillong
+      ],
+      'RTE-302': [
+        { lat: 26.1445, lng: 91.7362 }, { lat: 25.5788, lng: 91.8933 },
+        { lat: 25.2700, lng: 92.2950 }, { lat: 24.8333, lng: 92.7789 }
+      ],
+      'RTE-303': [
+        { lat: 24.8333, lng: 92.7789 }, { lat: 24.2246, lng: 92.6760 },
+        { lat: 23.7271, lng: 92.7176 }
+      ],
+      'RTE-304': [
+        { lat: 26.1445, lng: 91.7362 }, { lat: 26.3464, lng: 92.6840 },
+        { lat: 25.9091, lng: 93.7266 }
+      ]
+    };
+    return examples[this.routeId] ?? this.stops.map(stop => ({ lat: stop.latitude, lng: stop.longitude }));
   }
 
   private fitRoute(bounds: google.maps.LatLngBounds, version: number): void {

@@ -332,6 +332,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   ];
 
   ngOnInit(): void {
+    this.removeLegacySouthRoutePatches();
     this.applyStoredPatches('transfers', this.transfers);
     this.applyStoredPatches('purchasePlans', this.purchasePlans);
     this.applyStoredPatches('orders', this.orders);
@@ -1229,6 +1230,14 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   private applyStoredPatches<T extends { id: string }>(collection: string, records: T[]): void {
     records.forEach(record => Object.assign(record, this.prototype.recordPatch<T>(collection, record.id)));
+  }
+
+  private removeLegacySouthRoutePatches(): void {
+    const southLocations = /chennai|bengaluru|bangalore|hyderabad|mysuru|mysore|coimbatore/i;
+    const staleIds = this.routePlans
+      .map(route => route.id)
+      .filter(id => southLocations.test(JSON.stringify(this.prototype.recordPatch<RoutePlan>('routePlans', id))));
+    this.prototype.removeRecordPatches('routePlans', staleIds);
   }
 
   private showToast(message: string): void {

@@ -48,6 +48,19 @@ export class PrototypeStateService {
     return Boolean(this.state().recordPatches[collection]?.[id]);
   }
 
+  removeRecordPatches(collection: string, ids: string[]): void {
+    const current = this.state();
+    const existing = current.recordPatches[collection];
+    if (!existing || !ids.some(id => existing[id])) return;
+
+    const retained = { ...existing };
+    ids.forEach(id => delete retained[id]);
+    const recordPatches = { ...current.recordPatches };
+    if (Object.keys(retained).length) recordPatches[collection] = retained;
+    else delete recordPatches[collection];
+    this.commit({ ...current, recordPatches });
+  }
+
   settingsSnapshot<T extends object>(): Partial<T> {
     return this.state().settings as Partial<T>;
   }

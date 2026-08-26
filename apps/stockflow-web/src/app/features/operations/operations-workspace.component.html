@@ -255,7 +255,7 @@
 
       <section class="route-design-grid">
         <article class="panel route-map-panel">
-          <div class="panel-heading"><div><span>SELECTED PLAN · {{ selectedRoute().id }}</span><h2>{{ selectedRoute().lane }}</h2><p>Capacity-aware stop sequence and transfer consolidation preview</p></div><span class="optimization-badge">{{ selectedRoute().baselineKm - selectedRoute().optimizedKm }} km saved</span></div>
+          <div class="panel-heading"><div><span>SELECTED PLAN · {{ selectedRoute().id }}</span><h2>{{ selectedRoute().lane }}</h2><p>Capacity-aware stop sequence and transfer consolidation preview</p></div><span class="optimization-badge">{{ selectedRoute().baselineKm - selectedRoute().optimizedKm | number:'1.0-1' }} km saved</span></div>
           <sf-route-optimization-map [routeId]="selectedRoute().id" [stops]="selectedRouteMapStops()"></sf-route-optimization-map>
           <div class="route-summary-strip">
             <span><small>Optimized distance</small><strong>{{ selectedRoute().optimizedKm }} km</strong><small *ngIf="selectedRoute().matrixProvider">{{ selectedRoute().matrixProvider!.replaceAll('_', ' ') }}</small></span>
@@ -287,7 +287,7 @@
             <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('routePlans', item.id)">Updated</em></strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} service priority</small></td>
             <td><strong>{{ item.lane }}</strong><small>{{ item.vehicle }}</small></td>
             <td><strong>{{ item.stops.length }} planned stops</strong><small>Capacity-compatible sequence</small></td>
-            <td class="numeric"><strong>{{ item.optimizedKm }} km</strong><small>{{ item.baselineKm - item.optimizedKm }} km below baseline</small></td>
+            <td class="numeric"><strong>{{ item.optimizedKm | number:'1.0-1' }} km</strong><small>{{ item.baselineKm - item.optimizedKm | number:'1.0-1' }} km below baseline</small></td>
             <td><strong>{{ item.loadKg / item.capacityKg | percent:'1.0-0' }}</strong><div class="mini-progress"><i [style.width.%]="item.loadKg / item.capacityKg * 100"></i></div></td>
             <td class="numeric"><strong>{{ item.costInr | currency:'INR':'symbol':'1.0-0' }}</strong><small>estimated trip cost</small></td>
             <td><strong class="positive-text">−{{ item.co2SavedKg }} kg CO₂e</strong><small>{{ item.co2Kg }} kg estimated trip total</small></td>
