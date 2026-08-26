@@ -1,5 +1,7 @@
 package com.stockflow.replenishment
 
+import com.stockflow.intelligence.application.DecisionIntelligenceClient
+import com.stockflow.intelligence.application.InventoryPolicyRequest
 import com.stockflow.security.TenantAccessContext
 import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.JdbcTemplate
@@ -13,7 +15,10 @@ import kotlin.math.floor
 import kotlin.math.max
 
 @Service
-class ReplenishmentService(private val jdbc: JdbcTemplate) {
+class ReplenishmentService(
+    private val jdbc: JdbcTemplate,
+    private val decisionIntelligence: DecisionIntelligenceClient
+) {
     fun plans(actor: TenantAccessContext, targetCoverDays: Int): ReplenishmentSummaryView {
         if (targetCoverDays !in 7..90) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "targetCoverDays must be between 7 and 90")
         val rows = jdbc.query(SQL, { rs, _ -> RawPlan(
@@ -27,27 +32,39 @@ class ReplenishmentService(private val jdbc: JdbcTemplate) {
         ) }, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId, actor.tenantId)
 
         val visible = if (actor.warehouseIds.isEmpty()) rows else rows.filter { it.warehouseId in actor.warehouseIds }
-        val calculated = visible.mapNotNull { calculate(it, targetCoverDays) }
+        val calculated = visible.mapNotNull { calculate(actor.tenantId, it, targetCoverDays) }
             .sortedWith(compareBy<ReplenishmentPlanView> { riskRank(it.risk) }.thenBy { it.needBy }.thenByDescending { it.plannedValue })
         return ReplenishmentSummaryView(calculated.firstOrNull()?.asOfDate, targetCoverDays, calculated.size,
             calculated.count { it.risk == "CRITICAL" }, calculated.fold(BigDecimal.ZERO) { total, it -> total + it.plannedValue },
             calculated.sumOf { it.openPurchaseQuantity }, calculated)
     }
 
-    private fun calculate(row: RawPlan, targetCoverDays: Int): ReplenishmentPlanView? {
+    private fun calculate(tenantId: String, row: RawPlan, targetCoverDays: Int): ReplenishmentPlanView? {
         val forecastUsable = row.forecastDaily != null && row.forecastDaily > BigDecimal.ZERO
         val daily = (row.forecastDaily?.takeIf { it > BigDecimal.ZERO } ?: row.salesDaily).setScale(4, RoundingMode.HALF_UP)
         if (daily <= BigDecimal.ZERO) return null
         val lead = if (row.leadTimeDays > 0) row.leadTimeDays else 7
-        val target = ceil(daily.toDouble() * (lead + targetCoverDays) + row.safetyStock).toLong()
+        val fallbackTarget = ceil(daily.toDouble() * (lead + targetCoverDays) + row.safetyStock).toLong()
+        val cost = row.supplierCost ?: row.skuUnitCost
+        val stockpyl = decisionIntelligence.inventoryPolicy(InventoryPolicyRequest(
+            tenant_id = tenantId, warehouse_id = row.warehouseId, sku_id = row.skuId,
+            demand_mean = daily.toDouble(), demand_sd = kotlin.math.sqrt(daily.toDouble().coerceAtLeast(1.0)),
+            lead_time_days = (lead + targetCoverDays - 1).coerceAtLeast(0),
+            holding_cost = cost.toDouble().times(.02).coerceAtLeast(.01),
+            stockout_cost = cost.toDouble().coerceAtLeast(1.0),
+            inventory_position = (row.usable + row.openPurchase).toDouble(),
+            reorder_multiple = row.reorderMultiple.toInt().coerceAtLeast(1)
+        ))
+        val target = stockpyl?.targetStock ?: fallbackTarget
         val rawNeed = max(0L, target - row.usable - row.openPurchase)
-        val rounded = if (rawNeed == 0L) 0L else ceil(rawNeed.toDouble() / row.reorderMultiple).toLong() * row.reorderMultiple
+        val rounded = stockpyl?.recommendedOrderQuantity
+            ?: if (rawNeed == 0L) 0L else ceil(rawNeed.toDouble() / row.reorderMultiple).toLong() * row.reorderMultiple
         if (rounded == 0L && row.openPurchase == 0L) return null
         val cover = BigDecimal(row.usable).divide(daily, 2, RoundingMode.HALF_UP)
         val daysUntilReorder = max(0, floor((row.usable - row.safetyStock).coerceAtLeast(0).toDouble() / daily.toDouble()).toInt() - lead)
         val risk = when { cover.toDouble() <= lead -> "CRITICAL"; cover.toDouble() <= lead + 7 -> "HIGH"; else -> "MEDIUM" }
         val confidence = when (row.forecastConfidence?.uppercase()) { "HIGH" -> 90; "MEDIUM" -> 70; "LOW" -> 45; else -> 55 }
-        val cost = row.supplierCost ?: row.skuUnitCost
+        val model = stockpyl?.model ?: "DETERMINISTIC_FALLBACK"
         val status = when { row.openPurchase > 0 -> row.proposalStatus ?: "OPEN PROPOSAL"; row.supplierId == null -> "SUPPLIER REQUIRED"; else -> "RECOMMENDED" }
         val source = if (forecastUsable) "LATEST_FORECAST" else "30_DAY_SALES"
         return ReplenishmentPlanView(
@@ -57,8 +74,8 @@ class ReplenishmentService(private val jdbc: JdbcTemplate) {
             usableQuantity = row.usable, openPurchaseQuantity = row.openPurchase, averageDailyDemand = daily, demandSource = source,
             coverDays = cover, safetyStock = row.safetyStock, targetStock = target, reorderMultiple = row.reorderMultiple,
             recommendedQuantity = rounded, unitCost = cost, plannedValue = cost.multiply(BigDecimal(rounded)),
-            needBy = row.asOfDate.plusDays(daysUntilReorder.toLong()), confidencePercent = confidence, risk = risk, status = status,
-            explanation = "Target $target units covers $lead lead-time days, $targetCoverDays planning days and ${row.safetyStock} safety-stock units. ${row.usable} usable and ${row.openPurchase} open-purchase units were deducted; the result was rounded to ${row.reorderMultiple}.",
+            needBy = row.asOfDate.plusDays(daysUntilReorder.toLong()), confidencePercent = confidence, decisionModel = model, risk = risk, status = status,
+            explanation = "$model produced a $target-unit target covering $lead lead-time days and $targetCoverDays planning days. ${row.usable} usable and ${row.openPurchase} open-purchase units were deducted; the result was rounded to ${row.reorderMultiple}.",
             asOfDate = row.asOfDate
         )
     }
@@ -95,10 +112,14 @@ class ReplenishmentService(private val jdbc: JdbcTemplate) {
         ), open_po AS (
           SELECT warehouse_id,sku_id,SUM(open_quantity)::bigint open_purchase_quantity,MAX(status) proposal_status
           FROM open_supply_rows GROUP BY warehouse_id,sku_id
-        ), preferred_supplier AS (
-          SELECT DISTINCT ON (ss.sku_id) ss.sku_id,p.supplier_id,p.supplier_name,p.lead_time_days,ss.supplier_unit_cost
+        ), preferred_supplier_ranked AS (
+          SELECT ss.sku_id,p.supplier_id,p.supplier_name,p.lead_time_days,ss.supplier_unit_cost,
+                 ROW_NUMBER() OVER(PARTITION BY ss.sku_id ORDER BY ss.preferred DESC,p.on_time_in_full_percent DESC,p.supplier_id) supplier_rank
           FROM sku_supplier ss JOIN supplier p ON p.tenant_id=ss.tenant_id AND p.supplier_id=ss.supplier_id
-          WHERE ss.tenant_id=? AND ss.active=TRUE AND p.active=TRUE ORDER BY ss.sku_id,ss.preferred DESC,p.on_time_in_full_percent DESC
+          WHERE ss.tenant_id=? AND ss.active=TRUE AND p.active=TRUE
+        ), preferred_supplier AS (
+          SELECT sku_id,supplier_id,supplier_name,lead_time_days,supplier_unit_cost
+          FROM preferred_supplier_ranked WHERE supplier_rank=1
         )
         SELECT i.*,COALESCE(sa.sales_daily,0) sales_daily,fa.forecast_daily,fa.forecast_confidence,ps.supplier_id,ps.supplier_name,
                COALESCE(ps.lead_time_days,7) lead_time_days,ps.supplier_unit_cost,COALESCE(op.open_purchase_quantity,0) open_purchase_quantity,op.proposal_status

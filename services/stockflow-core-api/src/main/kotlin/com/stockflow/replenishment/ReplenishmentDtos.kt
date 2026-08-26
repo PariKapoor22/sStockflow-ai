@@ -25,6 +25,7 @@ data class ReplenishmentPlanView(
     val plannedValue: BigDecimal,
     val needBy: LocalDate,
     val confidencePercent: Int,
+    val decisionModel: String,
     val risk: String,
     val status: String,
     val explanation: String,

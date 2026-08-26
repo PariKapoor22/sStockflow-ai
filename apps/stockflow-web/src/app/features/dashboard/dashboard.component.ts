@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { catchError, finalize, forkJoin, of, throwError } from 'rxjs';
 import { DashboardOverview } from '../../core/models/dashboard.models';
 import { createPrototypeFoundationData } from '../../core/data/prototype-foundation.data';
 import {
@@ -1211,7 +1211,11 @@ export class DashboardComponent implements OnInit {
       summary: this.intelligenceData.demandSummary(this.selectedWindowDays),
       skus: this.intelligenceData.demandSkus(this.selectedWindowDays, 50),
       trend: this.intelligenceData.demandTrend(16),
-      forecasts: this.forecastOps.latest(50)
+      forecasts: this.forecastOps.latest(50).pipe(
+        catchError(error => error?.status === 404
+          ? of([] as LatestForecastPosition[])
+          : throwError(() => error))
+      )
     }).pipe(finalize(() => this.pageLoading = false))
       .subscribe({
         next: result => {
@@ -1276,6 +1280,7 @@ export class DashboardComponent implements OnInit {
       cost: item.estimatedTransferCost, carbonKg: item.estimatedCarbonKgCo2e, confidence: item.confidencePercent,
       asOf: item.asOfDate, explanation: item.explanation,
       evidence: [
+        `Decision engine: ${item.decisionModel.replaceAll('_', ' ')}.`,
         `Source after transfer: ${item.sourceUsableAfter.toLocaleString()} units; safety stock: ${item.sourceSafetyStock.toLocaleString()}.`,
         `Destination before transfer: ${item.destinationUsableBefore.toLocaleString()} units; target: ${item.destinationTargetStock.toLocaleString()}.`,
         `Purchase alternative: INR ${item.estimatedPurchaseCost.toLocaleString('en-IN')}; transfer: INR ${item.estimatedTransferCost.toLocaleString('en-IN')}.`,
@@ -1292,6 +1297,7 @@ export class DashboardComponent implements OnInit {
       quantity: item.recommendedQuantity, primaryBenefit: item.plannedValue, primaryBenefitLabel: 'Planned commitment',
       cost: item.plannedValue, confidence: item.confidencePercent, asOf: item.asOfDate, explanation: item.explanation,
       evidence: [
+        `Decision engine: ${item.decisionModel.replaceAll('_', ' ')}.`,
         `Usable: ${item.usableQuantity.toLocaleString()} units; safety stock: ${item.safetyStock.toLocaleString()}; target: ${item.targetStock.toLocaleString()}.`,
         `Demand: ${item.averageDailyDemand.toLocaleString()} units/day from ${item.demandSource.replaceAll('_', ' ').toLowerCase()}.`,
         `Lead time: ${item.leadTimeDays} days; open supply already deducted: ${item.openPurchaseQuantity.toLocaleString()} units.`,

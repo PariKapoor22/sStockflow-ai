@@ -20,4 +20,4 @@ export const COPILOT_API_BASE_URL = (window as typeof window & { STOCKFLOW_COPIL
  * Local development can provide the same global value or use port 8400.
  */
 export const CARBON_API_BASE_URL = (window as typeof window & { STOCKFLOW_CARBON_API_URL?: string }).STOCKFLOW_CARBON_API_URL
-  ?? (isLocalHost ? 'http://127.0.0.1:8400' : '');
+  ?? (isLocalHost ? 'http://127.0.0.1:8102' : '');

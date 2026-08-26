@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PrototypeStateService } from '../../core/services/prototype-state.service';
-import { CarbonApiService } from '../../core/services/carbon-api.service';
+import { CarbonApiService, RouteStopInput } from '../../core/services/carbon-api.service';
 import { ActionProposal, FleetbaseTracking, ProposalHistory, ProposalType, PurchaseOrder, PurchaseOrderDetail, TransferExecution, TransferExecutionDetail } from '../../core/models/action.models';
 import { ActionProposalService } from '../../core/services/action-proposal.service';
 import { BatchInventoryView, SkuView, WarehouseView } from '../../core/models/foundation.models';
@@ -119,6 +119,13 @@ interface RoutePlan {
   co2SavedKg: number;
   priority: string;
   status: string;
+  matrixProvider?: string;
+  solver?: string;
+  constraintsChecked?: string[];
+  explanation?: string[];
+  hazardPenalty?: number;
+  arrivalTime?: string;
+  optimizationRunId?: string;
 }
 
 interface SustainabilityRecord {
@@ -173,6 +180,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   selectedRouteId = 'RTE-301';
   toastMessage = '';
   routeOptimizationRunning = false;
+  routeSolver = '';
+  routeMatrixProviders: string[] = [];
+  routeLimitations: string[] = [];
+  routeRejected: { id: string; reason: string }[] = [];
   proposals: ActionProposal[] = [];
   proposalHistory: ProposalHistory[] = [];
   proposalsLoading = false;
@@ -224,6 +235,16 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     'Gangtok', 'Guwahati', 'Hyderabad', 'Imphal', 'Itanagar', 'Kohima',
     'Mysuru', 'Shillong', 'Silchar'
   ];
+  private readonly routeStopProfiles: Record<string, { latitude: number; longitude: number; floodRisk: number; landslideRisk: number; roadBlockRisk: number }> = {
+    'Chennai Central': { latitude: 13.0827, longitude: 80.2707, floodRisk: 0.18, landslideRisk: 0.02, roadBlockRisk: 0.08 },
+    'Bengaluru North': { latitude: 13.0358, longitude: 77.5970, floodRisk: 0.08, landslideRisk: 0.04, roadBlockRisk: 0.06 },
+    'Mysuru DC': { latitude: 12.2958, longitude: 76.6394, floodRisk: 0.05, landslideRisk: 0.04, roadBlockRisk: 0.04 },
+    'Hyderabad Hub': { latitude: 17.3850, longitude: 78.4867, floodRisk: 0.12, landslideRisk: 0.02, roadBlockRisk: 0.05 },
+    'Nellore Cross-dock': { latitude: 14.4426, longitude: 79.9865, floodRisk: 0.22, landslideRisk: 0.01, roadBlockRisk: 0.08 },
+    'Salem Hub': { latitude: 11.6643, longitude: 78.1460, floodRisk: 0.06, landslideRisk: 0.15, roadBlockRisk: 0.05 },
+    'Coimbatore West': { latitude: 11.0168, longitude: 76.9558, floodRisk: 0.08, landslideRisk: 0.12, roadBlockRisk: 0.05 },
+    'Mandya Drop': { latitude: 12.5218, longitude: 76.8951, floodRisk: 0.05, landslideRisk: 0.04, roadBlockRisk: 0.04 }
+  };
   readonly orderBoardStages: OrderBoardStage[] = [
     { status: 'Allocated', title: 'Allocated', description: 'Inventory secured', number: '01' },
     { status: 'Picking', title: 'Picking', description: 'Warehouse execution', number: '02' },
@@ -582,11 +603,33 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   optimizeRoutes(): void {
     if (this.routeOptimizationRunning) return;
     this.routeOptimizationRunning = true;
-    const candidates = this.routePlans.map(({ id, lane, stops, vehicle, loadKg, capacityKg, baselineKm, priority, status }) => ({
-      id, lane, stops, vehicle, loadKg, capacityKg, baselineKm, priority, status
-    }));
+    this.routeRejected = [];
+    const candidates = this.routePlans.map((route, index) => {
+      const departureMinutes = 360 + index * 30;
+      const promisedDeliveryMinutes = Math.min(2879, departureMinutes + Math.ceil(route.baselineKm / 45 * 60) + 180);
+      return {
+        id: route.id, lane: route.lane, stops: route.stops, vehicle: route.vehicle,
+        loadKg: route.loadKg, capacityKg: route.capacityKg, baselineKm: route.baselineKm,
+        priority: route.priority, status: route.status,
+        stopDetails: this.routeStopDetails(route, departureMinutes, promisedDeliveryMinutes),
+        vehicleAvailable: route.status !== 'Delivered',
+        coldChainRequired: route.id === 'RTE-302',
+        coldChainAvailable: true,
+        departureMinutes,
+        promisedDeliveryMinutes,
+        warehouseStockKg: route.loadKg + 500,
+        floodRisk: 0,
+        landslideRisk: 0,
+        roadBlockRisk: 0,
+        roadClosed: false
+      };
+    });
     this.carbonApi.optimiseRoutes(this.routeObjective, this.vehicleType, candidates).subscribe({
       next: response => {
+        this.routeSolver = response.solver;
+        this.routeMatrixProviders = response.matrixProviders;
+        this.routeLimitations = response.limitations;
+        this.routeRejected = response.rejected;
         response.routes.forEach(result => {
           const route = this.routePlans.find(item => item.id === result.id);
           if (!route) return;
@@ -596,7 +639,17 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
             costInr: result.costInr,
             co2Kg: result.co2Kg,
             co2SavedKg: result.co2SavedKg,
-            status: result.status
+            status: result.status,
+            stops: result.stops,
+            matrixProvider: result.matrixProvider,
+            solver: result.solver,
+            constraintsChecked: result.constraintsChecked,
+            explanation: result.explanation,
+            hazardPenalty: result.hazardPenalty,
+            arrivalTime: result.arrivalTime,
+            vehicle: result.vehicle,
+            capacityKg: result.capacityKg,
+            optimizationRunId: response.runId
           });
           this.prototype.patchRecord('routePlans', route.id, { ...route }, {
             module: 'Route Optimization',
@@ -612,7 +665,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
           tone: 'success'
         });
         this.routeOptimizationRunning = false;
-        this.showToast(`${response.routes.length} routes recalculated by the carbon and route backend.`);
+        this.showToast(`${response.routes.length} routes solved by OR-Tools${response.rejected.length ? `; ${response.rejected.length} rejected by constraints` : ''}.`);
       },
       error: () => {
         this.routeOptimizationRunning = false;
@@ -628,8 +681,22 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       Approved: 'In transit',
       'In transit': 'Delivered'
     };
+    const targetStatus = nextStatus[item.status];
+    if (!targetStatus) return;
+    if (item.optimizationRunId) {
+      const apiStatus = targetStatus.toUpperCase().replaceAll(' ', '_') as 'APPROVED' | 'IN_TRANSIT' | 'DELIVERED';
+      this.carbonApi.updateRouteStatus(item.optimizationRunId, item.id, apiStatus).subscribe({
+        next: result => this.completeRouteStatusChange(item, result.status),
+        error: error => this.showToast(error?.error?.detail || 'The persisted route status could not be changed.')
+      });
+      return;
+    }
+    this.completeRouteStatusChange(item, targetStatus);
+  }
+
+  private completeRouteStatusChange(item: RoutePlan, targetStatus: string): void {
     const previousStatus = item.status;
-    item.status = nextStatus[item.status] ?? item.status;
+    item.status = targetStatus;
     this.selectedRouteId = item.id;
     this.prototype.patchRecord('routePlans', item.id, { status: item.status }, {
       module: 'Route Optimization',
@@ -873,6 +940,25 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
         if (detail.fleetbaseOrderLink?.status === 'DISPATCHED') this.refreshFleetbaseTracking(false);
       },
       error: error => this.proposalError = this.apiError(error, 'Execution details could not be loaded.')
+    });
+  }
+
+  private routeStopDetails(route: RoutePlan, departureMinutes: number, promisedDeliveryMinutes: number): RouteStopInput[] {
+    const deliveryCount = Math.max(route.stops.length - 1, 1);
+    return route.stops.map((name, index) => {
+      const profile = this.routeStopProfiles[name];
+      return {
+        name,
+        latitude: profile.latitude,
+        longitude: profile.longitude,
+        demandKg: index === 0 ? 0 : route.loadKg / deliveryCount,
+        serviceMinutes: index === 0 || index === route.stops.length - 1 ? 0 : 20,
+        earliestMinutes: departureMinutes,
+        latestMinutes: promisedDeliveryMinutes,
+        floodRisk: profile.floodRisk,
+        landslideRisk: profile.landslideRisk,
+        roadBlockRisk: profile.roadBlockRisk
+      };
     });
   }
 

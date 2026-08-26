@@ -10,6 +10,8 @@ if errorlevel 1 (
 if not defined STOCKFLOW_DB_URL set "STOCKFLOW_DB_URL=jdbc:postgresql://localhost:5433/stockflow_phase2"
 if not defined STOCKFLOW_DB_USERNAME set "STOCKFLOW_DB_USERNAME=stockflow_app"
 if not defined STOCKFLOW_DB_PASSWORD set "STOCKFLOW_DB_PASSWORD=stockflow_dev"
+if not defined STATSFORECAST_ENABLED set "STATSFORECAST_ENABLED=true"
+if not defined STATSFORECAST_API_URL set "STATSFORECAST_API_URL=http://127.0.0.1:8101"
 
 cd /d "%~dp0services\stockflow-core-api"
 
@@ -19,6 +21,7 @@ echo ============================================================
 echo Database: %STOCKFLOW_DB_URL%
 echo Profile:  phase2
 echo Migration: V011__enhance_forecast_quality_engine.sql
+echo StatsForecast challenger: %STATSFORECAST_API_URL%
 echo.
 
 echo Running backend tests with isolated H2...

@@ -3,7 +3,7 @@
     <div>
       <span>NER LOGISTICS INTELLIGENCE · GOOGLE MAPS</span>
       <h2>GPS tracking & GIS accessibility dashboard</h2>
-      <p>Fleetbase positions overlaid with operational corridors and official flood or landslide alert zones from Google Public Alerts.</p>
+      <p>Fleetbase positions overlaid with operational corridors, official alerts, NASA LHASA landslide outlooks and GloFAS/LISFLOOD flood outlooks.</p>
     </div>
     <div class="map-actions">
       <button type="button" class="demo-button" (click)="startDemo()" [disabled]="routeLoading" *ngIf="demoMode !== 'running'">{{ routeLoading ? 'Computing route…' : (demoMode === 'paused' ? 'Resume demo' : 'Start live demo') }}</button>
@@ -40,7 +40,7 @@
     </div>
     <div class="hazard-feed-state" *ngIf="!mapError && !hazardLoading && !hazardError && !hazardAlerts.length">
       <strong>No flood or landslide alerts returned</strong>
-      <span>Google Public Alerts was checked at {{ hazardLocationsMonitored }} route and fleet locations. Coverage depends on participating authorities.</span>
+      <span>Official alerts and configured open-source model feeds were checked. No source returned an active or forecast zone.</span>
     </div>
     <div class="hazard-feed-state error" *ngIf="!mapError && hazardError">
       <strong>Hazard feed unavailable</strong><span>{{ hazardError }}</span>
@@ -62,5 +62,5 @@
       <strong>No live coordinates yet</strong><span>Connect Fleetbase Navigator or telematics. `(0,0)` positions are intentionally hidden.</span>
     </div>
   </div>
-  <footer><span><b></b> Google Maps Platform · Fleetbase refresh every 15 seconds</span><span>Flood and landslide zones are official authority alerts via Google; absence of an alert does not prove safety.</span></footer>
+  <footer><span><b></b> Google Maps Platform · Fleetbase refresh every 15 seconds</span><span>Hazards show source and model provenance. Model outlooks do not replace official warnings; absence of a zone does not prove safety.</span></footer>
 </section>

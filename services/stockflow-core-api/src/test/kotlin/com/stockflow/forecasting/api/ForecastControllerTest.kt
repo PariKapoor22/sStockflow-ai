@@ -16,7 +16,7 @@ import java.sql.Date
 import java.time.LocalDate
 import java.util.UUID
 
-@SpringBootTest
+@SpringBootTest(properties = ["stockflow.statsforecast.enabled=false"])
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Transactional

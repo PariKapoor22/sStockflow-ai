@@ -78,4 +78,7 @@ export interface InventoryRisk {
   stockoutRows30: number;
   reason: string;
   recommendedAction: string;
+  anomalyScore?: number;
+  anomalyDetected?: boolean;
+  anomalyModel?: string;
 }

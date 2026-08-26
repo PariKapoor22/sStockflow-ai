@@ -333,7 +333,7 @@
                   <td class="numeric">{{ risk.usableQuantity | number }}</td>
                   <td class="numeric">{{ risk.sales30 | number }}</td>
                   <td class="numeric">{{ risk.daysOfCover === null ? '—' : (risk.daysOfCover | number:'1.1-1') }}</td>
-                  <td class="reason-cell"><strong>{{ risk.reason }}</strong><small>{{ risk.recommendedAction }}</small></td>
+                  <td class="reason-cell"><strong>{{ risk.reason }}</strong><small>{{ risk.recommendedAction }}</small><small *ngIf="risk.anomalyModel">{{ risk.anomalyModel.replaceAll('_', ' ') }} score: {{ risk.anomalyScore | number:'1.2-2' }}<span *ngIf="risk.anomalyDetected"> · anomaly detected</span></small></td>
                 </tr>
                 <tr *ngIf="!inventoryRisks.length"><td colspan="8" class="empty-row">No risks match the selected filters.</td></tr>
               </tbody>

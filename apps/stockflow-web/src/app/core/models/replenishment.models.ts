@@ -3,7 +3,7 @@ export interface ReplenishmentPlan {
   supplierId?: string; supplierName: string; leadTimeDays: number; usableQuantity: number; openPurchaseQuantity: number;
   averageDailyDemand: number; demandSource: string; coverDays?: number; safetyStock: number; targetStock: number;
   reorderMultiple: number; recommendedQuantity: number; unitCost: number; plannedValue: number; needBy: string;
-  confidencePercent: number; risk: string; status: string; explanation: string; asOfDate: string;
+  confidencePercent: number; decisionModel: string; risk: string; status: string; explanation: string; asOfDate: string;
 }
 
 export interface ReplenishmentSummary {
@@ -20,7 +20,7 @@ export interface TransferRecommendation {
   distanceKm: number; vehicleType: string; vehicleCapacityUnits: number; trips: number;
   estimatedTransferCost: number; estimatedPurchaseCost: number; estimatedSavings: number;
   workingCapitalMoved: number; estimatedCarbonKgCo2e: number; risk: string;
-  confidencePercent: number; explanation: string; constraintsChecked: string[];
+  confidencePercent: number; decisionModel: string; explanation: string; constraintsChecked: string[];
   assumptions: string[]; asOfDate: string;
 }
 

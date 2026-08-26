@@ -12,4 +12,10 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-call uv run uvicorn stockflow_forecasting.main:app --port 8101
+echo ============================================================
+echo StockFlow StatsForecast Challenger Service
+echo ============================================================
+echo Health: http://127.0.0.1:8101/health
+echo API docs: http://127.0.0.1:8101/docs
+echo.
+call uv run uvicorn stockflow_forecasting.main:app --host 127.0.0.1 --port 8101

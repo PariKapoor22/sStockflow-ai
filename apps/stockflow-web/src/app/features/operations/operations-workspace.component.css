@@ -295,6 +295,9 @@ td > small { max-width: 250px; margin-top: 4px; color: var(--op-muted); font-siz
 .constraint-list span { display: flex; align-items: center; gap: 7px; color: var(--op-muted); font-size: 7px; }.constraint-list i { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: #dcf5e9; color: #138958; font-size: 7px; font-style: normal; font-weight: 900; }
 .optimize-button { min-height: 38px; border: 0; border-radius: 8px; background: #5b45e8; color: #fff; font-size: 8px; font-weight: 900; cursor: pointer; }
 .method-note { color: var(--op-muted); font-size: 7px; line-height: 1.55; }
+.route-engine-evidence,.route-rejection { display:grid; gap:4px; padding:10px; border:1px solid #cfe8dc; border-radius:9px; background:#f1fbf6; }
+.route-engine-evidence strong,.route-rejection strong { color:#12734c; font-size:8px; }.route-engine-evidence span,.route-rejection span { color:var(--op-text); font-size:7px; }.route-engine-evidence small { color:var(--op-muted); font-size:6px; line-height:1.4; }
+.route-rejection { border-color:#fecaca; background:#fff5f5; }.route-rejection strong { color:#b42318; }
 .selected-row { background: rgba(96,74,232,.045); box-shadow: inset 3px 0 #604ae8; }
 
 .sustainability-grid { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(330px,.65fr); gap: 13px; margin-bottom: 15px; }

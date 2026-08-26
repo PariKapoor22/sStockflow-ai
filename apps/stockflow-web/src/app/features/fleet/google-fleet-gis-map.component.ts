@@ -49,7 +49,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   readonly mapLayers: MapLayerDefinition[] = [
     { key: 'vehicles', label: 'Fleetbase GPS', description: 'Reported vehicle positions', tone: 'green', enabled: true },
     { key: 'prototype', label: 'Prototype live tracker', description: 'Simulated route and truck', tone: 'violet', enabled: true },
-    { key: 'hazards', label: 'Flood & landslide alerts', description: 'Official Google Public Alerts', tone: 'red', enabled: true },
+    { key: 'hazards', label: 'Flood & landslide alerts', description: 'Official + LHASA/GloFAS models', tone: 'red', enabled: true },
     { key: 'infrastructure', label: 'Roads & bridges', description: 'Accessibility checkpoints', tone: 'orange', enabled: true },
     { key: 'corridors', label: 'Essential-supply corridors', description: 'Operational movement lanes', tone: 'blue', enabled: true },
     { key: 'checkpoints', label: 'GIS checkpoints', description: 'Logistics hubs and nodes', tone: 'indigo', enabled: true }
@@ -267,15 +267,20 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
     this.hazardError = '';
     const locations = this.hazardMonitoringLocations();
     try {
-      const response = await firstValueFrom(this.googleWeather.hazardAlerts(locations));
-      this.hazardAlerts = response.alerts;
-      this.hazardLocationsMonitored = response.monitoredLocations;
+      const [official, modelled] = await Promise.all([
+        firstValueFrom(this.googleWeather.hazardAlerts(locations)).catch(() => null),
+        firstValueFrom(this.googleWeather.modelHazards()).catch(() => null)
+      ]);
+      if (!official && !modelled) throw new Error('Official alerts and open-source model outlooks are both unavailable.');
+      this.hazardAlerts = [...(official?.alerts ?? []), ...(modelled?.alerts ?? [])]
+        .filter((alert, index, all) => all.findIndex(other => other.id === alert.id) === index);
+      this.hazardLocationsMonitored = official?.monitoredLocations ?? locations.length;
       this.renderHazardAlerts();
     } catch (error: any) {
       this.hazardAlerts = [];
       this.hazardLocationsMonitored = locations.length;
       this.clearHazardOverlays();
-      this.hazardError = error?.error?.message || 'Google Public Alerts could not be loaded.';
+      this.hazardError = error?.error?.message || error?.message || 'Hazard sources could not be loaded.';
     } finally {
       this.hazardLoading = false;
     }

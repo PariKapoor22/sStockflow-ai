@@ -15,7 +15,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Route and carbon API | https://stockflow-carbon-100044030673.asia-southeast1.run.app | Explainable route, capacity, cost and prototype CO2e calculations |
 | Health check | https://stockflow-core-api-100044030673.asia-southeast1.run.app/actuator/health | Cloud API health |
 
-> Phase 3 forecasting increments and the integrated route/carbon backend are verified. Advanced OR-Tools vehicle routing remains a future solver phase.
+> Phase 3 forecasting and the local OR-Tools vehicle-routing integration are verified. The deployed Carbon API remains the production-facing legacy route service until the decision-intelligence service is deployed.
 
 ---
 
@@ -166,7 +166,7 @@ Acme Pharma validation:
 
 ## Phase 3 forecasting models
 
-The current engine evaluates ten candidate models:
+The core engine evaluates ten built-in candidate models:
 
 1. Naive
 2. Moving Average
@@ -178,6 +178,44 @@ The current engine evaluates ten candidate models:
 8. Croston Classic
 9. Croston SBA
 10. TSB
+
+When `STATSFORECAST_ENABLED=true`, the Python forecasting service also supplies
+four open-source StatsForecast challengers:
+
+11. AutoETS
+12. AutoARIMA
+13. Croston Optimized
+14. Seasonal Naive (StatsForecast)
+
+Spring Boot sends tenant-scoped demand history to the Python service over HTTP,
+compares all successful candidates using the same governed backtest metrics,
+selects the winner, and remains responsible for persistence and API responses.
+If the Python service is down or rejects a series, the run falls back to the ten
+built-in models instead of failing the whole forecast job. Selected external
+models appear in the website as `Stats Auto Ets`, `Stats Auto Arima`,
+`Stats Croston Optimized`, or `Stats Seasonal Naive`.
+
+The decision-intelligence service on port `8102` adds these open-source engines:
+
+- Stockpyl normal-demand newsvendor inventory policies
+- Google OR-Tools integer stock-transfer optimisation
+- Google OR-Tools multi-vehicle, multi-stop route optimisation
+- PyOD ECOD anomaly scoring
+- normalized NASA LHASA landslide model outputs
+- normalized Copernicus GloFAS/LISFLOOD flood model outputs
+
+Run it with `run-optimisation-windows.cmd`, or start the full application with
+`RUN_ALL_WINDOWS.cmd`. Spring Boot exposes configured model
+hazards to the website, where they are merged with official alerts on the GIS
+map. Unconfigured model feeds return no zones instead of synthetic live data.
+
+The Route Optimization page calls the same service directly in local
+development. It supports fleet assignment, stop sequencing, payload,
+availability, cold-chain, warehouse-stock, time-window, closure and hazard
+constraints. It uses a supplied road graph first, Google Routes traffic data
+when the backend key is configured, and an explicitly labelled geodesic
+fallback otherwise. Every run is persisted and route status transitions are
+audited before their resulting delivery impact is applied in the UI.
 
 Forecast-quality metrics:
 
@@ -408,6 +446,8 @@ Verified local ports:
 |---|---:|
 | Angular frontend | 4200 |
 | Spring Boot API | 8080 |
+| StatsForecast service | 8101 |
+| Decision intelligence service | 8102 |
 | Route and carbon service | 8400 |
 | PostgreSQL | 5433 |
 
@@ -667,7 +707,8 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Forecast operations are not yet scheduled.
 - Retry, cancellation, and failure-recovery workflows are not implemented.
 - Forecast accuracy degradation alerts are not implemented.
-- Routes and sustainability now call the dedicated FastAPI calculation service. The current solver is an explainable deterministic prototype; live traffic, road-network matrices and OR-Tools VRP remain future work.
+- OR-Tools vehicle routing is complete locally. Live traffic requires `GOOGLE_MAPS_BACKEND_API_KEY`; without it the response and UI disclose the geodesic fallback. Production-scale dispatch still needs real fleet availability, orders, road closures and telemetry feeds.
+- LHASA and GloFAS/LISFLOOD require externally prepared GeoJSON model-output feeds. The adapters are integrated, but a live source is not bundled with the repository.
 - Users & Roles remains a frontend preview; the secured tenant membership and role-assignment APIs are deployed, but the UI is not connected to them yet.
 - Transfer and purchase proposals can be persisted and independently approved, but approval does not execute inventory movement, dispatch a vehicle or place a supplier order.
 - Supabase JWT validation and tenant RBAC are deployed for the Core API and Copilot. The Carbon API still requires the same JWT membership enforcement before all operational services share one security boundary.
@@ -774,7 +815,7 @@ Purchase-order execution completed:
 
 Remaining:
 
-- Advanced road-network and multi-stop OR-Tools optimization
+- Production deployment and load testing of the completed local road-network and multi-stop OR-Tools service
 
 Fleetbase integration status: all eight phases are complete locally, including tenant-bound reads, vehicle UI, durable transfer-order linkage, guarded creation, FEFO-gated dispatch, tracker/ETA visibility, signed idempotent webhooks, reconciliation, recovery and production-readiness reporting.
 

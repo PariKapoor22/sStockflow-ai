@@ -265,8 +265,8 @@
             </div>
           </div>
           <div class="route-summary-strip">
-            <span><small>Optimized distance</small><strong>{{ selectedRoute().optimizedKm }} km</strong></span>
-            <span><small>Planned duration</small><strong>{{ selectedRoute().duration }}</strong></span>
+            <span><small>Optimized distance</small><strong>{{ selectedRoute().optimizedKm }} km</strong><small *ngIf="selectedRoute().matrixProvider">{{ selectedRoute().matrixProvider!.replaceAll('_', ' ') }}</small></span>
+            <span><small>Planned duration</small><strong>{{ selectedRoute().duration }}</strong><small *ngIf="selectedRoute().arrivalTime">arrival {{ selectedRoute().arrivalTime }}</small></span>
             <span><small>Load utilization</small><strong>{{ selectedRoute().loadKg / selectedRoute().capacityKg | percent:'1.0-0' }}</strong></span>
             <span><small>Estimated route cost</small><strong>{{ selectedRoute().costInr | currency:'INR':'symbol':'1.0-0' }}</strong></span>
             <span><small>Estimated emissions</small><strong>{{ selectedRoute().co2Kg }} kg CO₂e</strong></span>
@@ -276,11 +276,13 @@
         <aside class="panel optimization-control">
           <div class="panel-heading"><div><span>OPTIMIZATION SETUP</span><h2>Planning constraints</h2><p>Change the ranking objective before generating plans.</p></div><i class="control-mark">⚙</i></div>
           <div class="control-form">
-            <label><span>Optimization objective</span><select [(ngModel)]="routeObjective"><option>Balanced cost and carbon</option><option>Lowest transport cost</option><option>Lowest carbon impact</option><option>Fastest service recovery</option></select></label>
+            <label><span>Optimization objective</span><select [(ngModel)]="routeObjective"><option>Balanced cost and carbon</option><option>Lowest transport cost</option><option>Lowest carbon impact</option><option>Fastest service recovery</option><option>Safest route</option><option>Shortest path</option><option>Greenest route</option></select></label>
             <label><span>Vehicle eligibility</span><select [(ngModel)]="vehicleType"><option>All eligible vehicles</option><option>Electric and CNG preferred</option><option>Cold-chain vehicles only</option><option>High-capacity fleet only</option></select></label>
-            <div class="constraint-list"><span><i>✓</i>Respect vehicle capacity</span><span><i>✓</i>Protect critical delivery priority</span><span><i>✓</i>Check cold-chain compatibility</span><span><i>✓</i>Keep human approval required</span></div>
+            <div class="constraint-list"><span><i>✓</i>Respect vehicle capacity and availability</span><span><i>✓</i>Enforce promised-delivery windows</span><span><i>✓</i>Check cold-chain and warehouse stock</span><span><i>✓</i>Penalize flood, landslide and road-block risk</span><span><i>✓</i>Keep human approval required</span></div>
             <button type="button" class="optimize-button" [disabled]="routeOptimizationRunning" (click)="optimizeRoutes()">{{ routeOptimizationRunning ? 'Calculating…' : 'Recalculate route candidates' }}</button>
-            <small class="method-note">Prototype calculations use representative lanes. Production optimization requires live road, fleet and dispatch data.</small>
+            <div class="route-engine-evidence" *ngIf="routeSolver"><strong>{{ routeSolver.replaceAll('_', ' ') }}</strong><span>{{ routeMatrixProviders.join(', ').replaceAll('_', ' ') }}</span><small>Solver and road-cost sources returned by the live optimisation API.</small></div>
+            <div class="route-rejection" *ngFor="let rejected of routeRejected"><strong>{{ rejected.id }} rejected</strong><span>{{ rejected.reason }}</span></div>
+            <small class="method-note">OR-Tools performs stop sequencing with capacity and time-window constraints. Google traffic matrices are used when the backend key is available; otherwise the response clearly identifies its fallback.</small>
           </div>
         </aside>
       </section>

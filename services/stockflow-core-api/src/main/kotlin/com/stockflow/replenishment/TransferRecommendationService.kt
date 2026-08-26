@@ -1,5 +1,9 @@
 package com.stockflow.replenishment
 
+import com.stockflow.intelligence.application.DecisionIntelligenceClient
+import com.stockflow.intelligence.application.NetworkPosition
+import com.stockflow.intelligence.application.NetworkTransferRequest
+import com.stockflow.intelligence.application.TransferLane
 import com.stockflow.security.TenantAccessContext
 import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.JdbcTemplate
@@ -10,7 +14,10 @@ import java.math.RoundingMode
 import kotlin.math.*
 
 @Service
-class TransferRecommendationService(private val jdbc: JdbcTemplate) {
+class TransferRecommendationService(
+    private val jdbc: JdbcTemplate,
+    private val decisionIntelligence: DecisionIntelligenceClient
+) {
     fun recommendations(actor: TenantAccessContext, targetCoverDays: Int): TransferRecommendationSummaryView {
         if (targetCoverDays !in 7..90) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "targetCoverDays must be between 7 and 90")
         val rows = jdbc.query(SQL, { rs, _ -> Position(
@@ -20,18 +27,47 @@ class TransferRecommendationService(private val jdbc: JdbcTemplate) {
             rs.getBigDecimal("daily_demand") ?: BigDecimal.ZERO, rs.getBigDecimal("unit_cost")
         ) }, actor.tenantId, actor.tenantId, actor.tenantId)
         val visible = if (actor.warehouseIds.isEmpty()) rows else rows.filter { it.warehouseId in actor.warehouseIds }
-        val recommendations = visible.groupBy { it.skuId }.flatMap { (_, positions) ->
+        val recommendations = visible.groupBy { it.skuId }.flatMap { (skuId, positions) ->
             val shortages = positions.mapNotNull { p ->
                 val target = ceil(p.dailyDemand.toDouble() * targetCoverDays + p.safetyStock).toLong()
                 (target - p.usable).takeIf { it > 0 }?.let { Need(p, it, target) }
             }
             val sources = positions.mapNotNull { p -> (p.usable - p.safetyStock).takeIf { it > 0 }?.let { Source(p, it) } }.toMutableList()
-            shortages.sortedByDescending { it.quantity }.mapNotNull { need ->
+            val targetByWarehouse = shortages.associateBy { it.position.warehouseId }
+            val lanes = sources.flatMap { source -> shortages
+                .filter { it.position.warehouseId != source.position.warehouseId }
+                .map { need -> TransferLane(
+                    sourceWarehouseId = source.position.warehouseId,
+                    destinationWarehouseId = need.position.warehouseId,
+                    costPerUnit = BigDecimal(distanceKm(source.position, need.position) * 42.0 / 6000.0)
+                        .setScale(4, RoundingMode.HALF_UP),
+                    capacityUnits = min(source.surplus, need.quantity)
+                ) }
+            }
+            val external = lanes.takeIf { it.isNotEmpty() }?.let { eligibleLanes -> decisionIntelligence.optimiseTransfers(NetworkTransferRequest(
+                tenantId = actor.tenantId,
+                skuId = skuId,
+                positions = positions.map { position -> NetworkPosition(
+                    warehouseId = position.warehouseId,
+                    availableUnits = position.usable,
+                    safetyStockUnits = position.safetyStock,
+                    targetStockUnits = targetByWarehouse[position.warehouseId]?.target ?: position.safetyStock,
+                    shortagePenaltyPerUnit = position.unitCost.max(BigDecimal.ONE)
+                ) },
+                lanes = eligibleLanes
+            )) }
+            if (external != null) {
+                external.transfers.mapNotNull { transfer ->
+                    val source = positions.find { it.warehouseId == transfer.sourceWarehouseId } ?: return@mapNotNull null
+                    val need = targetByWarehouse[transfer.destinationWarehouseId] ?: return@mapNotNull null
+                    build(source, need, transfer.quantity, external.model)
+                }
+            } else shortages.sortedByDescending { it.quantity }.mapNotNull { need ->
                 val source = sources.filter { it.position.warehouseId != need.position.warehouseId && it.surplus > 0 }
                     .minByOrNull { distanceKm(it.position, need.position) } ?: return@mapNotNull null
                 val quantity = min(need.quantity, source.surplus)
                 source.surplus -= quantity
-                build(source.position, need, quantity)
+                build(source.position, need, quantity, "DETERMINISTIC_FALLBACK")
             }
         }.sortedWith(compareBy<TransferRecommendationView> { riskRank(it.risk) }.thenByDescending { it.estimatedSavings })
         return TransferRecommendationSummaryView(recommendations.firstOrNull()?.asOfDate, recommendations.size,
@@ -39,7 +75,7 @@ class TransferRecommendationService(private val jdbc: JdbcTemplate) {
             recommendations.sumOfDecimal { it.workingCapitalMoved }, recommendations.sumOfDecimal { it.estimatedCarbonKgCo2e }, recommendations)
     }
 
-    private fun build(source: Position, need: Need, quantity: Long): TransferRecommendationView {
+    private fun build(source: Position, need: Need, quantity: Long, model: String): TransferRecommendationView {
         val distance = distanceKm(source, need.position)
         val capacity = 6000L
         val trips = ceil(quantity.toDouble() / capacity).toInt().coerceAtLeast(1)
@@ -56,8 +92,8 @@ class TransferRecommendationService(private val jdbc: JdbcTemplate) {
             source.skuId, source.skuName, source.warehouseId, source.warehouseName, need.position.warehouseId, need.position.warehouseName,
             quantity, source.usable, source.usable - quantity, source.safetyStock, need.position.usable, need.target,
             BigDecimal(distance).setScale(1, RoundingMode.HALF_UP), "diesel", capacity, trips, transferCost, purchaseCost, savings,
-            source.unitCost.multiply(BigDecimal(quantity)).setScale(2, RoundingMode.HALF_UP), carbon, risk, 70,
-            "Move $quantity units from ${source.warehouseName}; the source remains at ${source.usable - quantity} units, above its ${source.safetyStock}-unit safety stock, while ${need.position.warehouseName} has a ${need.quantity}-unit target gap.",
+            source.unitCost.multiply(BigDecimal(quantity)).setScale(2, RoundingMode.HALF_UP), carbon, risk, 70, model,
+            "$model selected a $quantity-unit move from ${source.warehouseName}; the source remains at ${source.usable - quantity} units, above its ${source.safetyStock}-unit safety stock, while ${need.position.warehouseName} has a ${need.quantity}-unit target gap.",
             listOf("SOURCE_SAFETY_STOCK", "DESTINATION_TARGET_STOCK", "SOURCE_AVAILABILITY", "VEHICLE_CAPACITY", "WAREHOUSE_ACCESS"),
             listOf("Geodesic distance with 1.18 road-factor", "Diesel factor 0.27 kg CO2e/km", "0.05 kg representative unit weight", "INR 42/km prototype transport rate", "Human approval required"), source.asOfDate
         )
