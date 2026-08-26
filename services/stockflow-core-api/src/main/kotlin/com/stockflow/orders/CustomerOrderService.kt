@@ -26,21 +26,6 @@ class CustomerOrderService(private val jdbc: JdbcTemplate) {
             { rs, _ -> Triple(rs.getString("sku_name"), rs.getBigDecimal("selling_price"), rs.getString("currency")) },
             actor.tenantId, body.skuId
         ).firstOrNull() ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "SKU was not found in this tenant")
-        val usableQuantity = jdbc.queryForObject(
-            """SELECT COALESCE(SUM(available_quantity-reserved_quantity-blocked_quantity),0)
-               FROM batch_inventory
-               WHERE tenant_id=? AND warehouse_id=? AND sku_id=?
-                 AND snapshot_date=(SELECT MAX(snapshot_date) FROM batch_inventory WHERE tenant_id=? AND warehouse_id=? AND sku_id=?)""",
-            Long::class.java,
-            actor.tenantId, body.warehouseId, body.skuId,
-            actor.tenantId, body.warehouseId, body.skuId
-        ) ?: 0L
-        if (body.quantity > usableQuantity) {
-            throw ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "Requested ${body.quantity} units exceeds available inventory; only $usableQuantity usable units are available for this product at the selected warehouse"
-            )
-        }
         val unitPrice = body.unitPrice ?: sku.second
         val value = unitPrice.multiply(BigDecimal(body.quantity))
         val id = UUID.randomUUID()

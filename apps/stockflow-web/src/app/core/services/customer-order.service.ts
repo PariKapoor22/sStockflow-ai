@@ -14,12 +14,6 @@ export class CustomerOrderService {
     return this.http.get<CustomerOrderView[]>(this.baseUrl, { headers: this.tenantHeaders() });
   }
 
-  detail(orderId: string): Observable<CustomerOrderDetail> {
-    return this.http.get<CustomerOrderDetail>(`${this.baseUrl}/${encodeURIComponent(orderId)}`, {
-      headers: this.tenantHeaders()
-    });
-  }
-
   create(body: CreateCustomerOrderRequest): Observable<CustomerOrderDetail> {
     return this.http.post<CustomerOrderDetail>(this.baseUrl, body, {
       headers: this.tenantHeaders().set('Idempotency-Key', `web-order-${crypto.randomUUID()}`)

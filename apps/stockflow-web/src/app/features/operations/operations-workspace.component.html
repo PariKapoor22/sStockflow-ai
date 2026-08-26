@@ -4,62 +4,17 @@
       <header><div><span>CUSTOMER ORDER</span><h2 id="order-dialog-title">Create order</h2></div><button type="button" aria-label="Close order form" (click)="closeOrderDialog()">×</button></header>
       <div class="proposal-form">
         <label><span>Customer name</span><input [(ngModel)]="orderForm.customerName" maxlength="200" placeholder="Customer or business name"></label>
-        <label><span>Customer city</span><select [(ngModel)]="orderForm.customerCity"><option value="" disabled>Select delivery city</option><option *ngFor="let city of customerCityOptions" [value]="city">{{ city }}</option></select></label>
+        <label><span>Customer city</span><input [(ngModel)]="orderForm.customerCity" maxlength="120" placeholder="Delivery city"></label>
         <label><span>Order channel</span><select [(ngModel)]="orderForm.channel"><option>B2B Portal</option><option>EDI</option><option>Sales desk</option><option>Mobile app</option><option>API</option></select></label>
         <label><span>Promised date and time</span><input type="datetime-local" [(ngModel)]="orderForm.promisedAt"></label>
-        <label><span>Fulfilment warehouse</span><select [(ngModel)]="orderForm.warehouseId" (ngModelChange)="orderError = ''"><option value="" disabled>Select a warehouse</option><option *ngFor="let warehouse of proposalWarehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select></label>
-        <label><span>Product / SKU</span><select [(ngModel)]="orderForm.skuId" (ngModelChange)="orderError = ''"><option value="" disabled>Select a product</option><option *ngFor="let sku of proposalSkus" [value]="sku.skuId">{{ sku.skuName }} · {{ sku.skuId }}</option></select></label>
-        <label><span>Quantity</span><input type="number" min="1" step="1" [attr.max]="selectedOrderAvailableUnits" [class.quantity-invalid]="orderQuantityExceedsAvailability" [(ngModel)]="orderForm.quantity" (ngModelChange)="orderError = ''"><small class="quantity-availability" *ngIf="orderForm.warehouseId && orderForm.skuId && orderAvailabilityLoading">Checking available inventory…</small><small class="quantity-availability" [class.error]="orderQuantityExceedsAvailability" *ngIf="orderForm.warehouseId && orderForm.skuId && selectedOrderAvailableUnits !== null">{{ selectedOrderAvailableUnits | number }} usable units available for this product at the selected warehouse.<ng-container *ngIf="orderQuantityExceedsAvailability"> Reduce the requested quantity.</ng-container></small></label>
+        <label><span>Fulfilment warehouse</span><select [(ngModel)]="orderForm.warehouseId"><option value="" disabled>Select a warehouse</option><option *ngFor="let warehouse of proposalWarehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select></label>
+        <label><span>Product / SKU</span><select [(ngModel)]="orderForm.skuId"><option value="" disabled>Select a product</option><option *ngFor="let sku of proposalSkus" [value]="sku.skuId">{{ sku.skuName }} · {{ sku.skuId }}</option></select></label>
+        <label><span>Quantity</span><input type="number" min="1" step="1" [(ngModel)]="orderForm.quantity"></label>
         <label><span>Unit selling price (optional)</span><input type="number" min="0" step="0.01" [(ngModel)]="orderForm.unitPrice" placeholder="Uses SKU selling price"></label>
       </div>
       <p class="proposal-error" *ngIf="orderError">{{ orderError }}</p>
-      <footer><span>Creates a persisted order. Shipment and inventory deduction remain separate controlled steps.</span><button type="button" class="dialog-primary" [disabled]="orderSaving || orderQuantityExceedsAvailability" (click)="submitOrder()">{{ orderSaving ? 'Creating…' : 'Create order' }}</button></footer>
+      <footer><span>Creates a persisted order. Shipment and inventory deduction remain separate controlled steps.</span><button type="button" class="dialog-primary" [disabled]="orderSaving" (click)="submitOrder()">{{ orderSaving ? 'Creating…' : 'Create order' }}</button></footer>
     </section>
-  </div>
-  <div class="order-detail-backdrop" *ngIf="orderDetailOpen" (click)="closeOrderDetail()">
-    <aside class="order-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="order-detail-title" (click)="$event.stopPropagation()" *ngIf="selectedOrder as order">
-      <header class="order-detail-header">
-        <div><span>STOCKFLOW ORDER</span><h2 id="order-detail-title">{{ order.id }}</h2><p>{{ order.customer }} · {{ order.city }}</p></div>
-        <button type="button" aria-label="Close order details" (click)="closeOrderDetail()">×</button>
-      </header>
-      <div class="order-detail-scroll">
-        <section class="order-detail-hero">
-          <div class="order-detail-icon">▤</div>
-          <div><span [class]="'status-pill ' + statusClass(order.status)">{{ order.status }}</span><strong>{{ order.skuName || 'Customer order' }}</strong><small>{{ order.channel }} · {{ order.quantity || order.itemCount }} units</small></div>
-        </section>
-
-        <section class="order-detail-progress">
-          <div><span>Lifecycle progress</span><strong>{{ orderProgress(order.status) }}%</strong></div>
-          <div class="order-card-track"><i [style.width.%]="orderProgress(order.status)"></i><b [style.left.%]="orderProgress(order.status)">▰</b></div>
-          <div class="order-milestones"><span [class.done]="orderProgress(order.status) >= 18">Allocated</span><span [class.done]="orderProgress(order.status) >= 52">Picking</span><span [class.done]="orderProgress(order.status) >= 82">Ready</span><span [class.done]="orderProgress(order.status) === 100">Shipped</span></div>
-        </section>
-
-        <section class="order-detail-grid">
-          <div><span>Pickup / fulfilment node</span><strong>{{ order.warehouse }}</strong></div>
-          <div><span>Drop-off</span><strong>{{ order.customer }}, {{ order.city }}</strong></div>
-          <div><span>Promised delivery</span><strong [class.late-text]="orderIsLate(order)">{{ order.promisedDate }}</strong></div>
-          <div><span>Fulfilment</span><strong>{{ order.fulfillment }}%</strong></div>
-          <div><span>Order value</span><strong>{{ order.value | currency:'INR':'symbol':'1.0-0' }}</strong></div>
-          <div><span>Product / SKU</span><strong>{{ order.skuName || order.skuId || 'Not provided' }}</strong></div>
-          <div><span>Customer</span><strong>{{ order.customer }}</strong></div>
-          <div><span>Order version</span><strong>{{ order.version ?? 'Prototype record' }}</strong></div>
-        </section>
-
-        <p class="order-detail-state" *ngIf="orderDetailLoading">Loading persisted lifecycle history…</p>
-        <p class="proposal-error" *ngIf="orderDetailError">{{ orderDetailError }}</p>
-
-        <section class="order-event-timeline" *ngIf="selectedOrderDetail as detail">
-          <header><span>AUDITABLE LIFECYCLE</span><strong>{{ detail.events.length }} events</strong></header>
-          <div *ngFor="let event of detail.events">
-            <i></i><p><strong>{{ proposalStatus(event.toStatus) }}</strong><small>{{ event.occurredAt | date:'medium' }} · {{ event.changedBy }}</small><em *ngIf="event.comment">{{ event.comment }}</em></p>
-          </div>
-        </section>
-      </div>
-      <footer class="order-detail-actions">
-        <span>{{ order.status === 'Shipped' ? 'Customer order completed.' : 'Every transition is retained in the order audit history.' }}</span>
-        <button type="button" class="dialog-primary" [disabled]="!orderCanAdvance(order)" (click)="advanceOrder(order)">{{ orderActionId === order.orderId ? 'Saving…' : orderNextAction(order.status) }}</button>
-      </footer>
-    </aside>
   </div>
   <div class="proposal-backdrop" *ngIf="proposalDialogOpen" (click)="closeProposalDialog()">
     <section class="proposal-dialog" role="dialog" aria-modal="true" aria-labelledby="proposal-title" (click)="$event.stopPropagation()">
@@ -216,7 +171,7 @@
         <article class="panel route-panel">
           <div class="panel-heading"><div><span>OPTIMIZED NETWORK</span><h2>Transfer route sequence</h2></div><span class="optimization-badge">12.6% fewer km</span></div>
           <div class="route-line">
-            <div><i>01</i><strong>Chennai</strong><small>2 dispatches</small></div><span><em>347 km</em></span><div><i>02</i><strong>Bengaluru</strong><small>1 cross-dock</small></div><span><em>148 km</em></span><div><i>03</i><strong>Mysuru</strong><small>Final delivery</small></div>
+            <div><i>01</i><strong>Guwahati</strong><small>2 dispatches</small></div><span><em>102 km</em></span><div><i>02</i><strong>Shillong</strong><small>1 cross-dock</small></div><span><em>335 km</em></span><div><i>03</i><strong>Dimapur</strong><small>Final delivery</small></div>
           </div>
           <div class="route-footer"><span><strong>8h 35m</strong> planned transit</span><span><strong>92%</strong> vehicle utilization</span><span><strong>₹18.4K</strong> avoided expedite cost</span></div>
         </article>
@@ -403,43 +358,17 @@
         <article><span>On-time promise</span><strong>96.4%</strong><small>Trailing 30-day OTIF</small><i class="metric-icon teal">◷</i></article>
       </section>
 
-      <article class="panel order-workbench">
-        <div class="panel-heading order-board-heading">
-          <div><span>LIVE ORDER FLOW</span><h2>Customer order lifecycle</h2><p>Persisted StockFlow orders organized by their current fulfilment state.</p></div>
-          <div class="order-board-actions">
-            <span>{{ filteredOrders().length }} orders</span>
-            <div class="order-view-toggle" aria-label="Order layout">
-              <button type="button" [class.active]="orderDisplayMode === 'board'" (click)="orderDisplayMode = 'board'">Board</button>
-              <button type="button" [class.active]="orderDisplayMode === 'table'" (click)="orderDisplayMode = 'table'">Table</button>
-            </div>
-            <button type="button" class="order-refresh" [disabled]="ordersLoading" (click)="loadOrders()">{{ ordersLoading ? 'Syncing…' : 'Refresh' }}</button>
-          </div>
-        </div>
+      <article class="panel fulfilment-board">
+        <div class="panel-heading"><div><span>LIVE FLOW</span><h2>Fulfilment pipeline</h2></div><span>Last synchronized 2 min ago</span></div>
+        <div class="stage-grid"><div><i>01</i><span><strong>{{ orderCount('Allocated') }}</strong><small>Allocated</small></span><em>Inventory secured</em></div><div><i>02</i><span><strong>{{ orderCount('Picking') }}</strong><small>Picking</small></span><em>Warehouse execution</em></div><div><i>03</i><span><strong>{{ orderCount('Ready to ship') }}</strong><small>Ready</small></span><em>Dispatch queue</em></div><div><i>04</i><span><strong>{{ orderCount('Shipped') }}</strong><small>Shipped</small></span><em>Carrier handoff</em></div></div>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-heading"><div><span>ORDER QUEUE</span><h2>Customer orders</h2><p>Promise-date, allocation and fulfilment visibility across every active warehouse.</p></div><span>{{ filteredOrders().length }} records</span></div>
         <p class="proposal-error" *ngIf="orderError && !orderDialogOpen">{{ orderError }}</p>
-        <p class="empty-row" *ngIf="ordersLoading && !orders.length">Loading live customer orders…</p>
-
-        <div class="order-board-scroll" *ngIf="orderDisplayMode === 'board'">
-          <div class="order-board">
-            <section class="order-column" *ngFor="let stage of orderBoardStages" [class.attention]="stage.status === 'On hold'">
-              <header><div><span>{{ stage.title }}</span><small>{{ stage.description }}</small></div><strong>{{ ordersForStage(stage.status).length }}</strong></header>
-              <div class="order-column-body">
-                <article class="order-card" *ngFor="let item of ordersForStage(stage.status)" role="button" tabindex="0" (click)="openOrderDetail(item)" (keydown.enter)="openOrderDetail(item)">
-                  <div class="order-card-top"><div><strong>{{ item.id }}</strong><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></div><button type="button" aria-label="View order details" (click)="$event.stopPropagation(); openOrderDetail(item)">⌁</button></div>
-                  <div class="order-card-track"><i [style.width.%]="orderProgress(item.status)"></i><b [style.left.%]="orderProgress(item.status)">▰</b></div>
-                  <div class="order-card-route"><p><span>Pickup</span><strong>{{ item.warehouse }}</strong></p><i>→</i><p><span>Drop-off</span><strong>{{ item.customer }}</strong><small>{{ item.city }}</small></p></div>
-                  <div class="order-card-product"><span>{{ item.skuName || item.skuId || 'Customer order' }}</span><strong>{{ item.quantity || item.itemCount }} units</strong></div>
-                  <div class="order-card-meta"><p><span>Promise</span><strong [class.late-text]="orderIsLate(item)">{{ item.promisedDate }}</strong></p><p><span>Value</span><strong>{{ item.value | currency:'INR':'symbol':'1.0-0' }}</strong></p></div>
-                  <footer><span><i></i>{{ item.channel }}</span><button type="button" [disabled]="!orderCanAdvance(item)" (click)="$event.stopPropagation(); advanceOrder(item)">{{ orderActionId === item.orderId ? 'Saving…' : orderNextAction(item.status) }}</button></footer>
-                </article>
-                <p class="order-column-empty" *ngIf="!ordersForStage(stage.status).length">No {{ stage.title.toLowerCase() }} orders</p>
-                <button type="button" class="order-add-card" *ngIf="stage.status === 'Allocated'" (click)="openOrderDialog()"><span>＋</span> Add an order</button>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <div class="table-scroll" *ngIf="orderDisplayMode === 'table'"><table><thead><tr><th>Order</th><th>Customer</th><th>Fulfilment node</th><th class="numeric">Items</th><th class="numeric">Value</th><th>Promised</th><th>Fulfilment</th><th>Status</th><th></th></tr></thead><tbody>
-          <tr *ngFor="let item of filteredOrders()" (click)="openOrderDetail(item)">
+        <p class="empty-row" *ngIf="ordersLoading">Loading live customer orders…</p>
+        <div class="table-scroll"><table><thead><tr><th>Order</th><th>Customer</th><th>Fulfilment node</th><th class="numeric">Items</th><th class="numeric">Value</th><th>Promised</th><th>Fulfilment</th><th>Status</th><th></th></tr></thead><tbody>
+          <tr *ngFor="let item of filteredOrders()">
             <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('orders', item.id)">Updated</em></strong><small>{{ item.channel }}</small></td>
             <td><strong>{{ item.customer }}</strong><small>{{ item.city }}</small></td>
             <td><strong>{{ item.warehouse }}</strong><small>Inventory allocation node</small></td>
@@ -448,7 +377,7 @@
             <td><strong>{{ item.promisedDate }}</strong><small>Customer commitment</small></td>
             <td><strong>{{ item.fulfillment }}%</strong><div class="mini-progress"><i [style.width.%]="item.fulfillment" [class.warning]="item.fulfillment < 70"></i></div></td>
             <td><span [class]="'status-pill ' + statusClass(item.status)">{{ item.status }}</span></td>
-            <td><button type="button" class="row-action" [disabled]="!orderCanAdvance(item)" (click)="$event.stopPropagation(); advanceOrder(item)">{{ orderActionId === item.orderId ? 'Saving…' : orderNextAction(item.status) }}</button></td>
+            <td><button type="button" class="row-action" [disabled]="item.status === 'Shipped' || item.status === 'Cancelled' || orderActionId === item.orderId" (click)="advanceOrder(item)">{{ orderActionId === item.orderId ? 'Saving…' : item.status === 'Shipped' ? 'Completed' : 'Advance' }}</button></td>
           </tr><tr *ngIf="!filteredOrders().length"><td colspan="9" class="empty-row">No orders match the current filters.</td></tr>
         </tbody></table></div>
       </article>

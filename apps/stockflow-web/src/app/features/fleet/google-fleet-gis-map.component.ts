@@ -2,21 +2,13 @@ import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 import { firstValueFrom } from 'rxjs';
+import { NerContractAdapterService } from '../../core/services/ner-contract-adapter.service';
 import { FleetbaseVehicle } from '../../core/models/fleetbase.models';
 import { HazardAlert, HazardAlertLocation } from '../../core/models/google-weather.models';
 import { GoogleRoutesService } from '../../core/services/google-routes.service';
 import { GoogleWeatherService } from '../../core/services/google-weather.service';
 
 type DemoMode = 'idle' | 'running' | 'paused' | 'completed';
-type MapLayerKey = 'vehicles' | 'prototype' | 'hazards' | 'infrastructure' | 'corridors' | 'checkpoints';
-
-interface MapLayerDefinition {
-  key: MapLayerKey;
-  label: string;
-  description: string;
-  tone: string;
-  enabled: boolean;
-}
 
 @Component({
   selector: 'sf-google-fleet-gis-map',
@@ -45,15 +37,9 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   hazardLoading = false;
   hazardError = '';
   hazardLocationsMonitored = 0;
-  layersPanelOpen = true;
-  readonly mapLayers: MapLayerDefinition[] = [
-    { key: 'vehicles', label: 'Fleetbase GPS', description: 'Reported vehicle positions', tone: 'green', enabled: true },
-    { key: 'prototype', label: 'Prototype live tracker', description: 'Simulated route and truck', tone: 'violet', enabled: true },
-    { key: 'hazards', label: 'Flood & landslide alerts', description: 'Official Google Public Alerts', tone: 'red', enabled: true },
-    { key: 'infrastructure', label: 'Roads & bridges', description: 'Accessibility checkpoints', tone: 'orange', enabled: true },
-    { key: 'corridors', label: 'Essential-supply corridors', description: 'Operational movement lanes', tone: 'blue', enabled: true },
-    { key: 'checkpoints', label: 'GIS checkpoints', description: 'Logistics hubs and nodes', tone: 'indigo', enabled: true }
-  ];
+  showDistrictForecasts = true;
+  activeEvidence: any = null;
+  private districtForecastsLoaded = false;
 
   private map?: google.maps.Map;
   private infoWindow?: google.maps.InfoWindow;
@@ -63,9 +49,6 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   private demoBaseRoute?: google.maps.Polyline;
   private demoTravelledRoute?: google.maps.Polyline;
   private hazardOverlays: Array<google.maps.Polygon | google.maps.Marker> = [];
-  private infrastructureOverlays: Array<google.maps.Marker | google.maps.Polyline> = [];
-  private corridorOverlays: google.maps.Polyline[] = [];
-  private checkpointOverlays: google.maps.Marker[] = [];
   private readonly fallbackRoute: google.maps.LatLngLiteral[] = [
     { lat: 26.1445, lng: 91.7362 },
     { lat: 26.0368, lng: 91.8856 },
@@ -79,7 +62,8 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
 
   constructor(
     private readonly googleRoutes: GoogleRoutesService,
-    private readonly googleWeather: GoogleWeatherService
+    private readonly googleWeather: GoogleWeatherService,
+    private readonly nerAdapter: NerContractAdapterService
   ) {}
 
   get positionedVehicles(): FleetbaseVehicle[] {
@@ -116,7 +100,6 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   }
 
   async ngAfterViewInit(): Promise<void> {
-    this.restoreLayerState();
     await this.initializeMap();
   }
 
@@ -131,35 +114,10 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
     this.demoBaseRoute?.setMap(null);
     this.demoTravelledRoute?.setMap(null);
     this.clearHazardOverlays();
-    this.clearStaticOverlays();
-  }
-
-  toggleLayer(key: MapLayerKey): void {
-    const layer = this.mapLayers.find(candidate => candidate.key === key);
-    if (!layer) return;
-    layer.enabled = !layer.enabled;
-    this.applyLayerVisibility(key);
-    this.saveLayerState();
-  }
-
-  setAllLayers(enabled: boolean): void {
-    this.mapLayers.forEach(layer => layer.enabled = enabled);
-    this.mapLayers.forEach(layer => this.applyLayerVisibility(layer.key));
-    this.saveLayerState();
-  }
-
-  layerCount(key: MapLayerKey): number {
-    if (key === 'vehicles') return this.positionedVehicles.length;
-    if (key === 'prototype') return this.demoMode === 'idle' ? 0 : 1;
-    if (key === 'hazards') return this.hazardAlerts.length;
-    if (key === 'infrastructure') return this.infrastructureOverlays.length;
-    if (key === 'corridors') return this.corridorOverlays.length;
-    return this.checkpointOverlays.length;
   }
 
   async startDemo(vehicle?: FleetbaseVehicle): Promise<void> {
     if (!this.map) return;
-    this.enableLayer('prototype');
     if (vehicle) this.demoVehicleName = vehicle.name || vehicle.plateNumber || vehicle.internalId || 'StockFlow Prototype Truck';
     if (this.demoMode === 'completed') this.resetDemo(false);
     if (this.demoMode !== 'paused') await this.loadRoadRoute(vehicle);
@@ -237,14 +195,12 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   trackVehicle(vehicle: FleetbaseVehicle): void {
     this.mapElement.nativeElement.closest('.gis-shell')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (this.hasUsablePosition(vehicle)) {
-      this.enableLayer('vehicles');
       this.resetDemo(false);
       this.map?.panTo({ lat: vehicle.latitude!, lng: vehicle.longitude! });
       this.map?.setZoom(14);
       const marker = this.vehicleMarkers.get(vehicle.id);
       if (marker) window.setTimeout(() => google.maps.event.trigger(marker, 'click'), 500);
     } else {
-      this.enableLayer('prototype');
       this.startDemo(vehicle);
     }
   }
@@ -303,6 +259,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
       this.addGisLayers();
       this.renderVehicles();
       this.loading = false;
+      this.loadDistrictForecasts();
       await this.loadHazardAlerts();
     } catch (error) {
       this.loading = false;
@@ -312,7 +269,6 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
 
   private addGisLayers(): void {
     if (!this.map) return;
-    this.clearStaticOverlays();
     const assets = [
       { name: 'Guwahati logistics hub', position: { lat: 26.1445, lng: 91.7362 }, detail: 'Assam · Accessible' },
       { name: 'Shillong corridor checkpoint', position: { lat: 25.5788, lng: 91.8933 }, detail: 'Meghalaya · Monitoring' },
@@ -320,29 +276,14 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
       { name: 'Teesta bridge checkpoint', position: { lat: 27.187, lng: 88.505 }, detail: 'Sikkim · Inspection due' }
     ];
     assets.forEach(asset => {
-      const marker = new google.maps.Marker({ map: this.layerMap('checkpoints'), position: asset.position, title: asset.name, label: { text: '◆', color: '#ffffff', fontSize: '12px' }, icon: this.circleIcon('#2563eb', 15) });
+      const marker = new google.maps.Marker({ map: this.map, position: asset.position, title: asset.name, label: { text: '◆', color: '#ffffff', fontSize: '12px' }, icon: this.circleIcon('#2563eb', 15) });
       marker.addListener('click', () => this.openInfo(asset.position, `<strong>${asset.name}</strong><br>${asset.detail}`));
-      this.checkpointOverlays.push(marker);
     });
 
     [
       { points: [{ lat: 26.1445, lng: 91.7362 }, { lat: 25.91, lng: 91.88 }, { lat: 25.5788, lng: 91.8933 }], color: '#5b3ee5' },
       { points: [{ lat: 26.1445, lng: 91.7362 }, { lat: 25.62, lng: 92.82 }, { lat: 24.817, lng: 93.9368 }], color: '#2563eb' }
-    ].forEach(corridor => this.corridorOverlays.push(new google.maps.Polyline({ map: this.layerMap('corridors'), path: corridor.points, strokeColor: corridor.color, strokeWeight: 4, strokeOpacity: .72 })));
-
-    const infrastructure = [
-      { name: 'Nongpoh road accessibility post', position: { lat: 25.9044, lng: 91.8789 }, detail: 'NH-6 · Road condition monitoring' },
-      { name: 'Umiam bridge corridor', position: { lat: 25.6758, lng: 91.8933 }, detail: 'Bridge approach · Accessibility checkpoint' },
-      { name: 'Teesta bridge inspection', position: { lat: 27.187, lng: 88.505 }, detail: 'Sikkim · Inspection due' }
-    ];
-    infrastructure.forEach(asset => {
-      const marker = new google.maps.Marker({
-        map: this.layerMap('infrastructure'), position: asset.position, title: asset.name,
-        label: { text: '＋', color: '#ffffff', fontSize: '12px', fontWeight: '700' }, icon: this.circleIcon('#f59e0b', 13)
-      });
-      marker.addListener('click', () => this.openInfo(asset.position, `<strong>${asset.name}</strong><br>${asset.detail}`));
-      this.infrastructureOverlays.push(marker);
-    });
+    ].forEach(corridor => new google.maps.Polyline({ map: this.map, path: corridor.points, strokeColor: corridor.color, strokeWeight: 4, strokeOpacity: .72 }));
   }
 
   private renderHazardAlerts(): void {
@@ -354,7 +295,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
       if (paths.length) {
         paths.forEach(path => {
           const polygon = new google.maps.Polygon({
-            map: this.layerMap('hazards'),
+            map: this.map,
             paths: path,
             strokeColor: color,
             strokeOpacity: alert.phase === 'FORECAST' ? .65 : .95,
@@ -371,7 +312,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
         });
       } else {
         const marker = new google.maps.Marker({
-          map: this.layerMap('hazards'),
+          map: this.map,
           position: { lat: alert.matchedLatitude, lng: alert.matchedLongitude },
           title: alert.title,
           label: { text: '!', color: '#ffffff', fontWeight: '700' },
@@ -441,7 +382,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
     this.clearVehicleMarkers();
     this.positionedVehicles.forEach(vehicle => {
       const marker = new google.maps.Marker({
-        map: this.layerMap('vehicles'),
+        map: this.map,
         position: { lat: vehicle.latitude!, lng: vehicle.longitude! },
         title: vehicle.name || vehicle.plateNumber || vehicle.id,
         label: { text: '🚚', fontSize: '18px' },
@@ -461,11 +402,11 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   private renderDemoPosition(): void {
     if (!this.map) return;
     const position = this.positionAlongRoute(this.demoProgress / 100);
-    if (!this.demoBaseRoute) this.demoBaseRoute = new google.maps.Polyline({ map: this.layerMap('prototype'), path: this.demoRoute, strokeColor: '#94a3b8', strokeWeight: 5, strokeOpacity: .55 });
-    if (!this.demoTravelledRoute) this.demoTravelledRoute = new google.maps.Polyline({ map: this.layerMap('prototype'), strokeColor: '#16a34a', strokeWeight: 6, strokeOpacity: .9 });
+    if (!this.demoBaseRoute) this.demoBaseRoute = new google.maps.Polyline({ map: this.map, path: this.demoRoute, strokeColor: '#94a3b8', strokeWeight: 5, strokeOpacity: .55 });
+    if (!this.demoTravelledRoute) this.demoTravelledRoute = new google.maps.Polyline({ map: this.map, strokeColor: '#16a34a', strokeWeight: 6, strokeOpacity: .9 });
     this.demoTravelledRoute.setPath(this.travelledRoute(this.demoProgress / 100));
     if (!this.demoMarker) {
-      this.demoMarker = new google.maps.Marker({ map: this.layerMap('prototype'), position, title: this.demoVehicleName, label: { text: '🚚', fontSize: '20px' }, icon: this.circleIcon('#22c55e', 21), zIndex: 50 });
+      this.demoMarker = new google.maps.Marker({ map: this.map, position, title: this.demoVehicleName, label: { text: '🚚', fontSize: '20px' }, icon: this.circleIcon('#22c55e', 21), zIndex: 50 });
       this.demoMarker.addListener('click', () => this.openInfo(this.demoMarker!.getPosition()!, `<strong>${this.escape(this.demoVehicleName)}</strong><br>Accelerated live-tracking demo`));
     } else {
       this.demoMarker.setPosition(position);
@@ -540,54 +481,6 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
     this.vehicleMarkers.clear();
   }
 
-  private layerMap(key: MapLayerKey): google.maps.Map | null {
-    return this.mapLayers.find(layer => layer.key === key)?.enabled ? this.map ?? null : null;
-  }
-
-  private enableLayer(key: MapLayerKey): void {
-    const layer = this.mapLayers.find(candidate => candidate.key === key);
-    if (!layer || layer.enabled) return;
-    layer.enabled = true;
-    this.applyLayerVisibility(key);
-    this.saveLayerState();
-  }
-
-  private applyLayerVisibility(key: MapLayerKey): void {
-    const map = this.layerMap(key);
-    if (key === 'vehicles') this.vehicleMarkers.forEach(marker => marker.setMap(map));
-    if (key === 'prototype') [this.demoMarker, this.demoBaseRoute, this.demoTravelledRoute].forEach(overlay => overlay?.setMap(map));
-    if (key === 'hazards') this.hazardOverlays.forEach(overlay => overlay.setMap(map));
-    if (key === 'infrastructure') this.infrastructureOverlays.forEach(overlay => overlay.setMap(map));
-    if (key === 'corridors') this.corridorOverlays.forEach(overlay => overlay.setMap(map));
-    if (key === 'checkpoints') this.checkpointOverlays.forEach(overlay => overlay.setMap(map));
-    if (!map) this.infoWindow?.close();
-  }
-
-  private clearStaticOverlays(): void {
-    this.infrastructureOverlays.forEach(overlay => overlay.setMap(null));
-    this.corridorOverlays.forEach(overlay => overlay.setMap(null));
-    this.checkpointOverlays.forEach(overlay => overlay.setMap(null));
-    this.infrastructureOverlays = [];
-    this.corridorOverlays = [];
-    this.checkpointOverlays = [];
-  }
-
-  private restoreLayerState(): void {
-    try {
-      const value = JSON.parse(localStorage.getItem('stockflowGoogleMapLayers') || '{}') as Partial<Record<MapLayerKey, boolean>>;
-      this.mapLayers.forEach(layer => {
-        if (typeof value[layer.key] === 'boolean') layer.enabled = value[layer.key]!;
-      });
-    } catch {
-      localStorage.removeItem('stockflowGoogleMapLayers');
-    }
-  }
-
-  private saveLayerState(): void {
-    const value = Object.fromEntries(this.mapLayers.map(layer => [layer.key, layer.enabled]));
-    localStorage.setItem('stockflowGoogleMapLayers', JSON.stringify(value));
-  }
-
   private hasUsablePosition(vehicle: FleetbaseVehicle): boolean {
     return vehicle.latitude !== null && vehicle.latitude !== undefined && vehicle.longitude !== null && vehicle.longitude !== undefined
       && Number.isFinite(vehicle.latitude) && Number.isFinite(vehicle.longitude)
@@ -602,5 +495,55 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
 
   private escape(value: string): string {
     return value.replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] || character);
+  }
+
+  toggleDistrictForecasts(): void {
+    this.showDistrictForecasts = !this.showDistrictForecasts;
+    if (this.map) {
+      if (this.showDistrictForecasts && !this.districtForecastsLoaded) {
+        this.loadDistrictForecasts();
+      } else {
+        this.map.data.setStyle((feature) => {
+          return { visible: this.showDistrictForecasts, ...this.getDistrictStyle(feature) };
+        });
+      }
+    }
+  }
+
+  private loadDistrictForecasts(): void {
+    if (!this.map || this.districtForecastsLoaded) return;
+    this.nerAdapter.getDistrictForecasts().subscribe(data => {
+      this.map!.data.addGeoJson(data as any);
+      this.map!.data.setStyle((feature) => {
+        return { visible: this.showDistrictForecasts, ...this.getDistrictStyle(feature) };
+      });
+      this.map!.data.addListener('click', (event: any) => {
+        if (!event.feature.getProperty('districtId')) return; // Ignore if not a district
+        this.activeEvidence = {
+          districtId: event.feature.getProperty('districtId'),
+          name: event.feature.getProperty('name'),
+          status: event.feature.getProperty('status'),
+          provenance: event.feature.getProperty('provenance')
+        };
+      });
+      this.districtForecastsLoaded = true;
+    });
+  }
+
+  closeEvidencePanel(): void {
+    this.activeEvidence = null;
+  }
+
+  private getDistrictStyle(feature: google.maps.Data.Feature): google.maps.Data.StyleOptions {
+    if (!feature.getProperty('districtId')) return {}; // Default style for non-district features
+    const status = feature.getProperty('status');
+    switch (status) {
+      case 'OPEN': return { strokeColor: '#22c55e', strokeWeight: 2, fillColor: '#22c55e', fillOpacity: 0.35 };
+      case 'CAUTION': return { strokeColor: '#f59e0b', strokeWeight: 2, fillColor: '#f59e0b', fillOpacity: 0.35 };
+      case 'RESTRICTED': return { strokeColor: '#ef4444', strokeWeight: 2, fillColor: '#ef4444', fillOpacity: 0.35 };
+      case 'ISOLATED': return { strokeColor: '#7e22ce', strokeWeight: 2, fillColor: '#7e22ce', fillOpacity: 0.35 };
+      case 'NO_DATA':
+      default: return { strokeColor: '#888888', strokeWeight: 2, fillColor: '#888888', fillOpacity: 0.35 };
+    }
   }
 }
