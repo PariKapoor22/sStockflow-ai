@@ -1,25 +1,85 @@
 :root {
-  --navy-950: #061838;
-  --navy-900: #09224f;
-  --navy-800: #12316c;
-  --indigo-600: #4f35e8;
-  --indigo-500: #684cff;
-  --blue-500: #1e88ff;
-  --green-500: #16b364;
-  --orange-500: #ff8a00;
-  --red-500: #f04438;
-  --cyan-500: #12a8c8;
-  --ink-900: #111827;
-  --ink-700: #344054;
-  --ink-500: #667085;
-  --surface: #ffffff;
-  --surface-soft: #f7f8fc;
-  --line: #e4e7ec;
-  --shadow: 0 8px 28px rgba(18, 40, 84, 0.08);
-  font-family: Inter, Arial, sans-serif;
+  --bg: #F7F5F0;
+  --bg-warm: #F2EEE6;
+  --card: #FFFFFF;
+  --border: #E9E4DA;
+  --text: #1C1B1A;
+  --text-muted: #8A8478;
+  --text-faint: #B5AFA2;
+  --copper: #B8703D;
+  --copper-dark: #9C5C2E;
+  --copper-10: #F3E7DA;
+  --copper-16: #EEDECB;
+  --success: #2F8F5B;
+  --success-10: #E4F1EA;
+  --danger: #C4483B;
+  --danger-10: #F8E7E4;
+  --warning: #C98A2C;
+  --warning-10: #F6EBD8;
+  
+  --icon-filter: none;
+  --ink-900: #14161C;
+  
+  font-family: 'Inter', Arial, sans-serif;
+  color: var(--text);
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: #f8f9fd; color: var(--ink-900); }
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+html, body { 
+  margin: 0; 
+  min-height: 100%; 
+  color: var(--text); 
+  background-color: var(--bg);
+  background-image: none;
+  background-attachment: fixed;
+}
+
 button, input, select { font: inherit; }
 button { cursor: pointer; }
+
+@keyframes fadeUp {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+.app-shell.dark-theme {
+  --bg: #0A0A0C;
+  --bg-warm: #14161C;
+  --card: #14161C;
+  --border: #232733;
+  --text: #F7F5F0;
+  --text-muted: #8A8478;
+  --text-faint: #4E4B45;
+  --copper: #B8703D;
+  --copper-dark: #E4BC8C;
+  --copper-10: rgba(184, 112, 61, 0.15);
+  --copper-16: rgba(184, 112, 61, 0.25);
+  --success: #3AC27B;
+  --success-10: rgba(58, 194, 123, 0.15);
+  --danger: #E55446;
+  --danger-10: rgba(229, 84, 70, 0.15);
+  --warning: #E09F3E;
+  --warning-10: rgba(224, 159, 62, 0.15);
+  --icon-filter: brightness(0) invert(1);
+  --ink-900: #F7F5F0;
+}

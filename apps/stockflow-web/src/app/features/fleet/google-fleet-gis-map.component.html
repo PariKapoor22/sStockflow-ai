@@ -10,6 +10,7 @@
       <button type="button" (click)="pauseDemo()" *ngIf="demoMode === 'running'">Pause</button>
       <button type="button" (click)="resetDemo()" *ngIf="demoMode !== 'idle'">Reset</button>
       <button type="button" (click)="loadHazardAlerts()" [disabled]="hazardLoading">{{ hazardLoading ? 'Checking alerts…' : 'Refresh hazards' }}</button>
+      <button type="button" (click)="toggleDistrictForecasts()" [class.active]="showDistrictForecasts">District forecasts</button>
       <button type="button" (click)="fitToNetwork()">Fit network</button>
     </div>
   </header>
@@ -61,6 +62,23 @@
     <div class="gps-notice" *ngIf="vehicles.length && !positionedVehicles.length && demoMode === 'idle' && !mapError">
       <strong>No live coordinates yet</strong><span>Connect Fleetbase Navigator or telematics. `(0,0)` positions are intentionally hidden.</span>
     </div>
+    <aside class="evidence-panel" *ngIf="activeEvidence">
+      <header>
+        <h3>{{ activeEvidence.name }}</h3>
+        <button type="button" class="close-btn" (click)="closeEvidencePanel()">&times;</button>
+      </header>
+      <div class="evidence-body">
+        <div class="evidence-section">
+          <span class="sf-status-badge status-{{ activeEvidence.status | lowercase }}">{{ activeEvidence.status.replace('_', ' ') }}</span>
+          <span class="classification-badge classification-{{ activeEvidence.provenance.classification | lowercase }}">{{ activeEvidence.provenance.classification }}</span>
+        </div>
+        <div class="evidence-section"><small>District ID</small><strong>{{ activeEvidence.districtId }}</strong></div>
+        <div class="evidence-section"><small>Source</small><strong>{{ activeEvidence.provenance.source }}</strong></div>
+        <div class="evidence-section"><small>Data validity</small><strong>{{ activeEvidence.provenance.validUntil | date:'medium' }}</strong></div>
+        <div class="evidence-section"><small>Confidence</small><strong>{{ activeEvidence.provenance.confidenceScore * 100 | number:'1.0-0' }}%</strong></div>
+        <p class="evidence-warning" *ngIf="activeEvidence.provenance.classification === 'MOCK'">This is a simulated scenario. Do not treat it as official field evidence.</p>
+      </div>
+    </aside>
   </div>
   <footer><span><b></b> Google Maps Platform · Fleetbase refresh every 15 seconds</span><span>Hazards show source and model provenance. Model outlooks do not replace official warnings; absence of a zone does not prove safety.</span></footer>
 </section>

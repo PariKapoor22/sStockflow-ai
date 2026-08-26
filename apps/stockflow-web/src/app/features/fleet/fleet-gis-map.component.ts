@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { FleetbaseVehicle } from '../../core/models/fleetbase.models';
+import { NerContractAdapterService } from '../../core/services/ner-contract-adapter.service';
 
 @Component({
   selector: 'sf-leaflet-fleet-gis-map',
@@ -20,6 +21,7 @@ export class LeafletFleetGisMapComponent implements AfterViewInit, OnChanges, On
   private readonly infrastructureLayer = L.layerGroup();
   private readonly routeLayer = L.layerGroup();
   private readonly demoLayer = L.layerGroup();
+  private readonly districtForecastLayer = L.layerGroup();
   private readonly vehicleMarkers = new Map<string, L.Marker>();
   private demoTimer?: number;
   private readonly demoRoute: L.LatLngTuple[] = [
@@ -36,6 +38,7 @@ export class LeafletFleetGisMapComponent implements AfterViewInit, OnChanges, On
   demoSpeed = 46;
   demoPosition: L.LatLng = L.latLng(this.demoRoute[0]);
   demoVehicleName = 'StockFlow Prototype Truck';
+  activeEvidence: any = null;
 
   get positionedVehicles(): FleetbaseVehicle[] {
     return this.vehicles.filter(vehicle => this.hasUsablePosition(vehicle));
@@ -60,9 +63,12 @@ export class LeafletFleetGisMapComponent implements AfterViewInit, OnChanges, On
     return 'Delivery completed';
   }
 
+  constructor(private readonly nerAdapter: NerContractAdapterService) {}
+
   ngAfterViewInit(): void {
     this.initializeMap();
     this.renderVehicles();
+    this.loadDistrictForecasts();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -105,7 +111,12 @@ export class LeafletFleetGisMapComponent implements AfterViewInit, OnChanges, On
     this.demoSpeed = 46;
     this.demoPosition = L.latLng(this.demoRoute[0]);
     this.demoLayer.clearLayers();
+    this.activeEvidence = null;
     if (returnToNetwork) this.fitToNetwork();
+  }
+
+  closeEvidencePanel(): void {
+    this.activeEvidence = null;
   }
 
   trackVehicle(vehicle: FleetbaseVehicle): void {
@@ -150,9 +161,11 @@ export class LeafletFleetGisMapComponent implements AfterViewInit, OnChanges, On
     this.infrastructureLayer.addTo(this.map);
     this.routeLayer.addTo(this.map);
     this.demoLayer.addTo(this.map);
+    this.districtForecastLayer.addTo(this.map);
     L.control.layers(undefined, {
       'Fleetbase GPS': this.vehicleLayer,
       'Prototype live tracker': this.demoLayer,
+      'District Forecasts': this.districtForecastLayer,
       'Risk overlays (demo)': this.riskLayer,
       'Roads & bridges': this.infrastructureLayer,
       'Essential-supply corridors': this.routeLayer
@@ -295,5 +308,34 @@ export class LeafletFleetGisMapComponent implements AfterViewInit, OnChanges, On
 
   private escape(value: string): string {
     return value.replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] || character);
+  }
+
+  private loadDistrictForecasts(): void {
+    this.nerAdapter.getDistrictForecasts().subscribe(data => {
+      L.geoJSON(data as any, {
+        style: (feature) => {
+          const status = feature?.properties?.status;
+          switch (status) {
+            case 'OPEN': return { color: '#22c55e', weight: 2, fillColor: '#22c55e', fillOpacity: 0.35 };
+            case 'CAUTION': return { color: '#f59e0b', weight: 2, fillColor: '#f59e0b', fillOpacity: 0.35 };
+            case 'RESTRICTED': return { color: '#ef4444', weight: 2, fillColor: '#ef4444', fillOpacity: 0.35 };
+            case 'ISOLATED': return { color: '#7e22ce', weight: 2, fillColor: '#7e22ce', fillOpacity: 0.35 };
+            case 'NO_DATA':
+            default: return { color: '#888888', weight: 2, fillColor: '#888888', fillOpacity: 0.35 };
+          }
+        },
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties;
+          layer.on('click', () => {
+            this.activeEvidence = {
+              districtId: props.districtId,
+              name: props.name,
+              status: props.status,
+              provenance: props.provenance
+            };
+          });
+        }
+      }).addTo(this.districtForecastLayer);
+    });
   }
 }
