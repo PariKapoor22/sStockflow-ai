@@ -1,17 +1,42 @@
 from mcp.server.fastmcp import FastMCP
-from .common import CARBON_API, FORECAST_API, OPTIMISATION_API, TENANT_ID, get_json, post_json
 
-mcp = FastMCP("StockFlow Intelligence MCP", host="127.0.0.1", port=8202, stateless_http=True, json_response=True)
+from .common import (
+    CARBON_API,
+    FORECAST_API,
+    OPTIMISATION_API,
+    TENANT_ID,
+    get_json,
+    post_json,
+)
+
+
+mcp = FastMCP(
+    "StockFlow Intelligence MCP",
+    host="127.0.0.1",
+    port=8202,
+    stateless_http=True,
+    json_response=True,
+)
+
 
 @mcp.tool()
-def forecast_demand(warehouse_id: str, sku_id: str, horizon_days: int = 30) -> dict:
-    """Calculates demand forecast. Computational only; no side effects."""
-    return post_json(f"{FORECAST_API}/api/v1/forecast", {
-        "tenant_id": TENANT_ID,
-        "warehouse_id": warehouse_id,
-        "sku_id": sku_id,
-        "horizon_days": horizon_days,
-    })
+def forecast_demand(
+    warehouse_id: str,
+    sku_id: str,
+    horizon_days: int = 30,
+) -> dict:
+    """Calculate demand forecast. Read-only operation."""
+
+    return post_json(
+        f"{FORECAST_API}/api/v1/forecast",
+        {
+            "tenant_id": TENANT_ID,
+            "warehouse_id": warehouse_id,
+            "sku_id": sku_id,
+            "horizon_days": horizon_days,
+        },
+    )
+
 
 @mcp.tool()
 def recommend_stock_transfer(
@@ -24,35 +49,165 @@ def recommend_stock_transfer(
     transport_cost: float,
     unit_value: float,
 ) -> dict:
-    """Calculates a transfer candidate. It does not create or execute a transfer."""
-    return post_json(f"{OPTIMISATION_API}/api/v1/recommend-transfer", {"tenant_id": TENANT_ID, "sku_id": sku_id, "source_warehouse_id": source_warehouse_id, "destination_warehouse_id": destination_warehouse_id, "source_available": source_available, "source_safety_stock": source_safety_stock, "destination_shortage": destination_shortage, "transport_cost": transport_cost, "unit_value": unit_value})
+    """Calculate a stock transfer candidate. Does not execute transfer."""
+
+    return post_json(
+        f"{OPTIMISATION_API}/api/v1/recommend-transfer",
+        {
+            "tenant_id": TENANT_ID,
+            "sku_id": sku_id,
+            "source_warehouse_id": source_warehouse_id,
+            "destination_warehouse_id": destination_warehouse_id,
+            "source_available": source_available,
+            "source_safety_stock": source_safety_stock,
+            "destination_shortage": destination_shortage,
+            "transport_cost": transport_cost,
+            "unit_value": unit_value,
+        },
+    )
+
 
 @mcp.tool()
 def get_emission_factors() -> dict:
-    """Returns configured, auditable vehicle and fuel emission factors."""
-    return get_json(f"{CARBON_API}/api/v1/carbon/emission-factors")
+    """Return configured vehicle and fuel emission factors."""
+
+    return get_json(
+        f"{CARBON_API}/api/v1/carbon/emission-factors"
+    )
+
 
 @mcp.tool()
-def calculate_carbon(distance_km: float, vehicle_type: str, load_kg: float, capacity_kg: float, trips: int = 1, baseline_distance_km: float | None = None) -> dict:
-    """Calculates transparent prototype CO2e using distance, vehicle, load and capacity."""
-    payload = {"distanceKm": distance_km, "vehicleType": vehicle_type, "loadKg": load_kg, "capacityKg": capacity_kg, "trips": trips}
+def calculate_carbon(
+    distance_km: float,
+    vehicle_type: str,
+    load_kg: float,
+    capacity_kg: float,
+    trips: int = 1,
+    baseline_distance_km: float | None = None,
+) -> dict:
+    """Calculate transparent prototype CO2e."""
+
+    payload = {
+        "distanceKm": distance_km,
+        "vehicleType": vehicle_type,
+        "loadKg": load_kg,
+        "capacityKg": capacity_kg,
+        "trips": trips,
+    }
+
     if baseline_distance_km is not None:
         payload["baselineDistanceKm"] = baseline_distance_km
-    return post_json(f"{CARBON_API}/api/v1/carbon/calculate", payload)
+
+    return post_json(
+        f"{CARBON_API}/api/v1/carbon/calculate",
+        payload,
+    )
+
 
 @mcp.tool()
-def optimise_transfer_route(origin: str, destination: str, load_kg: float, capacity_kg: float, baseline_km: float, vehicle: str = "diesel", objective: str = "Balanced cost and carbon", priority: str = "High") -> dict:
-    """Ranks a transfer route for capacity, cost and carbon; never dispatches a vehicle."""
-    return post_json(f"{CARBON_API}/api/v1/routes/optimise", {
-        "objective": objective,
-        "vehicleType": vehicle,
-        "routes": [{"id": "copilot-candidate", "lane": f"{origin} to {destination}", "stops": [origin, destination], "vehicle": vehicle, "loadKg": load_kg, "capacityKg": capacity_kg, "baselineKm": baseline_km, "priority": priority, "status": "Draft"}],
-    })
+def optimise_transfer_route(
+    origin: str,
+    destination: str,
+    load_kg: float,
+    capacity_kg: float,
+    baseline_km: float,
+    vehicle: str = "cold-chain-electric",
+    objective: str = "Safest route",
+    priority: str = "High",
+    cold_chain_required: bool = True,
+    cold_chain_available: bool = True,
+    vehicle_available: bool = True,
+    warehouse_stock_kg: float = 1200,
+    promised_delivery_minutes: int | None = 1200,
+    departure_minutes: int = 480,
+) -> dict:
+    """
+    Optimize a logistics route using StockFlow's
+    risk-aware route optimization service.
+
+    Supports:
+    - vehicle payload capacity
+    - vehicle availability
+    - cold-chain requirements
+    - warehouse stock
+    - pickup and delivery locations
+    - promised delivery windows
+    - ETA
+    - transport cost
+    - carbon emissions
+    - flood risk
+    - landslide risk
+    - road-block risk
+    - shortest-path routing
+
+    Read-only operation. Does not dispatch a vehicle.
+    """
+
+    route = {
+        "id": "MCP-NER-ROUTE",
+        "lane": f"{origin}-{destination}",
+        "stops": [origin, destination],
+        "vehicle": vehicle,
+
+        "loadKg": load_kg,
+        "capacityKg": capacity_kg,
+        "baselineKm": baseline_km,
+
+        "priority": priority,
+        "status": "Draft",
+
+        "pickupNode": origin,
+        "deliveryNode": destination,
+
+        "vehicleAvailable": vehicle_available,
+
+        "coldChainRequired": cold_chain_required,
+        "coldChainAvailable": cold_chain_available,
+
+        "warehouseStockKg": warehouse_stock_kg,
+
+        "promisedDeliveryMinutes": promised_delivery_minutes,
+        "departureMinutes": departure_minutes,
+    }
+
+    return post_json(
+        f"{CARBON_API}/api/v1/routes/optimise",
+        {
+            "objective": objective,
+            "vehicleType": vehicle,
+            "routes": [route],
+        },
+        TENANT_ID,
+    )
+
 
 @mcp.tool()
-def recommend_sustainable_transfer(source_available: float, source_safety_stock: float, destination_shortage: float, vehicle_capacity: float, distance_km: float, vehicle_type: str, unit_value: float, transport_cost: float) -> dict:
-    """Calculates a read-only transfer recommendation with safety, capacity, financial and carbon constraints."""
-    return post_json(f"{CARBON_API}/api/v1/transfers/recommend", {"sourceAvailable": source_available, "sourceSafetyStock": source_safety_stock, "destinationShortage": destination_shortage, "vehicleCapacity": vehicle_capacity, "distanceKm": distance_km, "vehicleType": vehicle_type, "unitValue": unit_value, "transportCost": transport_cost})
+def recommend_sustainable_transfer(
+    source_available: float,
+    source_safety_stock: float,
+    destination_shortage: float,
+    vehicle_capacity: float,
+    distance_km: float,
+    vehicle_type: str,
+    unit_value: float,
+    transport_cost: float,
+) -> dict:
+    """Calculate a read-only sustainable transfer recommendation."""
+
+    return post_json(
+        f"{CARBON_API}/api/v1/transfers/recommend",
+        {
+            "sourceAvailable": source_available,
+            "sourceSafetyStock": source_safety_stock,
+            "destinationShortage": destination_shortage,
+            "vehicleCapacity": vehicle_capacity,
+            "distanceKm": distance_km,
+            "vehicleType": vehicle_type,
+            "unitValue": unit_value,
+            "transportCost": transport_cost,
+        },
+    )
+
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
