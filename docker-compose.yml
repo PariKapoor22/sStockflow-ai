@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14
+    container_name: stockflow-db
+    environment:
+      POSTGRES_DB: stockflow_phase2
+      POSTGRES_USER: stockflow_app
+      POSTGRES_PASSWORD: stockflow_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockflow_app -d stockflow_phase2"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  core-api:
+    build:
+      context: ./services/stockflow-core-api
+    container_name: stockflow-core-api
+    ports:
+      - "8080:8080"
+    environment:
+      - STOCKFLOW_DB_URL=jdbc:postgresql://db:5432/stockflow_phase2
+      - STOCKFLOW_DB_USERNAME=stockflow_app
+      - STOCKFLOW_DB_PASSWORD=stockflow_dev
+      - SPRING_PROFILES_ACTIVE=phase2
+    depends_on:
+      db:
+        condition: service_healthy
+
+  copilot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stockflow-copilot
+    ports:
+      - "8300:8300"
+    environment:
+      - PORT=8300
+    volumes:
+      - .:/app
+
+  carbon:
+    build:
+      context: ./services/carbon-service
+      dockerfile: Dockerfile
+    container_name: stockflow-carbon
+    ports:
+      - "8400:8400"
+    environment:
+      - PORT=8400
+    volumes:
+      - ./services/carbon-service:/app
+    command: ["sh", "-c", "uvicorn stockflow_carbon.main:app --host 0.0.0.0 --port $${PORT:-8400} --reload"]
+
+  web:
+    build:
+      context: ./apps/stockflow-web
+    container_name: stockflow-web
+    ports:
+      - "4200:4200"
+    depends_on:
+      - core-api
+      - copilot
+    volumes:
+      - ./apps/stockflow-web:/app
+      - /app/node_modules
+
+volumes:
+  pgdata:
