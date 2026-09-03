@@ -12,19 +12,41 @@
     </div>
 
     <nav class="nav-scroll">
-      <section *ngFor="let group of navGroups" class="nav-group">
-        <div class="nav-title" *ngIf="group.title">{{ group.title }}</div>
+      <section *ngFor="let group of navGroups" class="nav-group" [class.has-title]="!!group.title">
         <button
-          *ngFor="let item of group.items"
-          class="nav-item"
-          [class.active]="activeView === item.view"
-          (click)="selectView(item.view)">
-          <span class="nav-icon">
-            <img *ngIf="item.icon.includes('.png')" [src]="item.icon" alt="" />
-            <ng-container *ngIf="!item.icon.includes('.png')">{{ item.icon }}</ng-container>
+          *ngIf="group.title"
+          type="button"
+          class="nav-group-toggle"
+          [class.expanded]="isNavGroupExpanded(group.title)"
+          [class.active]="isNavGroupActive(group)"
+          [attr.aria-expanded]="isNavGroupExpanded(group.title)"
+          [attr.aria-controls]="'nav-group-' + group.title.toLowerCase()"
+          (click)="toggleNavGroup(group.title)">
+          <span class="nav-group-heading">
+            <span class="nav-group-icon" aria-hidden="true">
+              <img *ngIf="group.icon" [src]="group.icon" alt="" />
+            </span>
+            <span class="nav-group-title">{{ group.title }}</span>
           </span>
-          <span class="nav-label">{{ item.label }}</span>
+          <span class="nav-group-chevron" aria-hidden="true">⌄</span>
         </button>
+
+        <div
+          class="nav-group-items"
+          [class.collapsed]="!!group.title && !isNavGroupExpanded(group.title)"
+          [attr.id]="group.title ? 'nav-group-' + group.title.toLowerCase() : null">
+          <button
+            *ngFor="let item of group.items"
+            class="nav-item"
+            [class.active]="activeView === item.view"
+            (click)="selectView(item.view)">
+            <span class="nav-icon">
+              <img *ngIf="item.icon.includes('.png')" [src]="item.icon" alt="" />
+              <ng-container *ngIf="!item.icon.includes('.png')">{{ item.icon }}</ng-container>
+            </span>
+            <span class="nav-label">{{ item.label }}</span>
+          </button>
+        </div>
       </section>
     </nav>
 
@@ -149,7 +171,6 @@
       <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
         <div class="welcome-row">
           <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! </h1><p>Here’s what’s happening with your inventory today.</p></div>
-          <button type="button" class="ask-ai" (click)="toggleCopilot($event)"> <span>Ask StockFlow AI</span></button>
         </div>
 
         <section class="kpi-grid">

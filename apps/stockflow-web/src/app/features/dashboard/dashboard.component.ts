@@ -65,6 +65,12 @@ interface NavigationItem {
   view: ViewId;
 }
 
+interface NavigationGroup {
+  title: string;
+  icon?: string;
+  items: NavigationItem[];
+}
+
 type TopbarPanel = 'notifications' | 'help' | 'profile' | null;
 type NotificationTone = 'critical' | 'warning' | 'info' | 'success';
 type MasterDataEditor = 'warehouse' | 'sku' | 'batch' | null;
@@ -169,6 +175,12 @@ export class DashboardComponent implements OnInit {
   globalSearch = '';
   sidebarCollapsed = true;
   sidebarHoverExpanded = false;
+  readonly expandedNavGroups: Record<string, boolean> = {
+    INTELLIGENCE: false,
+    OPERATIONS: false,
+    INVENTORY: false,
+    ADMIN: false
+  };
   isPillHovered = false;
   private pillHoverTimeout?: any;
 
@@ -288,13 +300,14 @@ export class DashboardComponent implements OnInit {
     { value: 'DEMAND_SURGE', label: 'Demand surge' }
   ];
 
-  readonly navGroups: { title: string; items: NavigationItem[] }[] = [
+  readonly navGroups: NavigationGroup[] = [
     {
       title: '',
       items: [{ label: 'Dashboard', icon: 'assets/nav-icons/icons8-home-48.png', view: 'dashboard' }]
     },
     {
       title: 'INTELLIGENCE',
+      icon: 'assets/nav-icons/icons8-graph-50.png',
       items: [
         { label: 'Demand Forecast', icon: 'assets/nav-icons/icons8-graph-50.png', view: 'demand' },
         { label: 'Inventory Analytics', icon: 'assets/nav-icons/icons8-analysis-50.png', view: 'inventory' },
@@ -304,6 +317,7 @@ export class DashboardComponent implements OnInit {
     },
     {
       title: 'OPERATIONS',
+      icon: 'assets/nav-icons/icons8-logistics-32-2.png',
       items: [
         { label: 'Vehicle Fleet', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'fleet' },
         { label: 'Transfers', icon: 'assets/nav-icons/icons8-transfer-30.png', view: 'transfers' },
@@ -316,6 +330,7 @@ export class DashboardComponent implements OnInit {
     },
     {
       title: 'INVENTORY',
+      icon: 'assets/nav-icons/icons8-inventory-30.png',
       items: [
         { label: 'Warehouses', icon: 'assets/nav-icons/icons8-country-house-48.png', view: 'warehouses' },
         { label: 'Products & SKUs', icon: 'assets/nav-icons/icons8-product-30.png', view: 'products' },
@@ -324,6 +339,7 @@ export class DashboardComponent implements OnInit {
     },
     {
       title: 'ADMIN',
+      icon: 'assets/nav-icons/icons8-settings-50.png',
       items: [
         { label: 'Demo Activity', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'activity' },
         { label: 'Users & Roles', icon: 'assets/nav-icons/icons8-user-30.png', view: 'users' },
@@ -354,6 +370,7 @@ export class DashboardComponent implements OnInit {
 
   selectView(view: ViewId): void {
     this.closeTopbarPanels();
+    this.expandNavGroupForView(view);
     this.activeView = view;
     this.pageError = '';
     this.pageNotice = '';
@@ -709,6 +726,26 @@ export class DashboardComponent implements OnInit {
 
   riskTypeLabel(type: string): string {
     return type.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, value => value.toUpperCase());
+  }
+
+  toggleNavGroup(title: string): void {
+    if (!title) return;
+    this.expandedNavGroups[title] = !this.expandedNavGroups[title];
+  }
+
+  isNavGroupExpanded(title: string): boolean {
+    return !title || this.expandedNavGroups[title] === true;
+  }
+
+  isNavGroupActive(group: NavigationGroup): boolean {
+    return group.items.some(item => item.view === this.activeView);
+  }
+
+  private expandNavGroupForView(view: ViewId): void {
+    const group = this.navGroups.find(candidate =>
+      candidate.title && candidate.items.some(item => item.view === view)
+    );
+    if (group?.title) this.expandedNavGroups[group.title] = true;
   }
 
   warehouseDisplayId(warehouseId: string): string {
