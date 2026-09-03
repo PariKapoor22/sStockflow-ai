@@ -36,6 +36,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Frontend Increment 2 | Warehouses, products/SKUs, batches, and imports | Complete |
 | Frontend Increment 3 | Predictive-demand forecasting workspace | Complete locally |
 | Frontend authentication | Supabase login, signup, session recovery, sign-out, and password recovery | Complete and deployed |
+| Frontend navigation | Icon-led collapsible `INTELLIGENCE`, `OPERATIONS`, `INVENTORY`, and `ADMIN` groups with responsive compact mode | Complete locally |
 | Frontend operations UX | Transfers, purchase planning, orders, returns, route and sustainability views | Complete interactive UI |
 | Frontend admin UX | Users and roles, settings, sustainability policy, security, and integration health | Complete interactive UI |
 | Phase 3 Increment 5A | Forecasting foundation and backtesting | Complete |
@@ -100,7 +101,16 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 - Displays the authenticated user's profile metadata and provides sign-out
 - Adds the Supabase user access token to backend API requests as `Authorization: Bearer <token>`
 
-The Core API and Copilot validate Supabase JWTs. The Core API verifies active tenant membership before trusting `X-Tenant-ID`, applies role permissions to write operations, supports optional warehouse scopes, and exposes `/api/v1/security/me` plus administrator membership management APIs. On a new tenant, the first authenticated member can be bootstrapped as administrator only when the explicit deployment flag is enabled.
+In secured deployments, the Core API validates Supabase JWTs, verifies active membership before accepting `X-Tenant-ID`, and permission-gates mutating operations. The Copilot host separately validates Supabase JWTs, derives tenant scope from trusted token claims or an explicitly configured server-side default, and forwards the bearer token to Core API-backed MCP tools. The Core API exposes `/api/v1/security/me` plus administrator membership-management APIs; first-user administrator bootstrap remains opt-in.
+
+### Multi-tenancy and role-based access control
+
+- Tenant-owned operational records carry a `tenant_id`, and Core API queries scope records to the authenticated tenant.
+- `X-Tenant-ID` selects a tenant context; it is not authorization by itself. With production security enabled, the Core API accepts it only after validating the Supabase JWT and an active database-backed tenant membership.
+- Built-in roles include Administrator, Inventory Manager, Warehouse Manager, Purchase Manager, Logistics Manager, Sustainability Analyst, Approver, and Viewer.
+- Permissions cover inventory and risk reads, forecast execution, imports, transfer and purchase proposals, independent approval, routing, sustainability, execution, order management, and user administration.
+- Optional warehouse assignments narrow operational access within a tenant, while security audit events record membership changes and denied permission checks.
+- Local development is intentionally permissive. Any externally reachable Core API deployment must set `STOCKFLOW_SECURITY_ENABLED=true` and configure the Supabase JWT issuer.
 
 ---
 
@@ -137,11 +147,13 @@ TEN-FRESH-MART
 TEN-URBAN-TRADE
 ```
 
-Every tenant-scoped business API requires:
+Tenant-scoped services use the following header to carry tenant context:
 
 ```http
 X-Tenant-ID: TEN-ACME-PHARMA
 ```
+
+The header alone is not proof of access. A secured Core API request must also carry a valid JWT whose subject has an active membership in that tenant. The authenticated Copilot endpoint derives its tenant scope from verified JWT metadata or an explicitly configured server-side default.
 
 ---
 
@@ -686,6 +698,8 @@ curl ^
 Frontend UX includes:
 
 - Dark and light themes
+- Icon-led collapsible navigation groups for Intelligence, Operations, Inventory, and Admin, with active-group highlighting and automatic expansion when a workspace is selected
+- Compact sidebar mode that displays the group symbols while preserving expandable navigation on larger layouts
 - Responsive mobile navigation
 - Responsive filters and tables
 - Functional notification, help, and profile panels
@@ -694,6 +708,7 @@ Frontend UX includes:
 - Improved dark-mode contrast
 - Responsive operations workspaces with interactive filters and local demo-state actions
 - Responsive admin workspaces with role controls, policy settings, and clearly labelled local demo-state actions
+- StockFlow Copilot remains available through its floating launcher and popover; only the redundant dashboard-header AI button has been removed
 
 Notifications remain frontend-managed. Signed-in user identity and session state come from Supabase Auth.
 
@@ -709,9 +724,13 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Forecast accuracy degradation alerts are not implemented.
 - OR-Tools vehicle routing is complete locally. Live traffic requires `GOOGLE_MAPS_BACKEND_API_KEY`; without it the response and UI disclose the geodesic fallback. Production-scale dispatch still needs real fleet availability, orders, road closures and telemetry feeds.
 - LHASA and GloFAS/LISFLOOD require externally prepared GeoJSON model-output feeds. The adapters are integrated, but a live source is not bundled with the repository.
-- Users & Roles remains a frontend preview; the secured tenant membership and role-assignment APIs are deployed, but the UI is not connected to them yet.
+- The tenant picker is a static prototype list, while Users & Roles and Settings remain frontend previews. The UI does not yet discover the signed-in user's memberships, restrict tenant choices through `/api/v1/security/me`, or call the implemented membership-management APIs.
+- Supabase signup creates an authenticated identity but does not automatically grant tenant membership; an administrator must provision it unless the normally disabled first-user bootstrap is explicitly enabled.
 - Transfer and purchase proposals can be persisted and independently approved, but approval does not execute inventory movement, dispatch a vehicle or place a supplier order.
-- Supabase JWT validation and tenant RBAC are deployed for the Core API and Copilot. The Carbon API still requires the same JWT membership enforcement before all operational services share one security boundary.
+- Supabase JWT validation and tenant RBAC are implemented for the Core API and Copilot, but the Core API configuration defaults to permissive local mode unless `STOCKFLOW_SECURITY_ENABLED=true` is supplied by the deployment. Protected local workflows receive a synthetic `LOCAL_ADMIN` context.
+- RBAC currently concentrates on mutating workflows and membership administration. Most general read endpoints require active tenant membership when security is enabled but do not yet enforce their domain-specific read permission codes, and warehouse scopes are not universal across every read API.
+- The Carbon and optimisation APIs currently trust tenant/user headers and must remain private behind the Core API until JWT or authenticated service-to-service enforcement is added.
+- Tenant isolation is primarily enforced in application queries. PostgreSQL Row-Level Security remains a defence-in-depth production-hardening item.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
 - The MCP Copilot is deployed. Gemini fallback requires `GEMINI_API_KEY` to be configured on the Cloud Run Copilot service.
 
@@ -857,6 +876,8 @@ Implemented:
 - No secret or `service_role` credentials committed to source control; the browser-safe Supabase publishable key is intentionally public
 - Supabase user JWT validation at the backend boundary before trusting authenticated requests
 - Active database-backed tenant membership and role permissions
+- Tenant membership verification before accepting a caller-selected `X-Tenant-ID`
+- Optional warehouse-level access scopes for operational actions
 - First-user administrator bootstrap disabled unless explicitly configured
 - Human approval for high-value actions
 - Read-only AI tools by default
