@@ -448,9 +448,10 @@ Some future folders may still be placeholders until their increments are impleme
 - Java 17
 - Maven 3.9+
 - Node.js and npm
-- PostgreSQL 18
 - Python 3
+- [`uv`](https://docs.astral.sh/uv/) for the Python services
 - Git
+- PostgreSQL 18 only when running the persistent `phase2` profile; the default local launcher uses an in-memory H2 database
 
 Verified local ports:
 
@@ -465,7 +466,53 @@ Verified local ports:
 
 ---
 
-## Local database configuration
+## Run the complete application locally
+
+The recommended Windows launcher starts StatsForecast, decision intelligence/OR-Tools, the Spring Boot Core API, and the Angular website from one Command Prompt. It keeps their output in timestamped log files and stops the processes it started when you press `Ctrl+C`.
+
+From the repository root:
+
+```cmd
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair"
+RUN_ALL_WINDOWS.cmd
+```
+
+Keep that Command Prompt open. When all readiness checks pass, open:
+
+```text
+http://localhost:4200
+```
+
+The first run can take several minutes while Maven, npm, and `uv` resolve dependencies. The launcher reuses a service if its expected port is already occupied. Runtime logs are written under:
+
+```text
+.stockflow\logs\<timestamp>\
+```
+
+To check prerequisites and launcher files without starting the services:
+
+```cmd
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-all-windows.ps1 -CheckOnly
+```
+
+The single-window launcher skips the Core API test suite during startup. Run the tests separately before committing or deploying changes.
+
+### Optional local environment file
+
+The launcher scripts load `.env` from the repository root when it exists. Create it from the safe example, then replace only the values needed on your machine:
+
+```cmd
+copy .env.example .env
+notepad .env
+```
+
+Do not commit `.env`. Google Maps, Fleetbase, and other external integrations remain disabled or use a clearly identified fallback until their server-side credentials are configured.
+
+### Local database configuration
+
+The default `sprint1` profile uses an in-memory H2 database populated with demo data, so PostgreSQL is not required for the one-command prototype run. Data is recreated when the Core API restarts.
+
+To use persistent PostgreSQL data, add `SPRING_PROFILES_ACTIVE=phase2` to `.env` and configure:
 
 Example local environment:
 
@@ -488,17 +535,19 @@ Never commit production passwords or database URLs containing embedded credentia
 
 ---
 
-## Run Increment 5B.1 locally
+## Run services individually
 
-From the repository root:
+Use this only when debugging a particular service. Open a separate Command Prompt for each command and run them from the repository root:
 
 ```cmd
-cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4
-
-run-core-api-phase3-forecast-calibration-windows.cmd
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair"
+run-forecasting-windows.cmd
+run-optimisation-windows.cmd
+run-core-api-windows.cmd
+run-web-windows.cmd
 ```
 
-Expected startup:
+Expected Core API startup:
 
 ```text
 Tomcat started on port 8080
@@ -511,7 +560,7 @@ Health check:
 curl http://localhost:8080/actuator/health
 ```
 
-Run the calibration verification:
+Optional calibration verification:
 
 ```cmd
 verify-forecast-calibration-api-windows.cmd
@@ -522,18 +571,15 @@ verify-forecast-calibration-api-windows.cmd
 ## Run backend tests
 
 ```cmd
-cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4\services\stockflow-core-api
-
-"C:\Users\oveyj\Tools\apache-maven-3.9.16\bin\mvn.cmd" ^
-  -Dkotlin.compiler.daemon=false clean test
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair"
+call configure-maven-windows.cmd
+cd services\stockflow-core-api
+mvn -Dkotlin.compiler.daemon=false clean test
 ```
 
-Current expected result:
+Expected result:
 
 ```text
-Tests run: 20
-Failures: 0
-Errors: 0
 BUILD SUCCESS
 ```
 
@@ -542,7 +588,7 @@ BUILD SUCCESS
 ## Run the frontend
 
 ```cmd
-cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4\apps\stockflow-web
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair\apps\stockflow-web"
 
 npm install
 npm start
