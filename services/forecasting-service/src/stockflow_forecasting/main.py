@@ -5,9 +5,20 @@ from math import sqrt
 from typing import Callable, Literal
 
 import numpy as np
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 from statsforecast.models import AutoARIMA, AutoETS, CrostonOptimized, SeasonalNaive
+
+from .governance import PROMOTION_WAPE_IMPROVEMENT_THRESHOLD, evaluate_promotion
+from .hourly_aggregator import DEBOUNCE_WINDOW_SECONDS, HourlyDemandAggregator
+from .schemas import (
+    BatchDemandEventsRequest,
+    DemandEvent,
+    OnlineModelHealthResponse,
+    PositionPromotionResult,
+    ProvisionalForecastResponse,
+)
+from .state_store import MINIMUM_ONLINE_TRAINING_OBSERVATIONS, OnlineStateStore
 
 
 app = FastAPI(
@@ -162,6 +173,10 @@ def candidate_metrics(request: CandidateRequest, model_code: ModelCode) -> Candi
     )
 
 
+online_store = OnlineStateStore()
+hourly_aggregator = HourlyDemandAggregator()
+
+
 @app.get("/health")
 def health() -> dict:
     return {
@@ -169,6 +184,7 @@ def health() -> dict:
         "service": "stockflow-statsforecast",
         "version": app.version,
         "engineVersion": version("statsforecast"),
+        "riverVersion": version("river"),
     }
 
 
@@ -197,3 +213,131 @@ def forecast_candidates(
         candidates=sorted(candidates, key=lambda item: (item.selectionScore, item.wape, item.modelCode)),
         failures=failures,
     )
+
+
+@app.post("/api/v1/forecast/online/events")
+def ingest_demand_event(
+    event: DemandEvent,
+    tenant_id: str = Header(alias="X-Tenant-ID"),
+) -> dict:
+    if tenant_id.strip() != event.tenantId.strip():
+        raise HTTPException(status_code=403, detail="X-Tenant-ID does not match the event tenant")
+
+    # Ingest into hourly bucket aggregator
+    hourly_aggregator.ingest(event)
+
+    # Ingest into online state store (idempotent)
+    is_new, message = online_store.ingest_event(event)
+
+    return {
+        "eventId": event.eventId,
+        "tenantId": event.tenantId,
+        "warehouseId": event.warehouseId,
+        "skuId": event.skuId,
+        "ingested": is_new,
+        "message": message,
+        "debounceWindowSeconds": DEBOUNCE_WINDOW_SECONDS,
+    }
+
+
+@app.get("/api/v1/forecast/provisional", response_model=ProvisionalForecastResponse)
+def provisional_forecast(
+    warehouse_id: str = Query(..., min_length=1),
+    sku_id: str = Query(..., min_length=1),
+    horizon_days: int = Query(default=7, ge=1, le=90),
+    tenant_id: str = Header(alias="X-Tenant-ID"),
+) -> ProvisionalForecastResponse:
+    tenant = tenant_id.strip()
+    if not tenant:
+        raise HTTPException(status_code=403, detail="X-Tenant-ID header is required")
+
+    response = online_store.generate_provisional_forecast(
+        tenant_id=tenant,
+        warehouse_id=warehouse_id,
+        sku_id=sku_id,
+        horizon_days=horizon_days,
+    )
+
+    # Determine freshness status from hourly aggregator
+    freshness = hourly_aggregator.get_freshness(tenant, warehouse_id, sku_id)
+    if response.trainingObservations == 0:
+        freshness = "UNINITIALIZED"
+    response.freshnessStatus = freshness
+
+    # Record forecast generation timestamp
+    hourly_aggregator.record_forecast_generation(tenant, warehouse_id, sku_id)
+
+    return response
+
+
+@app.get("/api/v1/forecast/online/health", response_model=OnlineModelHealthResponse)
+def online_health() -> OnlineModelHealthResponse:
+    stats = online_store.stats()
+    return OnlineModelHealthResponse(
+        status="UP",
+        riverVersion=version("river"),
+        activePositionsCount=stats["activePositionsCount"],
+        totalEventsProcessed=stats["totalEventsProcessed"],
+        checkpointDir=stats["checkpointDir"],
+        persistenceMode=stats["persistenceMode"],
+        minimumTrainingObservations=stats["minimumTrainingObservations"],
+    )
+
+
+class StoreValidatedForecastRequest(BaseModel):
+    tenantId: str
+    warehouseId: str
+    skuId: str
+    forecast: list[float] = Field(min_length=1)
+
+
+@app.post("/api/v1/forecast/online/validated")
+def record_validated_forecast(
+    request: StoreValidatedForecastRequest,
+    tenant_id: str = Header(alias="X-Tenant-ID"),
+) -> dict:
+    if tenant_id.strip() != request.tenantId.strip():
+        raise HTTPException(status_code=403, detail="X-Tenant-ID does not match the request tenant")
+
+    online_store.record_validated_forecast(
+        tenant_id=request.tenantId,
+        warehouse_id=request.warehouseId,
+        sku_id=request.skuId,
+        forecast=request.forecast,
+    )
+    return {
+        "status": "RECORDED",
+        "tenantId": request.tenantId,
+        "warehouseId": request.warehouseId,
+        "skuId": request.skuId,
+        "forecastPoints": len(request.forecast),
+    }
+
+
+class EvaluatePromotionRequest(BaseModel):
+    tenantId: str
+    warehouseId: str
+    skuId: str
+    riverActuals: list[float]
+    riverPredictions: list[float]
+    statsforecastWape: float
+    wapeThreshold: float = PROMOTION_WAPE_IMPROVEMENT_THRESHOLD
+
+
+@app.post("/api/v1/forecast/online/evaluate-promotion", response_model=PositionPromotionResult)
+def evaluate_model_promotion(
+    request: EvaluatePromotionRequest,
+    tenant_id: str = Header(alias="X-Tenant-ID"),
+) -> PositionPromotionResult:
+    if tenant_id.strip() != request.tenantId.strip():
+        raise HTTPException(status_code=403, detail="X-Tenant-ID does not match the request tenant")
+
+    return evaluate_promotion(
+        warehouse_id=request.warehouseId,
+        sku_id=request.skuId,
+        river_actuals=request.riverActuals,
+        river_predictions=request.riverPredictions,
+        statsforecast_wape=request.statsforecastWape,
+        threshold=request.wapeThreshold,
+    )
+
