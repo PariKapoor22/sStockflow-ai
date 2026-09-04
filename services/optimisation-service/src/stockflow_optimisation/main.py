@@ -188,8 +188,11 @@ def anomalies(request: AnomalyRequest) -> dict:
     return {"tenantId": request.tenantId, **result}
 
 
+HazardProviderName = Literal["LHASA", "GLOFAS", "STOCKFLOW_HAZARD"]
+
+
 @app.get("/api/v1/hazards/model-outlooks")
-async def model_hazards(provider: list[str] = Query(default=["LHASA", "GLOFAS"])) -> dict:
+async def model_hazards(provider: list[HazardProviderName] = Query(default=["LHASA", "GLOFAS"])) -> dict:
     try:
         return await load_hazards(list(dict.fromkeys(provider)))
     except Exception as error:

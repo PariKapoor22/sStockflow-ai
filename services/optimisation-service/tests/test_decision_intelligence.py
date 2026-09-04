@@ -253,3 +253,54 @@ def test_linestring_hazard_applies_risk_penalty_to_route():
     # Imphal Hub is over 200km away, should remain 0.0
     assert imphal_stop["landslideRisk"] == 0.0
 
+
+def test_apply_hazard_alerts_preserves_existing_stop_details_and_populates_missing():
+    # Case A: Route with pre-existing stopDetails (custom demand and tag)
+    existing_details = [
+        {"name": "Guwahati Central", "latitude": 26.1445, "longitude": 91.7362, "demandKg": 750, "customTag": "KEEP_ME"},
+        {"name": "Shillong Hub", "latitude": 25.5788, "longitude": 91.8933, "demandKg": 250, "customTag": "KEEP_ME_TOO"}
+    ]
+    payload_a = {
+        "routes": [{
+            "id": "RTE-A",
+            "loadKg": 1000,
+            "stops": ["Guwahati Central", "Shillong Hub"],
+            "stopDetails": existing_details
+        }]
+    }
+    apply_hazard_alerts(payload_a, [])
+    # Verified: existing stopDetails list and custom attributes remain unmodified
+    stops_a = payload_a["routes"][0]["stopDetails"]
+    assert len(stops_a) == 2
+    assert stops_a[0]["customTag"] == "KEEP_ME"
+    assert stops_a[0]["demandKg"] == 750
+    assert stops_a[1]["customTag"] == "KEEP_ME_TOO"
+
+    # Case B: Route with NO stopDetails (only stops names)
+    payload_b = {
+        "routes": [{
+            "id": "RTE-B",
+            "loadKg": 1000,
+            "stops": ["Guwahati Central", "Shillong Hub"]
+        }]
+    }
+    apply_hazard_alerts(payload_b, [])
+    stops_b = payload_b["routes"][0]["stopDetails"]
+    # Verified: stopDetails was populated from KNOWN_COORDINATES
+    assert len(stops_b) == 2
+    assert stops_b[0]["name"] == "Guwahati Central"
+    assert (stops_b[0]["latitude"], stops_b[0]["longitude"]) == (26.1445, 91.7362)
+    assert stops_b[1]["name"] == "Shillong Hub"
+    assert (stops_b[1]["latitude"], stops_b[1]["longitude"]) == (25.5788, 91.8933)
+
+
+def test_hazard_model_outlooks_validates_provider_names():
+    # Valid provider STOCKFLOW_HAZARD is accepted
+    response_valid = client.get("/api/v1/hazards/model-outlooks?provider=STOCKFLOW_HAZARD")
+    assert response_valid.status_code == 200
+
+    # Invalid provider is rejected with HTTP 422 Unprocessable Entity
+    response_invalid = client.get("/api/v1/hazards/model-outlooks?provider=UNKNOWN_PROVIDER")
+    assert response_invalid.status_code == 422
+
+
