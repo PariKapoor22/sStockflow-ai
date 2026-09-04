@@ -1,0 +1,314 @@
+[
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_as_kam_001:flood:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-as-kam",
+    "segment_id": "seg_as_kam_001",
+    "hazard_type": "FLOOD",
+    "risk_score": 0.3,
+    "risk_level": "LOW",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [91.566539, 26.150295],
+        [91.565144, 26.103057]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 35.0,
+      "slope_degrees": 8.0,
+      "soil_type": "loam"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER Brahmaputra valley sector",
+        "reference": "registry://districts/d-in-as-kam"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_ml_ekh_001:landslide:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-ml-ekh",
+    "segment_id": "seg_ml_ekh_001",
+    "hazard_type": "LANDSLIDE",
+    "risk_score": 0.91,
+    "risk_level": "HIGH",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [91.353256, 25.231966],
+        [91.386862, 25.168724]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 85.0,
+      "slope_degrees": 42.0,
+      "soil_type": "clay"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER Shillong plateau corridor",
+        "reference": "registry://districts/d-in-ml-ekh"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_mn_iw_001:flood:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-mn-iw",
+    "segment_id": "seg_mn_iw_001",
+    "hazard_type": "FLOOD",
+    "risk_score": 0.17,
+    "risk_level": "LOW",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [93.777296, 24.738943],
+        [93.833692, 24.721476]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 20.0,
+      "slope_degrees": 6.0,
+      "soil_type": "loam"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER Imphal basin sector",
+        "reference": "registry://districts/d-in-mn-iw"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_tr_wt_001:flood:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-tr-wt",
+    "segment_id": "seg_tr_wt_001",
+    "hazard_type": "FLOOD",
+    "risk_score": 0.4,
+    "risk_level": "MEDIUM",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [91.22011, 23.73582],
+        [91.277354, 23.722674]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 42.0,
+      "slope_degrees": 12.0,
+      "soil_type": "sandy"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER Agartala plains sector",
+        "reference": "registry://districts/d-in-tr-wt"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_mz_aiz_001:landslide:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-mz-aiz",
+    "segment_id": "seg_mz_aiz_001",
+    "hazard_type": "LANDSLIDE",
+    "risk_score": 0.52,
+    "risk_level": "MEDIUM",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [92.624016, 23.797597],
+        [92.640581, 23.793474]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 60.0,
+      "slope_degrees": 36.0,
+      "soil_type": "loam"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER Aizawl mountain ridges",
+        "reference": "registry://districts/d-in-mz-aiz"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_nl_koh_001:landslide:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-nl-koh",
+    "segment_id": "seg_nl_koh_001",
+    "hazard_type": "LANDSLIDE",
+    "risk_score": 0.76,
+    "risk_level": "HIGH",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [93.895114, 25.640179],
+        [93.938298, 25.558713]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 68.0,
+      "slope_degrees": 40.0,
+      "soil_type": "clay"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER Naga Hills Kohima pass",
+        "reference": "registry://districts/d-in-nl-koh"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_ar_pap_001:landslide:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-ar-pap",
+    "segment_id": "seg_ar_pap_001",
+    "hazard_type": "LANDSLIDE",
+    "risk_score": 0.36,
+    "risk_level": "MEDIUM",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [93.212085, 27.13015],
+        [93.215432, 27.113306]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 55.0,
+      "slope_degrees": 28.0,
+      "soil_type": "rocky"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER Papum Pare Himalayan foothills",
+        "reference": "registry://districts/d-in-ar-pap"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  },
+  {
+    "schema_version": "1.0",
+    "risk_id": "seg_sk_esk_001:landslide:2026-08-26T06:00:00Z",
+    "tenant_id": "TEN-ACME-PHARMA",
+    "district_id": "d-in-sk-esk",
+    "segment_id": "seg_sk_esk_001",
+    "hazard_type": "LANDSLIDE",
+    "risk_score": 0.54,
+    "risk_level": "MEDIUM",
+    "confidence": 0.55,
+    "source_type": "HEURISTIC",
+    "observed_at": "2026-08-26T05:55:00Z",
+    "valid_from": "2026-08-26T06:00:00Z",
+    "valid_until": "2026-08-26T12:00:00Z",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [88.437848, 27.276042],
+        [88.492286, 27.230006]
+      ]
+    },
+    "inputs": {
+      "rainfall_mm_hr": 78.0,
+      "slope_degrees": 46.0,
+      "soil_type": "rocky"
+    },
+    "evidence": [
+      {
+        "type": "DATASET",
+        "label": "Canonical NER East Sikkim mountain corridor",
+        "reference": "registry://districts/d-in-sk-esk"
+      }
+    ],
+    "model": {
+      "name": "ner-rule-scorer",
+      "version": "1.0.0",
+      "method": "HEURISTIC_WEIGHTED_SCORE"
+    }
+  }
+]

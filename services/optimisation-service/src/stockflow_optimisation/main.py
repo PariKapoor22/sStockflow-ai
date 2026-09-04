@@ -189,7 +189,7 @@ def anomalies(request: AnomalyRequest) -> dict:
 
 
 @app.get("/api/v1/hazards/model-outlooks")
-async def model_hazards(provider: list[Literal["LHASA", "GLOFAS"]] = Query(default=["LHASA", "GLOFAS"])) -> dict:
+async def model_hazards(provider: list[str] = Query(default=["LHASA", "GLOFAS"])) -> dict:
     try:
         return await load_hazards(list(dict.fromkeys(provider)))
     except Exception as error:
@@ -208,7 +208,10 @@ async def vehicle_routes(request: VehicleRoutingRequest, tenant_id: str = Header
     hazard_sources: list[str] = []
     if request.includeLiveHazards:
         try:
-            outlooks = await load_hazards(["LHASA", "GLOFAS"])
+            configured_providers = [p for p in PROVIDERS if os.getenv(PROVIDERS[p]["url_env"], "").strip()]
+            if not configured_providers:
+                configured_providers = ["LHASA", "GLOFAS"]
+            outlooks = await load_hazards(configured_providers)
             hazard_sources = apply_hazard_alerts(payload, outlooks.get("alerts", []))
         except Exception:
             hazard_sources = []
