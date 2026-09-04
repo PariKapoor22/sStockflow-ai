@@ -745,6 +745,10 @@
       [tenantId]="selectedTenant"
     ></sf-fleet-workspace>
 
+    <sf-disaster-monitor-workspace
+      *ngIf="activeView === 'disaster-monitor'"
+    ></sf-disaster-monitor-workspace>
+
     <sf-operations-workspace
       *ngIf="activeOperationView() as operationView"
       [view]="operationView"
