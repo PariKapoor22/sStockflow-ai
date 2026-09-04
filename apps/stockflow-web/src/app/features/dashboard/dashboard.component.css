@@ -19,7 +19,7 @@
 .nav-group-toggle:hover { color: #FFFFFF; background: rgba(255,255,255,.08); }
 .nav-group-toggle.active { color: #FFFFFF; background: rgba(184,112,61,.24); }
 .nav-group-heading { min-width: 0; display: flex; align-items: center; gap: 10px; }
-.nav-group-icon { width: 18px; height: 18px; flex: 0 0 18px; display: grid; place-items: center; }
+.nav-group-icon { width: 18px; height: 18px; flex: 0 0 18px; display: grid; place-items: center; font-size: 17px; font-weight: 800; }
 .nav-group-icon img { width: 17px; height: 17px; object-fit: contain; filter: brightness(0) invert(1); opacity: .72; transition: opacity .2s ease, transform .2s ease; }
 .nav-group-toggle:hover .nav-group-icon img, .nav-group-toggle.expanded .nav-group-icon img { opacity: 1; transform: scale(1.08); }
 .nav-group-title { font-size: 10px; font-weight: 700; letter-spacing: .08em; }

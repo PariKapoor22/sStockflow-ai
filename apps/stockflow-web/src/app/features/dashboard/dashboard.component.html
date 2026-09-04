@@ -26,7 +26,8 @@
           (click)="toggleNavGroup(group.title)">
           <span class="nav-group-heading">
             <span class="nav-group-icon" aria-hidden="true">
-              <img *ngIf="group.icon" [src]="group.icon" alt="" />
+              <img *ngIf="group.icon?.includes('.png')" [src]="group.icon" alt="" />
+              <ng-container *ngIf="group.icon && !group.icon.includes('.png')">{{ group.icon }}</ng-container>
             </span>
             <span class="nav-group-title">{{ group.title }}</span>
           </span>

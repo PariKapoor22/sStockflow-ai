@@ -187,6 +187,7 @@ export class DashboardComponent implements OnInit {
   readonly expandedNavGroups: Record<string, boolean> = {
     INTELLIGENCE: false,
     OPERATIONS: false,
+    BILLING: false,
     INVENTORY: false,
     ADMIN: false
   };
@@ -329,7 +330,6 @@ export class DashboardComponent implements OnInit {
       title: 'OPERATIONS',
       icon: 'assets/nav-icons/icons8-logistics-32-2.png',
       items: [
-        { label: 'Field Operations', icon: 'assets/nav-icons/icons8-logistics-32-2.png', externalUrl: 'http://localhost:3000' },
         { label: 'Field Reports', icon: 'assets/nav-icons/icons8-risk-30.png', view: 'reports' },
         { label: 'Vehicle Fleet', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'fleet' },
         { label: 'Transfers', icon: 'assets/nav-icons/icons8-transfer-30.png', view: 'transfers' },
@@ -338,6 +338,13 @@ export class DashboardComponent implements OnInit {
         { label: 'Purchase Planning', icon: 'assets/nav-icons/icons8-timeline-week-50.png', view: 'purchase' },
         { label: 'Orders', icon: 'assets/nav-icons/icons8-product-30.png', view: 'orders' },
         { label: 'Returns', icon: 'assets/nav-icons/icons8-return-box-64.png', view: 'returns' }
+      ]
+    },
+    {
+      title: 'BILLING',
+      icon: '₹',
+      items: [
+        { label: 'Billing Dashboard', icon: '₹', view: 'billing' }
       ]
     },
     {
@@ -353,7 +360,6 @@ export class DashboardComponent implements OnInit {
       title: 'ADMIN',
       icon: 'assets/nav-icons/icons8-settings-50.png',
       items: [
-        { label: 'Billing Dashboard', icon: '₹', view: 'billing' },
         { label: 'Demo Activity', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'activity' },
         { label: 'Users & Roles', icon: 'assets/nav-icons/icons8-user-30.png', view: 'users' },
         { label: 'Settings', icon: 'assets/nav-icons/icons8-settings-50.png', view: 'settings' },
