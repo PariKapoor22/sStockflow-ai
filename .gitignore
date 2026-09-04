@@ -8,6 +8,8 @@ dist/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.checkpoints/
+*.pkl
 
 # Java / Maven
 target/
