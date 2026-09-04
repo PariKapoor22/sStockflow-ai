@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, type Variants } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { SyncQueueItem } from '../types';
 import { incidentOfflineStore } from '../services/incident-offline-store.service';
@@ -67,7 +67,7 @@ export const OfflineSyncCenter: React.FC = () => {
     showToast('Added sensor telemetry batch to offline queue');
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -75,7 +75,7 @@ export const OfflineSyncCenter: React.FC = () => {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 10 },
     show: { 
       opacity: 1, 

@@ -24,13 +24,15 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { TacticalMap } from './TacticalMap';
-import { calculateDistanceMeters } from '../services/gps-geojson.service';
+import { calculateDistanceMeters, evaluateGPSQuality, toGeoJSONPoint } from '../services/gps-geojson.service';
 import { speakInstruction } from '../services/voice-guidance.service';
+import type { IncidentCategory } from '../types';
 
 export const ActiveDrivingHUD: React.FC = () => {
   const {
     activeRoute,
     currentGPS,
+    isOnline,
     gpsSource,
     currentStepIndex,
     setCurrentStepIndex,
@@ -52,7 +54,7 @@ export const ActiveDrivingHUD: React.FC = () => {
   const [showStepsDrawer, setShowStepsDrawer] = useState(false);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [showQuickHazardModal, setShowQuickHazardModal] = useState(false);
-  const [hazardCategory, setHazardCategory] = useState<'landslide' | 'convoy_hold' | 'bridge_out' | 'washout'>('landslide');
+  const [hazardCategory, setHazardCategory] = useState<IncidentCategory>('landslide');
 
   // If no active route, fallback to empty or first
   if (!activeRoute) return null;
@@ -118,16 +120,30 @@ export const ActiveDrivingHUD: React.FC = () => {
 
   const handleQuickReportHazard = async () => {
     try {
+      const reportId = `IR-${Date.now()}`;
       await createIncident({
+        report_id: reportId,
+        idempotency_key: `idemp_${reportId}`,
+        tenant_id: 'tactical-unit-07',
+        revision: 1,
         title: `Road Hazard: ${hazardCategory.toUpperCase().replace('_', ' ')}`,
         category: hazardCategory,
         severity: 'critical',
         district_road_segment: activeRoute.roadSegment || 'En Route Highway',
+        description: 'Critical road hazard reported from the active driving route.',
+        observation_time: new Date().toISOString(),
         latitude: currentGPS.latitude,
         longitude: currentGPS.longitude,
         altitude_meters: currentGPS.altitude,
         accuracy_meters: currentGPS.accuracy,
-        photos: []
+        gps_status: evaluateGPSQuality(currentGPS.accuracy),
+        geo_json: toGeoJSONPoint(currentGPS.latitude, currentGPS.longitude, currentGPS.altitude),
+        locationName: activeRoute.roadSegment || 'En Route Highway',
+        reportedBy: 'Active convoy driver',
+        photos: [],
+        photo_attachments: [],
+        sync_stage: isOnline ? 'SYNCED' : 'QUEUED',
+        retry_count: 0
       });
       setShowQuickHazardModal(false);
       showToast('⚠️ Hazard beacon registered on live convoy mesh!');
@@ -525,9 +541,9 @@ export const ActiveDrivingHUD: React.FC = () => {
             <div className="grid grid-cols-2 gap-2 mb-4">
               {[
                 { id: 'landslide', label: '🪨 Rockfall / Slide' },
-                { id: 'washout', label: '🌊 Road Washout' },
-                { id: 'convoy_hold', label: '🛑 Blocked Road' },
-                { id: 'bridge_out', label: '🌉 Damaged Bridge' }
+                { id: 'weather_hazard', label: '🌊 Road Washout' },
+                { id: 'roadblock', label: '🛑 Blocked Road' },
+                { id: 'bridge_damage', label: '🌉 Damaged Bridge' }
               ].map((opt) => (
                 <button
                   key={opt.id}

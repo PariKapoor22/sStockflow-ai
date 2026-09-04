@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, type Variants } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { IncidentCategory, IncidentSeverity, IncidentReport, PhotoAttachment, SyncStatusStage } from '../types';
@@ -285,7 +285,7 @@ export const IncidentReporting: React.FC = () => {
     }
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -293,7 +293,7 @@ export const IncidentReporting: React.FC = () => {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 10 },
     show: { 
       opacity: 1, 

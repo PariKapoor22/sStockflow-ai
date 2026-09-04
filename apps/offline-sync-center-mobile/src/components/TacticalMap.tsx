@@ -727,7 +727,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const handleMicroNudge = (deltaMetersNorth: number, deltaMetersEast: number) => {
     if (!pinnedCoord) return;
     const newCoord = nudgeCoordinate(pinnedCoord.lat, pinnedCoord.lng, deltaMetersNorth, deltaMetersEast);
-    setPinnedCoord(newCoord);
+    setPinnedCoord({ lat: newCoord.latitude, lng: newCoord.longitude });
     if (onSelectCoordinate) {
       onSelectCoordinate(newCoord.latitude, newCoord.longitude);
     }
