@@ -51,10 +51,12 @@ Command Prompt. It starts:
 
 - Kotlin Core API
 - Angular UI
+- Field Operations mobile UI
 - Forecasting service
 - Optimisation service
 
-When all checks pass, open `http://localhost:4200`. Keep the launcher window
+When all checks pass, open `http://localhost:4200` for StockFlow or
+`http://localhost:3000` for Field Operations. Keep the launcher window
 open; press `Ctrl+C` once to stop the child processes. Per-service output is
 written under `.stockflow\logs\<timestamp>`.
 

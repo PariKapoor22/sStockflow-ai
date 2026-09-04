@@ -144,6 +144,7 @@ try {
         'run-mcp-data-windows.cmd',
         'run-mcp-intelligence-windows.cmd',
         'run-copilot-windows.cmd',
+        'run-field-operations-windows.cmd',
         'run-web-windows.cmd'
     )
     foreach ($script in $requiredScripts) {
@@ -186,12 +187,15 @@ try {
     Start-StockFlowService 'copilot' 'run-copilot-windows.cmd' 8300 | Out-Null
     Wait-ForUrl 'StockFlow Copilot' 'http://127.0.0.1:8300/health' 180
 
-    Write-Step 'Starting the Angular website...'
+    Write-Step 'Starting Field Operations and the Angular website...'
+    Start-StockFlowService 'field-operations' 'run-field-operations-windows.cmd' 3000 | Out-Null
     Start-StockFlowService 'web' 'run-web-windows.cmd' 4200 | Out-Null
+    Wait-ForPort 'Field Operations' 3000 180
     Wait-ForPort 'StockFlow website' 4200 180
 
     Write-Host ''
     Write-Host 'StockFlow is ready: http://localhost:4200' -ForegroundColor Green
+    Write-Host 'Field Operations:   http://localhost:3000' -ForegroundColor Green
     Write-Host "Logs: $logDirectory"
     Write-Host 'Keep this window open. Press Ctrl+C once to stop all services started here.'
 
@@ -205,7 +209,7 @@ try {
     }
 } catch {
     Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red
-    foreach ($name in @('forecasting', 'optimisation', 'carbon', 'core-api', 'mcp-data', 'mcp-intelligence', 'copilot', 'web')) {
+    foreach ($name in @('forecasting', 'optimisation', 'carbon', 'core-api', 'mcp-data', 'mcp-intelligence', 'copilot', 'field-operations', 'web')) {
         Show-LogTail $name
     }
     exit 1

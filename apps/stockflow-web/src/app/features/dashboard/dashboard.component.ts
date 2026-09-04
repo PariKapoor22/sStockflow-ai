@@ -65,7 +65,8 @@ type ViewId =
 interface NavigationItem {
   label: string;
   icon: string;
-  view: ViewId;
+  view?: ViewId;
+  externalUrl?: string;
 }
 
 interface NavigationGroup {
@@ -323,6 +324,7 @@ export class DashboardComponent implements OnInit {
       title: 'OPERATIONS',
       icon: 'assets/nav-icons/icons8-logistics-32-2.png',
       items: [
+        { label: 'Field Operations', icon: 'assets/nav-icons/icons8-logistics-32-2.png', externalUrl: 'http://localhost:3000' },
         { label: 'Field Reports', icon: 'assets/nav-icons/icons8-risk-30.png', view: 'reports' },
         { label: 'Vehicle Fleet', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'fleet' },
         { label: 'Transfers', icon: 'assets/nav-icons/icons8-transfer-30.png', view: 'transfers' },
@@ -451,6 +453,14 @@ export class DashboardComponent implements OnInit {
     if (this.activeAdminView()) {
       return;
     }
+  }
+
+  openNavigationItem(item: NavigationItem): void {
+    if (item.externalUrl) {
+      window.open(item.externalUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (item.view) this.selectView(item.view);
   }
 
   onTenantChange(): void {

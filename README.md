@@ -465,13 +465,14 @@ Verified local ports:
 | Intelligence MCP server | 8202 |
 | StockFlow Copilot | 8300 |
 | Route and carbon service | 8400 |
+| Field Operations | 3000 |
 | PostgreSQL | 5433 |
 
 ---
 
 ## Run the complete application locally
 
-The recommended Windows launcher starts StatsForecast, decision intelligence/OR-Tools, route and carbon calculation, the Spring Boot Core API, both read-only MCP servers, the StockFlow Copilot, and the Angular website from one Command Prompt. It keeps their output in timestamped log files and stops the processes it started when you press `Ctrl+C`.
+The recommended Windows launcher starts StatsForecast, decision intelligence/OR-Tools, route and carbon calculation, the Spring Boot Core API, both read-only MCP servers, the StockFlow Copilot, the Field Operations mobile app, and the Angular website from one Command Prompt. It keeps their output in timestamped log files and stops the processes it started when you press `Ctrl+C`.
 
 From the repository root:
 
@@ -485,6 +486,8 @@ Keep that Command Prompt open. When all readiness checks pass, open:
 ```text
 http://localhost:4200
 ```
+
+Field Operations is available directly at `http://localhost:3000` and from the **Operations > Field Operations** sidebar entry.
 
 The first run can take several minutes while Maven, npm, and `uv` resolve dependencies. The launcher reuses a service if its expected port is already occupied. Runtime logs are written under:
 

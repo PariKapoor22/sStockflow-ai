@@ -39,7 +39,7 @@
             *ngFor="let item of group.items"
             class="nav-item"
             [class.active]="activeView === item.view"
-            (click)="selectView(item.view)">
+            (click)="openNavigationItem(item)">
             <span class="nav-icon">
               <img *ngIf="item.icon.includes('.png')" [src]="item.icon" alt="" />
               <ng-container *ngIf="!item.icon.includes('.png')">{{ item.icon }}</ng-container>
