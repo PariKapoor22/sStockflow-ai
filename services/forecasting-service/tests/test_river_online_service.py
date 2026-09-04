@@ -86,18 +86,23 @@ def test_idempotent_event_ingestion():
         assert is_new1 is True
         state1 = store.get_or_create("TEN-ACME-PHARMA", "WH-GUWAHATI", "SKU-PARA-650")
         assert state1.forecaster.observation_count == 1
+        prediction_before = state1.forecaster.last_prediction
+        fc_before = store.generate_provisional_forecast("TEN-ACME-PHARMA", "WH-GUWAHATI", "SKU-PARA-650", horizon_days=3)
 
         # Replay identical event
         is_new2, msg2 = store.ingest_event(ev)
         assert is_new2 is False
         assert "already processed" in msg2
-        # Observation count must NOT have increased
+        # Observation count and model predictions must NOT have changed by even 1 bit
         assert state1.forecaster.observation_count == 1
+        assert state1.forecaster.last_prediction == prediction_before
+        fc_after = store.generate_provisional_forecast("TEN-ACME-PHARMA", "WH-GUWAHATI", "SKU-PARA-650", horizon_days=3)
+        assert fc_after.pointForecast == fc_before.pointForecast
 
 
 def test_checkpoint_persistence_across_simulated_restart():
     with tempfile.TemporaryDirectory() as tmp_dir:
-        # First process instance
+        # First process instance: ingest 15 events and generate reference forecast
         store1 = OnlineStateStore(checkpoint_dir=tmp_dir)
         for i in range(15):
             ev = DemandEvent(
@@ -110,19 +115,26 @@ def test_checkpoint_persistence_across_simulated_restart():
             )
             store1.ingest_event(ev)
 
+        fc1 = store1.generate_provisional_forecast("TEN-TEST", "WH-1", "SKU-1", horizon_days=3)
+        del store1  # Destroy in-memory state completely
+
         # Simulate full restart: instantiate brand new OnlineStateStore reading same checkpoint dir
         store2 = OnlineStateStore(checkpoint_dir=tmp_dir)
         reloaded_state = store2.get_or_create("TEN-TEST", "WH-1", "SKU-1")
 
+        # Verify state metadata survived
         assert reloaded_state.forecaster.observation_count == 15
         assert len(reloaded_state.processed_event_ids) == 15
         assert "chk-0" in reloaded_state.processed_event_ids
         assert "chk-14" in reloaded_state.processed_event_ids
 
-        fc = store2.generate_provisional_forecast("TEN-TEST", "WH-1", "SKU-1", horizon_days=3)
-        assert fc.fallbackUsed is False
-        assert fc.trainingObservations == 15
-        assert len(fc.pointForecast) == 3
+        # Verify numerical point forecast and confidence bounds match the pre-restart output exactly
+        fc2 = store2.generate_provisional_forecast("TEN-TEST", "WH-1", "SKU-1", horizon_days=3)
+        assert fc2.fallbackUsed is False
+        assert fc2.trainingObservations == 15
+        assert fc2.pointForecast == fc1.pointForecast
+        assert fc2.lowerBounds == fc1.lowerBounds
+        assert fc2.upperBounds == fc1.upperBounds
 
 
 def test_fallback_to_validated_when_untrained():
@@ -178,30 +190,49 @@ def test_exogenous_disruption_feature_input():
                 warehouseId="WH-GUWAHATI",
                 skuId="SKU-PARA-650",
                 timestamp=datetime.now(UTC) + timedelta(days=i),
-                quantity=50.0 + i,
+                quantity=50.0 + i * 2.0,
                 features={
-                    "rainfall_mm_hr": 45.0,
-                    "hazard_risk": 0.82,
-                    "road_blocked": 1.0,
+                    "rainfall_mm_hr": 45.0 if i % 2 == 0 else 5.0,
+                    "hazard_risk": 0.82 if i % 2 == 0 else 0.10,
+                    "road_blocked": 1.0 if i % 2 == 0 else 0.0,
                 },
             )
             store.ingest_event(ev)
 
-        fc = store.generate_provisional_forecast(
+        # Forecast under high disruption
+        fc_disrupted = store.generate_provisional_forecast(
             "TEN-ACME-PHARMA",
             "WH-GUWAHATI",
             "SKU-PARA-650",
             horizon_days=3,
             future_features=[
-                {"rainfall_mm_hr": 30.0, "hazard_risk": 0.70, "road_blocked": 1.0},
-                {"rainfall_mm_hr": 10.0, "hazard_risk": 0.20, "road_blocked": 0.0},
-                {"rainfall_mm_hr": 5.0, "hazard_risk": 0.10, "road_blocked": 0.0},
+                {"rainfall_mm_hr": 80.0, "hazard_risk": 0.95, "road_blocked": 1.0},
+                {"rainfall_mm_hr": 60.0, "hazard_risk": 0.85, "road_blocked": 1.0},
+                {"rainfall_mm_hr": 40.0, "hazard_risk": 0.75, "road_blocked": 1.0},
             ],
         )
-        assert fc.status == "PROVISIONAL"
-        assert fc.fallbackUsed is False
-        assert sorted(fc.featuresUsed) == ["hazard_risk", "rainfall_mm_hr", "road_blocked"]
-        assert len(fc.pointForecast) == 3
+
+        # Forecast under zero disruption / clear weather
+        fc_clear = store.generate_provisional_forecast(
+            "TEN-ACME-PHARMA",
+            "WH-GUWAHATI",
+            "SKU-PARA-650",
+            horizon_days=3,
+            future_features=[
+                {"rainfall_mm_hr": 0.0, "hazard_risk": 0.0, "road_blocked": 0.0},
+                {"rainfall_mm_hr": 0.0, "hazard_risk": 0.0, "road_blocked": 0.0},
+                {"rainfall_mm_hr": 0.0, "hazard_risk": 0.0, "road_blocked": 0.0},
+            ],
+        )
+
+        # Assert status and properties
+        assert fc_disrupted.status == "PROVISIONAL"
+        assert fc_disrupted.fallbackUsed is False
+        assert sorted(fc_disrupted.featuresUsed) == ["hazard_risk", "rainfall_mm_hr", "road_blocked"]
+        assert len(fc_disrupted.pointForecast) == 3
+
+        # Assert exogenous variables actively impact mathematical predictions (not just decorative metadata)
+        assert fc_disrupted.pointForecast != fc_clear.pointForecast
 
 
 def test_online_endpoints_via_testclient():
