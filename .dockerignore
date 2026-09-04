@@ -15,3 +15,5 @@ services/stockflow-core-api/
 services/forecasting-service/
 services/optimisation-service/
 tools/
+.codex-artifacts/
+deliverables/

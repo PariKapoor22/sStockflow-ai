@@ -781,7 +781,7 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - The Carbon and optimisation APIs currently trust tenant/user headers and must remain private behind the Core API until JWT or authenticated service-to-service enforcement is added.
 - Tenant isolation is primarily enforced in application queries. PostgreSQL Row-Level Security remains a defence-in-depth production-hardening item.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
-- The MCP Copilot is deployed. Gemini fallback requires `GEMINI_API_KEY` to be configured on the Cloud Run Copilot service.
+- The MCP Copilot is deployed. When `GEMINI_API_KEY` is configured on the Cloud Run Copilot service, Gemini can select and call allow-listed read-only MCP tools for natural-language questions that the deterministic domain router does not recognize. Tenant credentials are injected server-side and mutation/approval tools are excluded from autonomous calls.
 
 ### Human-gated Action API
 

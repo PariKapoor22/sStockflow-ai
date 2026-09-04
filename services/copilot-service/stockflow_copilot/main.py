@@ -9,11 +9,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import get_auth_context
-from .config import ALLOWED_ORIGINS, AUTH_DISABLED_FOR_LOCAL, ENABLE_ACTIONS, MCP_SERVERS
+from .config import ALLOWED_ORIGINS, AUTH_DISABLED_FOR_LOCAL, ENABLE_ACTIONS, GEMINI_API_KEY, GEMINI_MODEL, MCP_SERVERS
+from .gemini_mcp_agent import GeminiMCPAgent
 from .mcp_client import MCPHub
 from .models import ChatRequest, ChatResponse, Evidence
 
 hub = MCPHub(MCP_SERVERS)
+gemini_mcp_agent = GeminiMCPAgent(GEMINI_API_KEY, GEMINI_MODEL)
 logger = logging.getLogger("stockflow-copilot")
 
 
@@ -46,7 +48,7 @@ async def lifespan(_: FastAPI):
     await hub.close()
 
 
-app = FastAPI(title="StockFlow Copilot Host", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="StockFlow Copilot Host", version="0.4.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -65,6 +67,11 @@ async def health() -> dict:
         "primaryTool": "answer_stockflow_question",
         "mcpTools": hub.tool_names,
         "actionsEnabled": ENABLE_ACTIONS,
+        "geminiMcpAgent": {
+            "configured": gemini_mcp_agent.configured,
+            "model": GEMINI_MODEL if gemini_mcp_agent.configured else None,
+            "mode": "allow-listed-read-only-tool-calling",
+        },
     }
 
 
@@ -83,6 +90,25 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
         domain_result = _mcp_json(call_result)
         if not domain_result:
             raise ValueError("The StockFlow domain MCP returned no structured result")
+        if domain_result.get("intent") == "clarification.required" and gemini_mcp_agent.configured:
+            agent_answer = await gemini_mcp_agent.answer(
+                payload.message,
+                hub.tool_catalogue,
+                hub.call_tool,
+                tenant_id=context.tenant_id,
+                access_token=context.access_token or "",
+                selected_warehouse_id=payload.selectedWarehouseId or "",
+                selected_sku_id=payload.selectedSkuId or "",
+            )
+            if agent_answer:
+                domain_result = {
+                    "answer": agent_answer.answer,
+                    "intent": "agent.mcp_tool_answer",
+                    "toolsUsed": ["gemini_mcp_agent", *agent_answer.tools_used],
+                    "source": "StockFlow live APIs via Gemini-selected MCP tools",
+                    "asOf": agent_answer.as_of,
+                    "warnings": agent_answer.warnings,
+                }
         answer = str(domain_result.get("answer") or "No readable answer was returned.")
         as_of = str(domain_result.get("asOf") or datetime.now(timezone.utc).isoformat())
         tools = [str(item) for item in domain_result.get("toolsUsed", ["answer_stockflow_question"])]
