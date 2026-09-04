@@ -145,6 +145,10 @@ StockFlow never turns prototype polygons into live hazard predictions.
 
 ### MCP data server
 
+The recommended `RUN_ALL_WINDOWS.cmd` command starts the Data MCP,
+Intelligence MCP, and Copilot automatically. Use the commands below only when
+you want to run or debug one service separately.
+
 ```cmd
 cd mcp
 uv sync

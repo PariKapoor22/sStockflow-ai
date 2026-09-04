@@ -1,11 +1,17 @@
 # StockFlow Copilot Host
 
-This read-only FastAPI service connects Gemini to the authorised StockFlow MCP servers.
+This read-only FastAPI service connects the StockFlow web chatbot to the
+authorised StockFlow MCP servers. Answers are grounded in live tenant-scoped
+Core API data and no inventory action is executed from chat.
 
-1. Copy `.env.example` to `.env` and set `GEMINI_API_KEY` on the server only.
-2. Start the Core API, Data MCP and Intelligence MCP services.
-3. Run `run-copilot-windows.cmd` from the repository root.
-4. Start Angular; its `/api/v1/copilot` requests are proxied to `127.0.0.1:8300`.
+1. From the repository root, run `RUN_ALL_WINDOWS.cmd`; it starts the Core API,
+   Data MCP, Intelligence MCP, Copilot host, and Angular application in the
+   required order.
+2. Open `http://localhost:4200`; Angular proxies `/api/v1/copilot` requests to
+   `127.0.0.1:8300`.
+
+For isolated debugging, start the Core API, Data MCP and Intelligence MCP
+first, then run `run-copilot-windows.cmd` from the repository root.
 
 Keep `STOCKFLOW_ENABLE_ACTIONS=false` during development. In production, set
 `AUTH_DISABLED_FOR_LOCAL=false`, configure Supabase JWT verification, and expose

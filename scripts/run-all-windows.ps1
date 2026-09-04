@@ -139,7 +139,11 @@ try {
     $requiredScripts = @(
         'run-forecasting-windows.cmd',
         'run-optimisation-windows.cmd',
+        'run-carbon-windows.cmd',
         'run-core-api-windows.cmd',
+        'run-mcp-data-windows.cmd',
+        'run-mcp-intelligence-windows.cmd',
+        'run-copilot-windows.cmd',
         'run-web-windows.cmd'
     )
     foreach ($script in $requiredScripts) {
@@ -163,12 +167,24 @@ try {
     Write-Step 'Starting Python intelligence services...'
     Start-StockFlowService 'forecasting' 'run-forecasting-windows.cmd' 8101 | Out-Null
     Start-StockFlowService 'optimisation' 'run-optimisation-windows.cmd' 8102 | Out-Null
+    Start-StockFlowService 'carbon' 'run-carbon-windows.cmd' 8400 | Out-Null
     Wait-ForUrl 'StatsForecast service' 'http://127.0.0.1:8101/health' 180
     Wait-ForUrl 'Optimisation service' 'http://127.0.0.1:8102/health' 180
+    Wait-ForUrl 'Route and carbon service' 'http://127.0.0.1:8400/health' 180
 
     Write-Step 'Starting the Spring Boot API (startup tests skipped; use the individual launcher to test)...'
     Start-StockFlowService 'core-api' 'run-core-api-windows.cmd' 8080 'set "STOCKFLOW_SKIP_TESTS=true" && set "STOCKFLOW_DECISION_INTELLIGENCE_ENABLED=true"' | Out-Null
     Wait-ForUrl 'Core API' 'http://127.0.0.1:8080/actuator/health/liveness' 300
+
+    Write-Step 'Starting the MCP data layer and StockFlow Copilot...'
+    # These two launchers share one uv environment. Start them sequentially so
+    # their first-run dependency syncs cannot contend with one another.
+    Start-StockFlowService 'mcp-data' 'run-mcp-data-windows.cmd' 8201 | Out-Null
+    Wait-ForPort 'Data MCP' 8201 180
+    Start-StockFlowService 'mcp-intelligence' 'run-mcp-intelligence-windows.cmd' 8202 | Out-Null
+    Wait-ForPort 'Intelligence MCP' 8202 180
+    Start-StockFlowService 'copilot' 'run-copilot-windows.cmd' 8300 | Out-Null
+    Wait-ForUrl 'StockFlow Copilot' 'http://127.0.0.1:8300/health' 180
 
     Write-Step 'Starting the Angular website...'
     Start-StockFlowService 'web' 'run-web-windows.cmd' 4200 | Out-Null
@@ -189,7 +205,7 @@ try {
     }
 } catch {
     Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red
-    foreach ($name in @('forecasting', 'optimisation', 'core-api', 'web')) {
+    foreach ($name in @('forecasting', 'optimisation', 'carbon', 'core-api', 'mcp-data', 'mcp-intelligence', 'copilot', 'web')) {
         Show-LogTail $name
     }
     exit 1

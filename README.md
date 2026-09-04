@@ -461,6 +461,9 @@ Verified local ports:
 | Spring Boot API | 8080 |
 | StatsForecast service | 8101 |
 | Decision intelligence service | 8102 |
+| Data MCP server | 8201 |
+| Intelligence MCP server | 8202 |
+| StockFlow Copilot | 8300 |
 | Route and carbon service | 8400 |
 | PostgreSQL | 5433 |
 
@@ -468,7 +471,7 @@ Verified local ports:
 
 ## Run the complete application locally
 
-The recommended Windows launcher starts StatsForecast, decision intelligence/OR-Tools, the Spring Boot Core API, and the Angular website from one Command Prompt. It keeps their output in timestamped log files and stops the processes it started when you press `Ctrl+C`.
+The recommended Windows launcher starts StatsForecast, decision intelligence/OR-Tools, route and carbon calculation, the Spring Boot Core API, both read-only MCP servers, the StockFlow Copilot, and the Angular website from one Command Prompt. It keeps their output in timestamped log files and stops the processes it started when you press `Ctrl+C`.
 
 From the repository root:
 

@@ -1282,9 +1282,9 @@ td small { display: block; margin-top: 4px; color: var(--text); font-size: 8.5px
 .copilot-suggestions { display: flex; gap: 6px; padding: 4px 16px 8px; overflow-x: auto; scrollbar-width: none; }
 .copilot-suggestions button { flex: 0 0 auto; min-height: 27px; padding: 0 9px; border: 1px solid var(--border); border-radius: 4px; color: var(--text); background: var(--bg); font-size: 8.5px; cursor: pointer; }
 .copilot-suggestions button:hover { background: var(--bg-warm); }
-.copilot-popover__input { display: flex; gap: 7px; margin: 8px 12px 12px; padding: 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-warm); }
-.copilot-popover__input input { flex: 1; min-width: 0; height: 36px; padding: 0 9px; border: 0; outline: 0; color: var(--text); background: transparent; font: inherit; font-size: 10px; }
-.copilot-popover__input button { width: 36px; height: 36px; border: 0; border-radius: 4px; color: var(--bg); background: var(--text); cursor: pointer; }
+.copilot-popover__input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 7px; width: calc(100% - 24px); margin: 8px 12px 12px; padding: 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-warm); }
+.copilot-popover__input input { width: 100%; min-width: 0; height: 36px; padding: 0 9px; border: 0; outline: 0; color: var(--text); background: transparent; font: inherit; font-size: 10px; }
+.copilot-popover__input button { min-width: 58px; height: 36px; padding: 0 12px; border: 0; border-radius: 4px; color: var(--bg); background: var(--text); font: inherit; font-size: 10px; font-weight: 700; white-space: nowrap; cursor: pointer; }
 .copilot-popover__input button:disabled { color: var(--text-faint); background: var(--bg); cursor: not-allowed; }
 @keyframes copilot-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes copilot-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-3px); opacity: 1; } }
