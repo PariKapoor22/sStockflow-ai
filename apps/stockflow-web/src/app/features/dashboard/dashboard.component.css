@@ -12,7 +12,7 @@
 .brand-copy { display: flex; flex-direction: column; white-space: nowrap; }
 .brand-copy strong { font-size: 20px; letter-spacing: -.4px; color: #FFFFFF; }
 .brand-copy small { margin-top: 2px; font-size: 10px; color: #B5AFA2; }
-.nav-scroll { overflow-y: auto; scrollbar-width: none; flex: 1; }
+.nav-scroll { overflow-y: auto; scrollbar-width: none; flex: 1; overscroll-behavior: contain; }
 .nav-scroll::-webkit-scrollbar { display: none; }
 .nav-group { margin-bottom: 10px; }
 .nav-group-toggle { width: 100%; min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border: 0; border-radius: 10px; background: transparent; color: #B5AFA2; cursor: pointer; transition: color .2s ease, background .2s ease; }
@@ -35,15 +35,12 @@
 .nav-item:hover .nav-icon img { transform: scale(1.15) translateY(-2px); opacity: 1; filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(255,255,255,0.4)); }
 .nav-label { overflow: hidden; transition: opacity .15s; }
 .app-shell.sidebar-collapsed .nav-label, .app-shell.sidebar-collapsed .nav-group-title, .app-shell.sidebar-collapsed .nav-group-chevron, .app-shell.sidebar-collapsed .brand-copy { display: none; }
-.app-shell.sidebar-collapsed .nav-group-toggle { display: flex; width: 48px; height: 48px; min-height: 48px; justify-content: center; padding: 0; margin: 10px auto; border-radius: 24px; }
-.app-shell.sidebar-collapsed .nav-group-heading { gap: 0; }
-.app-shell.sidebar-collapsed .nav-group-icon { width: 20px; height: 20px; flex-basis: 20px; }
-.app-shell.sidebar-collapsed .nav-group-icon img { width: 19px; height: 19px; opacity: .92; }
+.app-shell.sidebar-collapsed .nav-group-toggle { display: none; }
 .app-shell.sidebar-collapsed .nav-group.has-title .nav-group-items,
-.app-shell.sidebar-collapsed .nav-group.has-title .nav-group-items.collapsed { display: none; opacity: 0; }
-.app-shell.sidebar-collapsed .nav-item { padding: 0; justify-content: center; gap: 0; width: 48px; margin: 10px auto; }
-.app-shell.sidebar-collapsed .nav-group { margin-bottom: 0; }
-.app-shell.sidebar-collapsed .brand { min-width: 0; padding: 0; justify-content: center; }
+.app-shell.sidebar-collapsed .nav-group.has-title .nav-group-items.collapsed { display: grid; opacity: 1; gap: 4px; }
+.app-shell.sidebar-collapsed .nav-group:not(:last-child) { border-bottom: 1px solid rgba(255, 255, 255, 0.25); padding-bottom: 16px; margin-bottom: 12px; width: 48px; margin-left: auto; margin-right: auto; }
+.app-shell.sidebar-collapsed .nav-item { padding: 0; justify-content: center; gap: 0; width: 48px; margin: 0 auto; }
+.app-shell.sidebar-collapsed .brand { min-width: 0; padding: 0 0 24px; justify-content: center; }
 .app-shell.sidebar-collapsed .nav-scroll { display: block; overflow-y: auto; overflow-x: hidden; }
 .collapse-button { margin-top: 10px; height: 48px; color: #F7F5F0; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 24px; display: flex; gap: 12px; align-items: center; padding: 0 18px; white-space: nowrap; }
 .app-shell.sidebar-collapsed .collapse-button { padding: 0; justify-content: center; border-radius: 50%; width: 48px; margin: 10px auto 0; }
@@ -60,7 +57,7 @@
 .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(145deg,#e1e8f5,#8ca4c7); display: grid; place-items: center; font-weight: 700; color: var(--text); font-size: 12px; }
 .profile div:nth-child(2) { display: flex; flex-direction: column; line-height: 1.2; }
 .profile strong { font-size: 12px; }.profile small { font-size: 10px; color: var(--text); margin-top: 3px; }
-.content { padding: 110px 28px 28px; max-width: 1540px; margin: 0 auto; }
+.content { padding: 40px 28px 28px; max-width: 1540px; margin: 0 auto; }
 .welcome-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .welcome-row h1 { margin: 0; font-size: 26px; letter-spacing: -.5px; color: var(--text-main); font-weight: 300; font-family: "Fraunces", serif; }
 .welcome-row p { margin: 6px 0 0; color: var(--text); font-size: 12px; }

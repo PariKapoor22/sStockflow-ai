@@ -271,3 +271,93 @@ def recommend_transfer(request: TransferRecommendationRequest, tenant_id: str = 
         "constraintsChecked": ["SOURCE_SAFETY_STOCK", "DESTINATION_SHORTAGE", "VEHICLE_CAPACITY"],
         "approvalRequired": True,
     }
+
+
+# ── NeSDR WMS/WFS Proxy ─────────────────────────────────────────────────────
+# Bypass browser CORS restrictions when fetching external OGC endpoints from
+# nesdr.gov.in. Includes a lightweight in-memory cache for WFS GeoJSON data.
+
+import time
+import httpx
+from fastapi import Request
+from fastapi.responses import Response
+
+_NESDR_BASE = os.getenv("NESDR_BASE_URL", "https://nesdr.gov.in/geoserver")
+_WFS_CACHE: dict[str, tuple[float, bytes, str]] = {}
+_WFS_CACHE_TTL = int(os.getenv("NESDR_WFS_CACHE_TTL", "300"))
+
+
+@app.get("/api/proxy/nesdr/wms")
+async def proxy_nesdr_wms(request: Request):
+    """Forward WMS tile requests to NeSDR and pipe the image response back."""
+    params = dict(request.query_params)
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            upstream = await client.get(f"{_NESDR_BASE}/wms", params=params)
+            return Response(
+                content=upstream.content,
+                status_code=upstream.status_code,
+                media_type=upstream.headers.get("content-type", "image/png"),
+            )
+        except httpx.HTTPError:
+            return Response(content=b"", status_code=502)
+
+
+@app.get("/api/proxy/nesdr/wfs")
+async def proxy_nesdr_wfs(request: Request):
+    """Forward WFS GeoJSON requests to NeSDR with in-memory caching."""
+    params = dict(request.query_params)
+    cache_key = str(sorted(params.items()))
+
+    cached = _WFS_CACHE.get(cache_key)
+    if cached:
+        timestamp, body, content_type = cached
+        if time.time() - timestamp < _WFS_CACHE_TTL:
+            return Response(content=body, media_type=content_type)
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            upstream = await client.get(f"{_NESDR_BASE}/wfs", params=params)
+            content_type = upstream.headers.get("content-type", "application/json")
+            _WFS_CACHE[cache_key] = (time.time(), upstream.content, content_type)
+            return Response(
+                content=upstream.content,
+                status_code=upstream.status_code,
+                media_type=content_type,
+            )
+        except httpx.HTTPError:
+            return Response(
+                content=b'{"error":"NeSDR upstream unreachable"}',
+                status_code=502,
+                media_type="application/json",
+            )
+
+
+@app.get("/api/proxy/flood")
+async def proxy_flood():
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            res = await client.get("https://nerdrr.gov.in/api/flood_event.php")
+            return Response(content=res.content, status_code=res.status_code, media_type="application/json")
+        except httpx.HTTPError:
+            return Response(content=b'[]', status_code=502, media_type="application/json")
+
+
+@app.get("/api/proxy/landslide")
+async def proxy_landslide():
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            res = await client.get("https://nerdrr.gov.in/api/landslide_event.php")
+            return Response(content=res.content, status_code=res.status_code, media_type="application/json")
+        except httpx.HTTPError:
+            return Response(content=b'[]', status_code=502, media_type="application/json")
+
+
+@app.get("/api/proxy/earthquake")
+async def proxy_earthquake():
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            res = await client.get("https://www.nerdrr.gov.in/tempdbacc/getLastDayEqs.php")
+            return Response(content=res.content, status_code=res.status_code, media_type="application/json")
+        except httpx.HTTPError:
+            return Response(content=b'[]', status_code=502, media_type="application/json")

@@ -1,83 +1,103 @@
 <section class="content disaster-workspace">
-  <header class="disaster-header">
+  <div class="disaster-header">
     <div>
       <span class="eyebrow">NER DISASTER INTELLIGENCE</span>
       <h1>Disaster Monitor</h1>
-      <p>Official flood and landslide alerts combined with configured NASA LHASA and Copernicus GloFAS model outlooks across North Eastern India.</p>
+      <p>Real-time geospatial hazard monitoring across the North Eastern Region. Flood zones, landslide corridors and seismic activity.</p>
     </div>
     <div class="header-actions">
       <div class="severity-summary">
-        <span class="severity-chip severe">{{ severeCount }} severe</span>
-        <span class="severity-chip active">{{ activeCount }} active</span>
-        <span class="severity-chip forecast">{{ forecastCount }} forecast</span>
+        <span class="severity-chip severe">{{ severityCounts.severe }} Severe</span>
+        <span class="severity-chip warning">{{ severityCounts.warning }} Warning</span>
+        <span class="severity-chip monitoring">{{ severityCounts.monitoring }} Monitoring</span>
       </div>
-      <button type="button" class="refresh-button" (click)="refreshData()" [disabled]="loading">
-        {{ loading ? 'Refreshing…' : '↻ Refresh feeds' }}
-      </button>
+      <button class="refresh-button" [class.spinning]="refreshing" (click)="refreshData()">⟳ <span>Refresh</span></button>
     </div>
-  </header>
-
-  <div class="source-status">
-    <span [class.available]="officialAvailable"><i></i> Google public alerts {{ officialAvailable ? 'connected' : 'unavailable' }}</span>
-    <span [class.available]="modelsAvailable"><i></i> LHASA/GloFAS {{ modelsAvailable ? 'connected' : 'not configured' }}</span>
-    <span><i class="neutral"></i> {{ monitoredLocations }} NER locations monitored</span>
   </div>
 
-  <div class="feed-error" *ngIf="error"><strong>Hazard feeds unavailable</strong><span>{{ error }}</span></div>
-
   <div class="disaster-layout">
+    <!-- Map Container -->
     <div class="map-container">
-      <div #disasterMap class="disaster-map" aria-label="North Eastern Region flood and landslide hazard map"></div>
+      <div #disasterMap class="disaster-map"></div>
+
+
+
+      <!-- Map Legend -->
       <div class="map-legend">
-        <span><i class="severe"></i> Severe</span><span><i class="flood"></i> Flood</span><span><i class="landslide"></i> Landslide</span><span><b></b> Forecast boundary</span>
+        <span class="legend-dot severe-dot"></span> Severe
+        <span class="legend-dot warning-dot"></span> Warning
+        <span class="legend-dot monitoring-dot"></span> Monitoring
       </div>
     </div>
 
-    <aside class="incident-panel">
+    <!-- Glassmorphic Side Panel -->
+    <aside class="incident-panel" [class.collapsed]="panelCollapsed">
       <div class="panel-header">
-        <div><span>LIVE EVIDENCE</span><h2>Hazard layers & alerts</h2></div>
-        <select [(ngModel)]="severityFilter" aria-label="Filter hazard alerts by severity">
+        <h2>Active Incidents</h2>
+        <select [ngModel]="severityFilter" (ngModelChange)="onFilterChange($event)" class="severity-filter">
           <option value="all">All severities</option>
-          <option value="severe">Severe</option>
-          <option value="warning">Warning</option>
+          <option value="severe">Severe only</option>
+          <option value="warning">Warnings</option>
           <option value="monitoring">Monitoring</option>
         </select>
       </div>
 
-      <div class="layer-controls">
-        <label *ngFor="let layer of layers">
-          <input type="checkbox" [checked]="layer.enabled" (change)="toggleLayer(layer)">
-          <i [style.background]="layer.color"></i>
-          <span><strong>{{ layer.label }}</strong><small>{{ layer.description }}</small></span>
-        </label>
+      <div class="panel-section">
+        <div class="layer-toggles">
+          <span class="panel-label">LAYER CONTROLS</span>
+          <label *ngFor="let layer of layers" class="layer-toggle" [class.enabled]="layer.enabled">
+            <input type="checkbox" [checked]="layer.enabled" (change)="toggleLayer(layer)">
+            <span class="layer-swatch" [style.background]="layer.color"></span>
+            <span class="layer-info">
+              <strong>{{ layer.label }}</strong>
+              <small>{{ layer.description }}</small>
+            </span>
+          </label>
+        </div>
       </div>
 
-      <div class="incident-feed" *ngIf="filteredAlerts.length; else noAlerts">
-        <button type="button" *ngFor="let alert of filteredAlerts" (click)="selectAlert(alert)" [class.selected]="selectedAlert?.id === alert.id">
-          <span class="hazard-icon">{{ alert.hazardType === 'FLOOD' ? '≈' : '▲' }}</span>
-          <span class="incident-copy"><strong>{{ alert.title }}</strong><small>{{ alert.areaName }}</small><em>{{ sourceLabel(alert) }}</em></span>
-          <span class="incident-severity" [class]="severity(alert)">{{ alert.phase }}</span>
+      <div class="panel-section incident-feed">
+        <span class="panel-label">INCIDENT FEED <small>({{ filteredIncidents.length }})</small></span>
+        <button
+          *ngFor="let incident of filteredIncidents"
+          class="incident-item"
+          [class.selected]="selectedIncident?.id === incident.id"
+          [class]="'incident-item ' + severityClass(incident.severity)"
+          (click)="selectIncident(incident)">
+          <span class="incident-icon">{{ severityIcon(incident.type) }}</span>
+          <span class="incident-copy">
+            <strong>{{ incident.title }}</strong>
+            <small>{{ incident.location }}</small>
+            <em>{{ incident.timestamp }}</em>
+          </span>
+          <span class="incident-severity" [class]="incident.severity">{{ incident.severity }}</span>
         </button>
       </div>
-      <ng-template #noAlerts>
-        <div class="empty-feed" *ngIf="!loading">
-          <strong>No hazard zones returned</strong>
-          <p>The connected sources returned no matching active or forecast flood/landslide zones. This does not prove the monitored locations are safe.</p>
-        </div>
-      </ng-template>
 
-      <article class="incident-detail" *ngIf="selectedAlert">
-        <div><span>{{ selectedAlert.hazardType }}</span><b [class]="severity(selectedAlert)">{{ selectedAlert.severity }}</b></div>
-        <h3>{{ selectedAlert.title }}</h3>
-        <p>{{ selectedAlert.description || selectedAlert.areaName }}</p>
-        <p *ngIf="selectedAlert.instruction"><strong>Recommended action:</strong> {{ selectedAlert.instruction }}</p>
-        <small>{{ selectedAlert.phase }} · {{ sourceLabel(selectedAlert) }}</small>
-      </article>
+      <!-- Selected incident detail -->
+      <div class="incident-detail" *ngIf="selectedIncident">
+        <div class="detail-header">
+          <span class="detail-id">{{ selectedIncident.id }}</span>
+          <span class="detail-severity" [class]="selectedIncident.severity">{{ selectedIncident.severity | uppercase }}</span>
+        </div>
+        <h3>{{ selectedIncident.title }}</h3>
+        <p class="detail-location">📍 {{ selectedIncident.location }}</p>
+        <p class="detail-body">{{ selectedIncident.detail }}</p>
+        <small class="detail-time">{{ selectedIncident.timestamp }}</small>
+      </div>
     </aside>
   </div>
 
   <footer class="disaster-footer">
-    <span><i></i> {{ lastUpdated ? ('Updated ' + (lastUpdated | date:'medium')) : 'Waiting for first feed refresh' }}</span>
-    <p>Decision-support only. Model outlooks do not replace official disaster-management warnings.</p>
+    <div class="footer-stats">
+      <div><span>🌊</span><strong>{{ severityCounts.severe }}</strong><small>Active Hazards</small></div>
+
+      <div><span>📡</span><strong>8</strong><small>NER States Monitored</small></div>
+    </div>
+    <div class="footer-sync">
+      <i></i> Data as of {{ lastUpdated }}
+      <button (click)="refreshData()">⟳</button>
+      <small>NeSDR prototype overlay</small>
+    </div>
   </footer>
 </section>

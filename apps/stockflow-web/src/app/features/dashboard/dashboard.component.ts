@@ -176,7 +176,6 @@ export class DashboardComponent implements OnInit {
   private readonly copilotConversationId = `stockflow-${crypto.randomUUID?.() ?? Date.now()}`;
   globalSearch = '';
   sidebarCollapsed = true;
-  sidebarHoverExpanded = false;
   readonly expandedNavGroups: Record<string, boolean> = {
     INTELLIGENCE: false,
     OPERATIONS: false,
@@ -315,7 +314,7 @@ export class DashboardComponent implements OnInit {
         { label: 'Inventory Analytics', icon: 'assets/nav-icons/icons8-analysis-50.png', view: 'inventory' },
         { label: 'Risk & Alerts', icon: 'assets/nav-icons/icons8-risk-30.png', view: 'risks' },
         { label: 'Recommendations', icon: 'assets/nav-icons/icons8-recommendation-30.png', view: 'recommendations' },
-        { label: 'Disaster Monitor', icon: 'assets/nav-icons/icons8-data-protection-30.png', view: 'disaster-monitor' }
+        { label: 'Disaster Monitor', icon: 'assets/nav-icons/crisis.png', view: 'disaster-monitor' }
       ]
     },
     {
@@ -491,20 +490,8 @@ export class DashboardComponent implements OnInit {
   }
 
   toggleSidebar(): void {
-    this.sidebarHoverExpanded = false;
     this.sidebarCollapsed = !this.sidebarCollapsed;
   }
-
-  expandSidebarOnHover(): void {
-    if (this.sidebarCollapsed && window.innerWidth > 900) {
-      this.sidebarHoverExpanded = true;
-    }
-  }
-
-  collapseSidebarAfterHover(): void {
-    this.sidebarHoverExpanded = false;
-  }
-
 
   @HostListener('document:click')
   onDocumentClick(): void {
