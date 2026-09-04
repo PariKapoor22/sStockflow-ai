@@ -37,6 +37,8 @@ import { ReplenishmentService } from '../../core/services/replenishment.service'
 import { AdminView, AdminWorkspaceComponent } from '../admin/admin-workspace.component';
 import { OperationsWorkspaceComponent, OperationView } from '../operations/operations-workspace.component';
 import { FleetWorkspaceComponent } from '../fleet/fleet-workspace.component';
+import { TacticalSignalsService } from '../../core/services/tactical-signals.service';
+import { inject } from '@angular/core';
 
 type ViewId =
   | 'dashboard'
@@ -57,7 +59,8 @@ type ViewId =
   | 'users'
   | 'settings'
   | 'integrations'
-  | 'activity';
+  | 'activity'
+  | 'reports';
 
 interface NavigationItem {
   label: string;
@@ -143,6 +146,7 @@ export class DashboardComponent implements OnInit {
   decisionRecommendationsLoading = false;
   decisionRecommendationsError = '';
   selectedDecisionRecommendation?: DecisionRecommendationView;
+  selectedImage: string | null = null;
 
   foundationSummary?: FoundationSummary;
   warehouses: WarehouseView[] = [];
@@ -319,6 +323,7 @@ export class DashboardComponent implements OnInit {
       title: 'OPERATIONS',
       icon: 'assets/nav-icons/icons8-logistics-32-2.png',
       items: [
+        { label: 'Field Reports', icon: 'assets/nav-icons/icons8-risk-30.png', view: 'reports' },
         { label: 'Vehicle Fleet', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'fleet' },
         { label: 'Transfers', icon: 'assets/nav-icons/icons8-transfer-30.png', view: 'transfers' },
         { label: 'Route Optimization', icon: 'assets/nav-icons/img.icons8.com.png', view: 'routes' },
@@ -351,6 +356,7 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     readonly auth: AuthService,
+    public readonly tacticalSignalsService: TacticalSignalsService,
     private readonly dashboardData: DashboardDataService,
     private readonly intelligenceData: IntelligenceDataService,
     private readonly foundationData: FoundationDataService,
@@ -366,6 +372,14 @@ export class DashboardComponent implements OnInit {
     this.applyThemePreference();
     this.loadDashboard();
     this.loadDashboardWarehouses();
+  }
+
+  openImage(url: string): void {
+    this.selectedImage = url;
+  }
+
+  closeImage(): void {
+    this.selectedImage = null;
   }
 
   selectView(view: ViewId): void {
@@ -772,7 +786,8 @@ export class DashboardComponent implements OnInit {
       users: 'Users & Roles',
       settings: 'Settings',
       integrations: 'Data Imports',
-      activity: 'Demo Activity'
+      activity: 'Demo Activity',
+      reports: 'Field Reports'
     };
     return titles[this.activeView];
   }

@@ -1,0 +1,13 @@
+<div class="alerts-container">
+  <div 
+    *ngFor="let alert of activeAlerts" 
+    class="alert-box"
+    [ngClass]="alert.type === 'sos' ? 'alert-sos' : 'alert-report'"
+  >
+    <div class="alert-content">
+      <strong>{{ alert.type === 'sos' ? 'EMERGENCY' : 'REPORT' }}</strong>
+      <span>{{ alert.message }}</span>
+    </div>
+    <button (click)="removeAlert(alert.id)" class="close-btn">&times;</button>
+  </div>
+</div>

@@ -1,0 +1,6 @@
+{
+  "name": "Offline Sync Center & Tactical Navigation",
+  "description": "Tactical field operations dashboard with real-time GPS tracking, resilient offline mapping, incident logging, queued data synchronization, and emergency SOS.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

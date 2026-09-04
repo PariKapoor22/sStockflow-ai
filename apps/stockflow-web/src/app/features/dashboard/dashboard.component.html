@@ -247,6 +247,59 @@
       </ng-container>
     </section>
 
+    <section class="content workspace" *ngIf="activeView === 'reports'">
+      <div class="page-heading">
+        <div><span class="eyebrow">FIELD OPERATIONS</span><h1>Tactical Reports History</h1><p>Live feed and historical archive of tactical signals from the mobile module.</p></div>
+      </div>
+
+      <div class="workspace-grid" style="grid-template-columns: 1fr;">
+        <article class="card list-card">
+          <div class="card-header"><h2>Signal History ({{ tacticalSignalsService.history.length }})</h2></div>
+          
+          <div class="empty-state" *ngIf="tacticalSignalsService.history.length === 0" style="padding: 60px; text-align: center; color: var(--on-surface-variant);">
+            <div style="font-size: 48px; opacity: 0.5; margin-bottom: 16px;">📡</div>
+            <p>No tactical signals received in this session.</p>
+          </div>
+
+          <table class="data-table" *ngIf="tacticalSignalsService.history.length > 0">
+            <thead>
+              <tr>
+                <th style="width: 150px;">Time</th>
+                <th style="width: 150px;">Type</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let signal of tacticalSignalsService.history">
+                <td style="white-space: nowrap;">{{ signal.timestamp | date:'mediumTime' }}</td>
+                <td>
+                  <span class="risk-badge" [class.high]="signal.type === 'sos'" [class.medium]="signal.type === 'report'">
+                    {{ signal.type === 'sos' ? 'EMERGENCY SOS' : 'FIELD REPORT' }}
+                  </span>
+                </td>
+                <td style="width: 100%;">
+                  <strong>{{ signal.message }}</strong>
+                  <div *ngIf="signal.description" style="margin-top: 4px; font-size: 13px; color: var(--on-surface-variant);">
+                    {{ signal.description }}
+                  </div>
+                  <div *ngIf="signal.photo" style="margin-top: 8px;">
+                    <img [src]="signal.photo" alt="Incident Photo" (click)="openImage(signal.photo)" style="max-width: 200px; border-radius: 4px; border: 1px solid var(--border-color); cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+      </div>
+
+      <div class="image-modal-backdrop" *ngIf="selectedImage" (click)="closeImage()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out;">
+        <div class="image-modal-content" (click)="$event.stopPropagation()" style="position: relative; max-width: 90vw; max-height: 90vh; cursor: default;">
+          <button type="button" class="close-button" (click)="closeImage()" style="position: absolute; top: -40px; right: 0; background: none; border: none; color: white; font-size: 32px; cursor: pointer;">&times;</button>
+          <img [src]="selectedImage" alt="Full size incident photo" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+        </div>
+      </div>
+    </section>
+
     <section class="content workspace" *ngIf="activeView === 'demand'">
       <div class="page-heading">
         <div><span class="eyebrow">PREDICTIVE INTELLIGENCE</span><h1>Demand Forecast</h1><p>Monitor demand, run calibrated multi-model forecasts and inspect confidence, accuracy and projected stockouts.</p></div>

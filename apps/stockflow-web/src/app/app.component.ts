@@ -4,11 +4,12 @@ import { AuthService } from './core/services/auth.service';
 import { LoginComponent } from './features/auth/login.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { ParticleTextComponent } from './shared/components/particle-text/particle-text.component';
+import { TacticalAlertsComponent } from './shared/components/tactical-alerts/tactical-alerts.component';
 
 @Component({
   selector: 'sf-root',
   standalone: true,
-  imports: [CommonModule, DashboardComponent, LoginComponent, ParticleTextComponent],
+  imports: [CommonModule, DashboardComponent, LoginComponent, ParticleTextComponent, TacticalAlertsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })

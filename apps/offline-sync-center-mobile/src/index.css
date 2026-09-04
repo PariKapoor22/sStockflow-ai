@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Premium Minimal Dark Theme Tokens */
+  --bg-base: #0A0908;
+  --bg-surface: #151311;
+  --text-primary: #F5F0E8;
+  --text-secondary: #A8A29A;
+  --accent-amber: #E8A959;
+  --accent-coral: #D97757;
+  --accent-gold: #C9862E;
+  --border-hairline: rgba(255,255,255,0.08);
+
+  --color-background: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-surface-dim: var(--bg-base);
+  --color-surface-bright: #272522;
+  
+  --color-on-surface: var(--text-primary);
+  --color-on-surface-variant: var(--text-secondary);
+  --color-outline: var(--border-hairline);
+  --color-outline-variant: var(--border-hairline);
+
+  --color-primary: #a0caff;
+  --color-primary-container: #00497e;
+  --color-on-primary: #003259;
+  --color-on-primary-container: #d2e4ff;
+
+  --color-secondary: #4ae183;
+  --color-secondary-container: #005228;
+  --color-on-secondary: #003919;
+  --color-on-secondary-container: #6bfe9c;
+
+  --color-tertiary: #fbbb45;
+  --color-tertiary-container: #5f4100;
+  --color-on-tertiary: #422c00;
+  --color-on-tertiary-container: #ffdeab;
+
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+}
+
+@layer base {
+  html, body {
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  }
+  body {
+    overscroll-behavior: none;
+  }
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 8px);
+  }
+}
+
+/* Material Symbols sizing helper */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+.material-symbols-outlined.fill-1 {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Custom Tactical Animations */
+@keyframes pulse-sync {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.96); }
+}
+
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes beacon-ping {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  70% { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.pulse-sync {
+  animation: pulse-sync 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.beacon-ping {
+  animation: beacon-ping 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* Scrollbar hide */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Leaflet Dark Tactical Map Theming */
+.leaflet-container {
+  background: var(--bg-base) !important;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif !important;
+  width: 100%;
+  height: 100%;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-hairline) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #272a2f !important;
+  color: #a0caff !important;
+}
+
+.leaflet-control-attribution {
+  background: var(--bg-surface) !important;
+  color: var(--text-secondary) !important;
+  font-size: 10px !important;
+  backdrop-filter: blur(4px);
+}
+
+.leaflet-control-attribution a {
+  color: #a0caff !important;
+}
+
+/* Tactical Scale Control Styling */
+.leaflet-control-scale {
+  margin-bottom: 12px !important;
+  margin-left: 12px !important;
+}
+.leaflet-control-scale-line {
+  background: var(--bg-surface) !important;
+  border: 1.5px solid var(--border-hairline) !important;
+  border-top: none !important;
+  color: var(--text-primary) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+  padding: 2px 6px !important;
+  box-shadow: none !important;
+  letter-spacing: 0.05em;
+}
+
+/* Tactical custom marker popups */
+.leaflet-popup-content-wrapper {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-hairline) !important;
+}
