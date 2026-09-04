@@ -1,0 +1,208 @@
+<section class="billing-page">
+  <header class="billing-heading">
+    <div>
+      <span class="eyebrow">BILLING & CASH MANAGEMENT</span>
+      <h1>Billing Dashboard</h1>
+      <p>{{ tenantLabel }} · Invoices, cash flow and GST overview</p>
+    </div>
+
+    <span class="demo-badge">DEMO DATA</span>
+  </header>
+
+  <div class="fixture-note">
+    <span>i</span>
+    <p>
+      Billing is currently using frontend demo data. Connect invoice,
+      payment and cash-transaction APIs when billing entities are available.
+    </p>
+  </div>
+
+  <section class="summary-grid">
+    <article class="summary-card revenue">
+      <span>Total Revenue</span>
+      <strong>₹{{ totalRevenue.toLocaleString('en-IN') }}</strong>
+      <small>Total invoice value</small>
+      <i>₹</i>
+    </article>
+
+    <article class="summary-card cash">
+      <span>Cash Balance</span>
+      <strong>₹{{ cashBalance.toLocaleString('en-IN') }}</strong>
+      <small>Current available balance</small>
+      <i>↗</i>
+    </article>
+
+    <article class="summary-card gst">
+      <span>GST Collected</span>
+      <strong>₹{{ gstPayable.toLocaleString('en-IN') }}</strong>
+      <small>CGST + SGST + IGST</small>
+      <i>GST</i>
+    </article>
+
+    <article class="summary-card outstanding">
+      <span>Outstanding</span>
+      <strong>₹{{ outstanding.toLocaleString('en-IN') }}</strong>
+      <small>Pending customer payments</small>
+      <i>!</i>
+    </article>
+  </section>
+
+  <section class="panel invoice-panel">
+    <div class="panel-heading">
+      <div>
+        <span>INVOICE MANAGEMENT</span>
+        <h2>Recent Invoices</h2>
+        <p>Invoice value, GST, payments and outstanding balances</p>
+      </div>
+
+      <strong>{{ invoices.length }} invoices</strong>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th class="numeric">Taxable Amount</th>
+            <th class="numeric">GST</th>
+            <th class="numeric">Total</th>
+            <th class="numeric">Paid</th>
+            <th class="numeric">Balance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let invoice of invoices">
+            <td><strong>{{ invoice.invoiceNumber }}</strong></td>
+            <td>{{ invoice.customer }}</td>
+            <td>{{ invoice.date }}</td>
+
+            <td class="numeric">
+              ₹{{ invoice.taxableAmount.toLocaleString('en-IN') }}
+            </td>
+
+            <td class="numeric">
+              ₹{{ invoice.gst.toLocaleString('en-IN') }}
+            </td>
+
+            <td class="numeric">
+              ₹{{ invoice.total.toLocaleString('en-IN') }}
+            </td>
+
+            <td class="numeric">
+              ₹{{ invoice.paid.toLocaleString('en-IN') }}
+            </td>
+
+            <td
+              class="numeric"
+              [class.negative]="balance(invoice) > 0"
+            >
+              ₹{{ balance(invoice).toLocaleString('en-IN') }}
+            </td>
+
+            <td>
+              <span
+                class="status-pill"
+                [class.paid]="invoice.status === 'Paid'"
+                [class.partial]="invoice.status === 'Partially paid'"
+                [class.overdue]="invoice.status === 'Overdue'"
+              >
+                {{ invoice.status }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="bottom-grid">
+
+    <article class="panel">
+      <div class="panel-heading">
+        <div>
+          <span>CASH MANAGEMENT</span>
+          <h2>Cash Flow</h2>
+          <p>Monthly inflow versus outflow</p>
+        </div>
+      </div>
+
+      <div class="cash-chart">
+        <div class="cash-period" *ngFor="let period of cashFlow">
+
+          <div class="bars">
+            <i
+              class="inflow"
+              [style.height.%]="barHeight(period.inflow)"
+              title="Inflow"
+            ></i>
+
+            <i
+              class="outflow"
+              [style.height.%]="barHeight(period.outflow)"
+              title="Outflow"
+            ></i>
+          </div>
+
+          <div>
+            <strong>{{ period.label }}</strong>
+
+            <small>
+              In ₹{{ period.inflow.toLocaleString('en-IN') }}
+            </small>
+
+            <small>
+              Out ₹{{ period.outflow.toLocaleString('en-IN') }}
+            </small>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="legend">
+        <span>
+          <i class="inflow"></i>
+          Cash Inflow
+        </span>
+
+        <span>
+          <i class="outflow"></i>
+          Cash Outflow
+        </span>
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-heading">
+        <div>
+          <span>GST MANAGEMENT</span>
+          <h2>GST Summary</h2>
+          <p>Tax collected across invoice types</p>
+        </div>
+      </div>
+
+      <div class="gst-list">
+        <div *ngFor="let item of gstSummary">
+
+          <span [class]="item.tone"></span>
+
+          <p>{{ item.label }}</p>
+
+          <strong>
+            ₹{{ item.amount.toLocaleString('en-IN') }}
+          </strong>
+
+        </div>
+      </div>
+
+      <div class="gst-total">
+        <span>Total GST</span>
+        <strong>₹{{ gstPayable.toLocaleString('en-IN') }}</strong>
+      </div>
+    </article>
+
+  </section>
+</section>
