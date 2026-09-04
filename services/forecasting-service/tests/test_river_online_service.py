@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import tempfile
 import pytest
@@ -205,17 +205,20 @@ def test_exogenous_disruption_feature_input():
 
 
 def test_online_endpoints_via_testclient():
+    import uuid
     headers = {"X-Tenant-ID": "TEN-ACME-PHARMA"}
+    sku = f"SKU-TEST-{uuid.uuid4().hex[:8]}"
+    event_id = f"API-EV-{uuid.uuid4().hex[:8]}"
 
     # Ingest event via API
     ingest_res = client.post(
         "/api/v1/forecast/online/events",
         headers=headers,
         json={
-            "eventId": "API-EV-001",
+            "eventId": event_id,
             "tenantId": "TEN-ACME-PHARMA",
             "warehouseId": "WH-GUWAHATI",
-            "skuId": "SKU-PARA-650",
+            "skuId": sku,
             "timestamp": datetime.now(UTC).isoformat(),
             "quantity": 35.0,
             "features": {"rainfall_mm_hr": 20.0, "hazard_risk": 0.45},
@@ -227,7 +230,7 @@ def test_online_endpoints_via_testclient():
 
     # Query provisional forecast
     prov_res = client.get(
-        "/api/v1/forecast/provisional?warehouse_id=WH-GUWAHATI&sku_id=SKU-PARA-650&horizon_days=5",
+        f"/api/v1/forecast/provisional?warehouse_id=WH-GUWAHATI&sku_id={sku}&horizon_days=5",
         headers=headers,
     )
     assert prov_res.status_code == 200
