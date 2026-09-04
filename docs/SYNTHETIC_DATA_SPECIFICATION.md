@@ -199,8 +199,8 @@ Use readable, stable IDs so that developers and judges can understand the demo.
 | Entity | Pattern | Example |
 |---|---|---|
 | Tenant | `TEN-<CODE>` | `TEN-ACME-PHARMA` |
-| Warehouse | `WH-<CITY>` | `WH-CHENNAI` |
-| Retailer | `RET-<REGION>-<NUMBER>` | `RET-SOUTH-001` |
+| Warehouse | `WH-<CITY>` | `WH-GUWAHATI` |
+| Retailer | `RET-<REGION>-<NUMBER>` | `RET-NER-001` |
 | Supplier | `SUP-<NUMBER>` | `SUP-001` |
 | Product | `PRD-<CATEGORY>-<NUMBER>` | `PRD-MED-001` |
 | SKU | `SKU-<SHORT-NAME>` | `SKU-PARA-650` |
@@ -298,9 +298,9 @@ TEN-URBAN-TRADE,Urban Trade Distribution,MERCHANDISE,INR,Asia/Kolkata,true
 
 ```csv
 warehouse_id,tenant_id,warehouse_name,city,state,latitude,longitude,capacity_units,cold_chain_available,active
-WH-CHENNAI,TEN-ACME-PHARMA,Chennai Central Warehouse,Chennai,Tamil Nadu,13.0827,80.2707,500000,true,true
-WH-BENGALURU,TEN-ACME-PHARMA,Bengaluru Regional Warehouse,Bengaluru,Karnataka,12.9716,77.5946,350000,true,true
-WH-HYDERABAD,TEN-ACME-PHARMA,Hyderabad Regional Warehouse,Hyderabad,Telangana,17.3850,78.4867,300000,true,true
+WH-GUWAHATI,TEN-ACME-PHARMA,Guwahati Central Warehouse,Guwahati,Assam,26.1445,91.7362,500000,true,true
+WH-SHILLONG,TEN-ACME-PHARMA,Shillong Regional Warehouse,Shillong,Meghalaya,25.5788,91.8933,350000,true,true
+WH-IMPHAL,TEN-ACME-PHARMA,Imphal Regional Warehouse,Imphal,Manipur,24.8170,93.9368,300000,true,true
 ```
 
 ---
@@ -325,8 +325,8 @@ WH-HYDERABAD,TEN-ACME-PHARMA,Hyderabad Regional Warehouse,Hyderabad,Telangana,17
 
 ```csv
 retailer_id,tenant_id,retailer_name,retailer_type,warehouse_id,city,region,credit_days,active
-RET-SOUTH-001,TEN-ACME-PHARMA,HealthPlus Pharmacy,PHARMACY,WH-CHENNAI,Chennai,SOUTH,30,true
-RET-SOUTH-002,TEN-ACME-PHARMA,CareMed Pharmacy,PHARMACY,WH-BENGALURU,Bengaluru,SOUTH,45,true
+RET-NER-001,TEN-ACME-PHARMA,HealthPlus Pharmacy,PHARMACY,WH-GUWAHATI,Guwahati,NORTHEAST,30,true
+RET-NER-002,TEN-ACME-PHARMA,CareMed Pharmacy,PHARMACY,WH-SHILLONG,Shillong,NORTHEAST,45,true
 ```
 
 ---
@@ -458,8 +458,8 @@ Use variability so that every order does not arrive exactly on the same fixed da
 
 ```csv
 source_warehouse_id,destination_warehouse_id,distance_km,travel_time_hours,fixed_transfer_cost,cost_per_unit,cold_chain_supported,active
-WH-CHENNAI,WH-BENGALURU,346,7.5,12000,0.60,true,true
-WH-CHENNAI,WH-HYDERABAD,627,11.5,18000,0.75,true,true
+WH-GUWAHATI,WH-SHILLONG,346,7.5,12000,0.60,true,true
+WH-GUWAHATI,WH-IMPHAL,627,11.5,18000,0.75,true,true
 ```
 
 ---
@@ -498,8 +498,8 @@ For a smaller MVP, `retailer_id` may be empty and the grain can be warehouse-SKU
 
 ```csv
 sales_date,tenant_id,warehouse_id,retailer_id,sku_id,ordered_quantity,fulfilled_quantity,sales_quantity,return_quantity,lost_sales_quantity,unit_selling_price,promotion_id,stockout_flag
-2026-07-20,TEN-ACME-PHARMA,WH-CHENNAI,RET-SOUTH-001,SKU-PARA-650,85,85,82,3,0,25.00,,false
-2026-07-21,TEN-ACME-PHARMA,WH-BENGALURU,RET-SOUTH-002,SKU-PARA-650,140,90,88,2,50,25.00,,true
+2026-07-20,TEN-ACME-PHARMA,WH-GUWAHATI,RET-NER-001,SKU-PARA-650,85,85,82,3,0,25.00,,false
+2026-07-21,TEN-ACME-PHARMA,WH-SHILLONG,RET-NER-002,SKU-PARA-650,140,90,88,2,50,25.00,,true
 ```
 
 ### Important forecasting rule
@@ -545,8 +545,8 @@ The production model may calculate this internally rather than storing it.
 
 ```csv
 snapshot_date,tenant_id,warehouse_id,sku_id,batch_number,manufacture_date,expiry_date,available_quantity,reserved_quantity,blocked_quantity,unit_cost,currency,storage_condition_code,last_movement_at
-2026-07-26,TEN-ACME-PHARMA,WH-CHENNAI,SKU-PARA-650,B2456,2025-09-01,2026-09-09,2450,100,0,18.50,INR,AMBIENT,2026-07-24T16:20:00Z
-2026-07-26,TEN-ACME-PHARMA,WH-BENGALURU,SKU-PARA-650,B2512,2026-01-10,2027-01-10,250,50,0,18.75,INR,AMBIENT,2026-07-25T10:05:00Z
+2026-07-26,TEN-ACME-PHARMA,WH-GUWAHATI,SKU-PARA-650,B2456,2025-09-01,2026-09-09,2450,100,0,18.50,INR,AMBIENT,2026-07-24T16:20:00Z
+2026-07-26,TEN-ACME-PHARMA,WH-SHILLONG,SKU-PARA-650,B2512,2026-01-10,2027-01-10,250,50,0,18.75,INR,AMBIENT,2026-07-25T10:05:00Z
 ```
 
 ### Derived values
@@ -712,7 +712,7 @@ expected_demand_multiplier
 
 ```csv
 promotion_id,tenant_id,sku_id,region,start_date,end_date,promotion_type,discount_percentage,expected_demand_multiplier
-PROMO-001,TEN-FRESH-MART,SKU-JUICE-1L,SOUTH,2026-05-01,2026-05-15,PRICE_DISCOUNT,0.10,1.25
+PROMO-001,TEN-FRESH-MART,SKU-JUICE-1L,NORTHEAST,2026-05-01,2026-05-15,PRICE_DISCOUNT,0.10,1.25
 ```
 
 ---
@@ -810,7 +810,7 @@ Create `scenario_definitions.csv`.
 
 ```csv
 scenario_id,scenario_type,description,start_date,end_date,tenant_id,warehouse_id,sku_id,severity
-SCN-EXPIRY-001,NEAR_EXPIRY,Paracetamol excess stock in Chennai with demand shortage in Bengaluru,2026-07-26,2026-09-09,TEN-ACME-PHARMA,WH-CHENNAI,SKU-PARA-650,HIGH
+SCN-EXPIRY-001,NEAR_EXPIRY,Paracetamol excess stock in Guwahati with demand shortage in Shillong,2026-07-26,2026-09-09,TEN-ACME-PHARMA,WH-GUWAHATI,SKU-PARA-650,HIGH
 ```
 
 Allowed scenario types:
@@ -837,7 +837,7 @@ Create `expected_outcomes.csv` to test detection accuracy.
 
 ```csv
 scenario_id,expected_risk_type,expected_source_warehouse_id,expected_destination_warehouse_id,expected_min_quantity,expected_max_quantity,expected_action,expected_priority
-SCN-EXPIRY-001,NEAR_EXPIRY,WH-CHENNAI,WH-BENGALURU,800,1000,TRANSFER,HIGH
+SCN-EXPIRY-001,NEAR_EXPIRY,WH-GUWAHATI,WH-SHILLONG,800,1000,TRANSFER,HIGH
 ```
 
 This file should never be supplied as a model input. It is test ground truth only.
@@ -848,7 +848,7 @@ This file should never be supplied as a model input. It is test ground truth onl
 
 Use the following judge-facing scenario.
 
-### Chennai
+### Guwahati
 
 ```text
 SKU: SKU-PARA-650
@@ -858,14 +858,14 @@ Expiry: 45 days from the forecast as-of date
 Expected local consumption before expiry: approximately 700 units
 ```
 
-### Bengaluru
+### Shillong
 
 ```text
 Expected stockout: within 8 days
 Forecast demand: approximately 1,200 units
 ```
 
-### Hyderabad
+### Imphal
 
 ```text
 Forecast demand: approximately 650 units
@@ -874,9 +874,9 @@ Forecast demand: approximately 650 units
 ### Expected recommendation
 
 ```text
-Transfer approximately 900 units to Bengaluru.
-Transfer approximately 600 units to Hyderabad.
-Retain sufficient safety stock in Chennai.
+Transfer approximately 900 units to Shillong.
+Transfer approximately 600 units to Imphal.
+Retain sufficient safety stock in Guwahati.
 Avoid or postpone an unnecessary open purchase order.
 ```
 
@@ -905,11 +905,11 @@ Example:
 
 ```text
 SKU: SKU-JUICE-1L
-Affected warehouses: Chennai and Hyderabad
+Affected warehouses: Guwahati and Imphal
 Weather: maximum temperature above 40°C for 5 days
 Historical effect: beverage demand multiplier between 1.20 and 1.45
-Current Chennai stock: insufficient for forecast
-Current Bengaluru stock: excess cover above 45 days
+Current Guwahati stock: insufficient for forecast
+Current Shillong stock: excess cover above 45 days
 Expected action: transfer stock before creating a new PO
 ```
 
@@ -923,9 +923,9 @@ Example:
 
 ```text
 SKU: SKU-BACKPACK-01
-Source warehouse: Chennai
+Source warehouse: Guwahati
 Source cover: 120 days
-Destination warehouse: Bengaluru
+Destination warehouse: Shillong
 Destination forecast: school-opening demand surge
 Expected comparison: transfer cost versus markdown loss
 Expected action: transfer when net benefit is positive
@@ -1506,21 +1506,21 @@ scenarios:
   - id: SCN-EXPIRY-001
     type: NEAR_EXPIRY
     sku_id: SKU-PARA-650
-    source_warehouse_id: WH-CHENNAI
+    source_warehouse_id: WH-GUWAHATI
     destination_warehouse_ids:
-      - WH-BENGALURU
-      - WH-HYDERABAD
+      - WH-SHILLONG
+      - WH-IMPHAL
 
   - id: SCN-WEATHER-001
     type: WEATHER_LIFT
     category: BEVERAGE
-    city: Chennai
+    city: Guwahati
     demand_multiplier: 1.35
 
   - id: SCN-DUPPO-001
     type: DUPLICATE_PO
     sku_id: SKU-AMOX-500
-    warehouse_id: WH-BENGALURU
+    warehouse_id: WH-SHILLONG
 ```
 
 ---

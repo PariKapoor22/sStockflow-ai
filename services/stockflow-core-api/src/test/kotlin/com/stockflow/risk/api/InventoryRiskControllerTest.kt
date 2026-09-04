@@ -26,14 +26,14 @@ class InventoryRiskControllerTest(
         jdbcTemplate.update(
             """INSERT INTO retailer
                (retailer_id, tenant_id, retailer_name, retailer_type, warehouse_id, city, region, credit_days, active)
-               VALUES ('RET-RISK-001', 'TEN-ACME-PHARMA', 'Risk Test Retailer', 'PHARMACY', 'WH-CHENNAI', 'Chennai', 'SOUTH', 30, TRUE)"""
+               VALUES ('RET-RISK-001', 'TEN-ACME-PHARMA', 'Risk Test Retailer', 'PHARMACY', 'WH-GUWAHATI', 'Guwahati', 'NORTHEAST', 30, TRUE)"""
         )
         jdbcTemplate.update(
             """INSERT INTO sales_history
                (sales_history_id, sales_date, tenant_id, warehouse_id, retailer_id, sku_id,
                 ordered_quantity, fulfilled_quantity, sales_quantity, return_quantity,
                 lost_sales_quantity, unit_selling_price, promotion_id, stockout_flag)
-               VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-CHENNAI', 'RET-RISK-001', 'SKU-PARA-650',
+               VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-GUWAHATI', 'RET-RISK-001', 'SKU-PARA-650',
                        10000, 10000, 10000, 0, 0, ?, NULL, FALSE)""",
             UUID.randomUUID(), Date.valueOf("2026-07-26"), BigDecimal("25.00")
         )
@@ -43,7 +43,7 @@ class InventoryRiskControllerTest(
         }.andExpect {
             status { isOk() }
             jsonPath("$[0].riskType") { value("STOCKOUT_RISK") }
-            jsonPath("$[0].warehouseId") { value("WH-CHENNAI") }
+            jsonPath("$[0].warehouseId") { value("WH-GUWAHATI") }
             jsonPath("$[0].severity") { value("HIGH") }
         }
 

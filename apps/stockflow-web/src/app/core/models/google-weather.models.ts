@@ -50,6 +50,6 @@ export interface HazardAlertsResponse {
   count: number;
   monitoredLocations: number;
   regionCodes: string[];
-  source: 'GOOGLE_WEATHER_PUBLIC_ALERTS';
+  source: 'GOOGLE_WEATHER_PUBLIC_ALERTS' | 'OPEN_SOURCE_HAZARD_MODELS';
   disclaimer: string;
 }

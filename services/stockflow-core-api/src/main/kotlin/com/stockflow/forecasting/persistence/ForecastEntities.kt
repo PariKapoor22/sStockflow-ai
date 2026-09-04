@@ -250,7 +250,11 @@ enum class ForecastModelCode {
     HOLT_WINTERS_ADDITIVE,
     CROSTON_CLASSIC,
     CROSTON_SBA,
-    TSB
+    TSB,
+    STATS_AUTO_ETS,
+    STATS_AUTO_ARIMA,
+    STATS_CROSTON_OPTIMIZED,
+    STATS_SEASONAL_NAIVE
 }
 
 enum class DemandPattern {

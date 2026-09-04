@@ -8,6 +8,7 @@ import { HazardAlertLocation, HazardAlertsResponse, RouteWeatherForecast } from 
 export class GoogleWeatherService {
   private readonly forecastUrl = `${API_BASE_URL}/api/v1/integrations/google-weather/route-forecast`;
   private readonly alertsUrl = `${API_BASE_URL}/api/v1/integrations/google-weather/hazard-alerts`;
+  private readonly modelAlertsUrl = `${API_BASE_URL}/api/v1/integrations/model-hazards`;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -31,6 +32,12 @@ export class GoogleWeatherService {
     return this.http.get<HazardAlertsResponse>(this.alertsUrl, {
       headers: new HttpHeaders({ 'X-Tenant-ID': localStorage.getItem('stockflowTenantId') ?? 'TEN-ACME-PHARMA' }),
       params
+    });
+  }
+
+  modelHazards(): Observable<HazardAlertsResponse> {
+    return this.http.get<HazardAlertsResponse>(this.modelAlertsUrl, {
+      headers: new HttpHeaders({ 'X-Tenant-ID': localStorage.getItem('stockflowTenantId') ?? 'TEN-ACME-PHARMA' })
     });
   }
 }

@@ -2,7 +2,19 @@
 name = "stockflow-optimisation"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.116", "uvicorn>=0.35", "pydantic>=2.11"]
+dependencies = [
+  "fastapi>=0.116",
+  "uvicorn>=0.35",
+  "pydantic>=2.11",
+  "httpx>=0.28",
+  "numpy>=1.26",
+  "ortools>=9.14",
+  "pyod>=2.0",
+  "stockpyl>=1.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.4"]
 
 [build-system]
 requires = ["hatchling"]

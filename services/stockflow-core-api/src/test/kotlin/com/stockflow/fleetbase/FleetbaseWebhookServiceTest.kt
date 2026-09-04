@@ -36,13 +36,13 @@ class FleetbaseWebhookServiceTest {
         jdbc.update(
             """INSERT INTO action_proposal(proposal_id,tenant_id,proposal_type,status,sku_id,quantity,source_warehouse_id,
                 destination_warehouse_id,currency,reason,idempotency_key,created_by)
-               VALUES (?, 'TEN-ACME-PHARMA','TRANSFER','APPROVED','SKU-PARA-650',5,'WH-CHENNAI','WH-BENGALURU','INR','Webhook test',?,?)""",
+               VALUES (?, 'TEN-ACME-PHARMA','TRANSFER','APPROVED','SKU-PARA-650',5,'WH-GUWAHATI','WH-SHILLONG','INR','Webhook test',?,?)""",
             proposalId, "webhook-proposal-$proposalId", userId
         )
         jdbc.update(
             """INSERT INTO transfer_execution(execution_id,tenant_id,proposal_id,status,sku_id,source_warehouse_id,
                 destination_warehouse_id,quantity,idempotency_key,created_by)
-               VALUES (?, 'TEN-ACME-PHARMA',?,'RESERVED','SKU-PARA-650','WH-CHENNAI','WH-BENGALURU',5,?,?)""",
+               VALUES (?, 'TEN-ACME-PHARMA',?,'RESERVED','SKU-PARA-650','WH-GUWAHATI','WH-SHILLONG',5,?,?)""",
             executionId, proposalId, "webhook-execution-$executionId", userId
         )
         jdbc.update(

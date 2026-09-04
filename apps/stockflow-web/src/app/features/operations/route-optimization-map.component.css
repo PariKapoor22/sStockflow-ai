@@ -1,0 +1,14 @@
+:host { display: block; min-height: 300px; }
+.route-map-shell { position: relative; min-height: 300px; height: 100%; overflow: hidden; background: #eef2f7; }
+.route-google-map { width: 100%; min-height: 300px; height: 100%; }
+.route-map-sequence { position:absolute; top:12px; left:50%; z-index:3; transform:translateX(-50%); display:flex; align-items:center; gap:7px; max-width:calc(100% - 290px); padding:7px 10px; overflow:hidden; border:1px solid rgba(212,220,232,.9); border-radius:999px; background:rgba(255,255,255,.95); color:#344054; font-size:7px; font-weight:800; white-space:nowrap; box-shadow:0 5px 18px rgba(15,23,42,.12); }
+.route-map-sequence span { display:flex; align-items:center; gap:5px; overflow:hidden; text-overflow:ellipsis; }.route-map-sequence b { flex:0 0 auto; width:17px; height:17px; display:grid; place-items:center; border-radius:50%; background:#6650db; color:#fff; font-size:7px; }.route-map-sequence span:last-of-type b { background:#0eaa68; }.route-map-sequence i { color:#8b96a8; font-style:normal; }
+.route-map-source { position: absolute; left: 14px; bottom: 13px; z-index: 3; display: flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid rgba(212,220,232,.9); border-radius: 999px; background: rgba(255,255,255,.94); color: #40506a; font-size: 8px; font-weight: 800; box-shadow: 0 5px 18px rgba(15,23,42,.12); }
+.route-map-source i { width: 8px; height: 8px; border-radius: 50%; background: #0eaa68; }
+.route-map-state { position: absolute; inset: 50% auto auto 50%; z-index: 4; transform: translate(-50%,-50%); display: flex; align-items: center; gap: 8px; max-width: 370px; padding: 11px 14px; border: 1px solid #dce3ed; border-radius: 11px; background: rgba(255,255,255,.96); color: #17233a; font-size: 9px; box-shadow: 0 12px 32px rgba(15,23,42,.16); }
+.route-map-state.loading span { width: 13px; height: 13px; border: 2px solid #d8d2fa; border-top-color: #6650db; border-radius: 50%; animation: spin .7s linear infinite; }
+.route-map-state.error { display: grid; justify-items: start; gap: 5px; color: #7f1d1d; }
+.route-map-state.error > span { color: #667085; line-height: 1.45; }
+.route-map-state button { padding: 5px 9px; border: 0; border-radius: 6px; background: #6650db; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 900px) { .route-map-sequence { left:12px; right:12px; max-width:none; transform:none; overflow:auto; } }

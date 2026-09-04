@@ -1,7 +1,7 @@
 route_id,origin_city,destination_city,distance_km,fastest_hours,cheapest_inr,carbon_kgco2e,route_type
-R-CHN-BLR-FAST,Chennai,Bengaluru,350,7.0,18500,420,Express road
-R-CHN-BLR-CHEAP,Chennai,Bengaluru,375,8.5,13200,450,Economy road
-R-CHN-BLR-GREEN,Chennai,Bengaluru,365,8.0,15800,292,Low-carbon road
-R-BLR-CHN-FAST,Bengaluru,Chennai,350,7.0,18500,420,Express road
-R-BLR-CHN-CHEAP,Bengaluru,Chennai,375,8.5,13200,450,Economy road
-R-BLR-CHN-GREEN,Bengaluru,Chennai,365,8.0,15800,292,Low-carbon road
+R-GHY-SHL-FAST,Guwahati,Shillong,99,2.7,8400,34,NH6 priority relief corridor
+R-GHY-SHL-SAFE,Guwahati,Shillong,108,3.2,9200,31,Risk-aware monsoon alternative
+R-GHY-SHL-GREEN,Guwahati,Shillong,104,3.0,8800,24,Low-carbon consolidated route
+R-SHL-GHY-FAST,Shillong,Guwahati,99,2.7,8400,34,NH6 return corridor
+R-SHL-GHY-SAFE,Shillong,Guwahati,108,3.2,9200,31,Risk-aware monsoon return
+R-SHL-GHY-GREEN,Shillong,Guwahati,104,3.0,8800,24,Low-carbon consolidated return

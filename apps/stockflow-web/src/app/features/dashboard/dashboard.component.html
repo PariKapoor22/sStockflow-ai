@@ -12,19 +12,41 @@
     </div>
 
     <nav class="nav-scroll">
-      <section *ngFor="let group of navGroups" class="nav-group">
-        <div class="nav-title" *ngIf="group.title">{{ group.title }}</div>
+      <section *ngFor="let group of navGroups" class="nav-group" [class.has-title]="!!group.title">
         <button
-          *ngFor="let item of group.items"
-          class="nav-item"
-          [class.active]="activeView === item.view"
-          (click)="selectView(item.view)">
-          <span class="nav-icon">
-            <img *ngIf="item.icon.includes('.png')" [src]="item.icon" alt="" />
-            <ng-container *ngIf="!item.icon.includes('.png')">{{ item.icon }}</ng-container>
+          *ngIf="group.title"
+          type="button"
+          class="nav-group-toggle"
+          [class.expanded]="isNavGroupExpanded(group.title)"
+          [class.active]="isNavGroupActive(group)"
+          [attr.aria-expanded]="isNavGroupExpanded(group.title)"
+          [attr.aria-controls]="'nav-group-' + group.title.toLowerCase()"
+          (click)="toggleNavGroup(group.title)">
+          <span class="nav-group-heading">
+            <span class="nav-group-icon" aria-hidden="true">
+              <img *ngIf="group.icon" [src]="group.icon" alt="" />
+            </span>
+            <span class="nav-group-title">{{ group.title }}</span>
           </span>
-          <span class="nav-label">{{ item.label }}</span>
+          <span class="nav-group-chevron" aria-hidden="true">⌄</span>
         </button>
+
+        <div
+          class="nav-group-items"
+          [class.collapsed]="!!group.title && !isNavGroupExpanded(group.title)"
+          [attr.id]="group.title ? 'nav-group-' + group.title.toLowerCase() : null">
+          <button
+            *ngFor="let item of group.items"
+            class="nav-item"
+            [class.active]="activeView === item.view"
+            (click)="selectView(item.view)">
+            <span class="nav-icon">
+              <img *ngIf="item.icon.includes('.png')" [src]="item.icon" alt="" />
+              <ng-container *ngIf="!item.icon.includes('.png')">{{ item.icon }}</ng-container>
+            </span>
+            <span class="nav-label">{{ item.label }}</span>
+          </button>
+        </div>
       </section>
     </nav>
 
@@ -136,7 +158,7 @@
               <span class="avatar large">{{ profileInitials() }}</span>
               <div><strong>{{ profileName() }}</strong><small>{{ profileEmail() || data?.userRole || 'Inventory Manager' }}</small><em>{{ currentTenantLabel() }}</em></div>
             </div>
-            <button type="button" class="menu-row" (click)="selectView('dashboard')"><span>⌂</span><span><strong>My dashboard</strong><small>Return to the tenant overview</small></span></button>
+            <button type="button" class="menu-row" (click)="selectView('dashboard')"><span></span><span><strong>My dashboard</strong><small>Return to the tenant overview</small></span></button>
             <button type="button" class="menu-row" (click)="selectView('settings')"><span>⚙</span><span><strong>Preferences</strong><small>Open the settings workspace</small></span></button>
             <button type="button" class="menu-row danger" (click)="signOut()"><span>↪</span><span><strong>Sign out</strong><small>End this secure session</small></span></button>
           </section>
@@ -148,19 +170,18 @@
     <section class="content" *ngIf="activeView === 'dashboard'">
       <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
         <div class="welcome-row">
-          <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! <span>👋</span></h1><p>Here’s what’s happening with your inventory today.</p></div>
-          <button type="button" class="ask-ai" (click)="toggleCopilot($event)">✦ <span>Ask StockFlow AI</span></button>
+          <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! </h1><p>Here’s what’s happening with your inventory today.</p></div>
         </div>
 
         <section class="kpi-grid">
           <article *ngFor="let kpi of dashboard.kpis" class="card kpi-card">
-            <div class="kpi-icon" [style.background]="kpi.accent">{{ kpi.icon }}</div>
+            <div class="kpi-icon" >{{ kpi.icon }}</div>
             <div class="kpi-body"><span>{{ kpi.label }}</span><strong>{{ kpi.value }}</strong><small [class.positive]="kpi.intent === 'positive'" [class.negative]="kpi.intent === 'negative'">{{ kpi.direction === 'up' ? '↑' : '↓' }} {{ kpi.change }} <em>{{ kpi.comparison }}</em></small></div>
           </article>
         </section>
 
         <section class="dashboard-grid">
-          <article class="card risk-overview">
+          <article class="card risk-overview clickable-card" (click)="selectView('risks')">
             <div class="card-header"><h2>Inventory Risk Overview</h2><div><select aria-label="Warehouse filter" [(ngModel)]="selectedWarehouseId" (ngModelChange)="onDashboardWarehouseChange()"><option value="">All Warehouses</option><option *ngFor="let warehouse of warehouses" [value]="warehouse.warehouseId">{{ warehouse.warehouseName }} · {{ warehouse.city }}</option></select><button>⋮</button></div></div>
             <div class="risk-body">
               <div class="donut-wrap"><div class="donut" [style.background]="riskDonutStyle()"><div><strong>{{ dashboard.riskTotal }}</strong><span>Total Alerts</span></div></div></div>
@@ -171,7 +192,7 @@
             <button class="card-cta" (click)="selectView('risks')">View All Risk Details <span>→</span></button>
           </article>
 
-          <article class="card top-risks">
+          <article class="card top-risks clickable-card" (click)="selectView('risks')">
             <div class="card-header"><h2>Top Operational Risks</h2><div><a (click)="selectView('risks')">View All</a><button>⋮</button></div></div>
             <div class="risk-list">
               <div *ngFor="let risk of dashboard.topRisks" class="risk-item">
@@ -184,7 +205,7 @@
 
 
 
-          <article class="card chart-card demand-card">
+          <article class="card chart-card demand-card clickable-card" (click)="selectView('demand')">
             <div class="card-header"><h2>Demand Forecast <small>(Current deterministic baseline)</small></h2><a (click)="selectView('demand')">View Full Forecast</a></div>
             <div class="chart-legend"><span><i class="actual-line"></i>Actual Demand</span><span><i class="forecast-line"></i>Forecast</span></div>
             <svg viewBox="0 0 360 190" preserveAspectRatio="none" class="line-chart" aria-label="Demand forecast chart">
@@ -196,10 +217,10 @@
             <div class="x-labels"><span *ngFor="let label of dashboard.demandForecast.labels">{{ label }}</span></div>
           </article>
 
-          <article class="card chart-card trend-card">
+          <article class="card chart-card trend-card clickable-card" (click)="selectView('inventory')">
             <div class="card-header"><h2>Inventory Value Snapshot</h2><select><option>Latest</option></select></div>
             <svg viewBox="0 0 260 190" preserveAspectRatio="none" class="line-chart trend-chart" aria-label="Inventory value trend chart">
-              <defs><linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#18b76a" stop-opacity=".28"/><stop offset="1" stop-color="#18b76a" stop-opacity="0"/></linearGradient></defs>
+              <defs><linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B8703D" stop-opacity=".28"/><stop offset="1" stop-color="var(--copper)" stop-opacity="0"/></linearGradient></defs>
               <g class="grid-lines"><line x1="12" y1="30" x2="248" y2="30"/><line x1="12" y1="70" x2="248" y2="70"/><line x1="12" y1="110" x2="248" y2="110"/><line x1="12" y1="150" x2="248" y2="150"/></g>
               <polygon [attr.points]="inventoryTrendPoints() + ' 248,170 12,170'" fill="url(#areaGradient)"/>
               <polyline [attr.points]="inventoryTrendPoints()" class="trend-path"/>
@@ -207,7 +228,7 @@
             <div class="x-labels"><span *ngFor="let label of dashboard.inventoryTrend.labels">{{ label }}</span></div>
           </article>
 
-          <article class="card recommendations-card">
+          <article class="card recommendations-card clickable-card" (click)="selectView('recommendations')">
             <div class="card-header"><h2>Recommendations ({{ dashboard.recommendations.length }})</h2><a (click)="selectView('recommendations')">View All</a></div>
             <div class="recommendation-list">
               <div *ngFor="let recommendation of dashboard.recommendations" class="recommendation-item">
@@ -221,7 +242,7 @@
 
         <footer class="network-bar">
           <div *ngFor="let metric of dashboard.networkMetrics"><span>{{ metric.icon }}</span><strong>{{ metric.value }}</strong><small>{{ metric.label }}</small></div>
-          <div class="sync"><i></i> Data as of {{ dashboard.asOf }} <button (click)="onTenantChange()">⟳</button></div>
+          <div class="sync"><i></i> Data as of {{ dashboard.asOf }} <button (click)="onTenantChange()">Refresh</button></div>
         </footer>
       </ng-container>
     </section>
@@ -287,7 +308,7 @@
           <div class="table-scroll">
             <table>
               <thead><tr><th>SKU</th><th>Warehouse</th><th class="numeric">Sales qty</th><th class="numeric">Avg/day</th><th class="numeric">Returns</th><th class="numeric">Lost sales</th><th class="numeric">Sales value</th></tr></thead>
-              <tbody><tr *ngFor="let item of demandSkus"><td><strong>{{ item.skuName }}</strong><small>{{ item.skuId }}</small></td><td><strong>{{ item.warehouseName }}</strong><small>{{ item.warehouseId }}</small></td><td class="numeric">{{ item.salesQuantity | number }}</td><td class="numeric">{{ item.averageDailyDemand | number:'1.0-2' }}</td><td class="numeric">{{ item.returnQuantity | number }}</td><td class="numeric" [class.negative-text]="item.lostSalesQuantity > 0">{{ item.lostSalesQuantity | number }}</td><td class="numeric">{{ item.grossSalesValue | currency:'INR':'symbol':'1.0-0' }}</td></tr></tbody>
+              <tbody><tr *ngFor="let item of demandSkus"><td><strong>{{ item.skuName }}</strong><small>{{ item.skuId }}</small></td><td><strong>{{ item.warehouseName }}</strong><small>{{ warehouseDisplayId(item.warehouseId) }}</small></td><td class="numeric">{{ item.salesQuantity | number }}</td><td class="numeric">{{ item.averageDailyDemand | number:'1.0-2' }}</td><td class="numeric">{{ item.returnQuantity | number }}</td><td class="numeric" [class.negative-text]="item.lostSalesQuantity > 0">{{ item.lostSalesQuantity | number }}</td><td class="numeric">{{ item.grossSalesValue | currency:'INR':'symbol':'1.0-0' }}</td></tr></tbody>
             </table>
           </div>
         </article>
@@ -297,7 +318,7 @@
     <section class="content workspace" *ngIf="activeView === 'risks'">
       <div class="page-heading">
         <div><span class="eyebrow">INTELLIGENCE</span><h1>Risk & Alerts</h1><p>Separate operational inventory risks from data-quality alerts before taking action.</p></div>
-        <button class="secondary-button" (click)="loadRiskWorkspace()">⟳ Refresh</button>
+        <button class="secondary-button" (click)="loadRiskWorkspace()">Refresh Refresh</button>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading inventory risks…</span></div>
@@ -329,11 +350,11 @@
                   <td><span [class]="'severity-pill ' + risk.severity.toLowerCase()">{{ risk.severity }}</span></td>
                   <td><strong>{{ riskTypeLabel(risk.riskType) }}</strong><small>{{ risk.riskId }}</small></td>
                   <td><strong>{{ risk.skuName }}</strong><small>{{ risk.skuId }}{{ risk.batchNumber ? ' · ' + risk.batchNumber : '' }}</small></td>
-                  <td><strong>{{ risk.warehouseName }}</strong><small>{{ risk.warehouseId }}</small></td>
+                  <td><strong>{{ risk.warehouseName }}</strong><small>{{ warehouseDisplayId(risk.warehouseId) }}</small></td>
                   <td class="numeric">{{ risk.usableQuantity | number }}</td>
                   <td class="numeric">{{ risk.sales30 | number }}</td>
                   <td class="numeric">{{ risk.daysOfCover === null ? '—' : (risk.daysOfCover | number:'1.1-1') }}</td>
-                  <td class="reason-cell"><strong>{{ risk.reason }}</strong><small>{{ risk.recommendedAction }}</small></td>
+                  <td class="reason-cell"><strong>{{ risk.reason }}</strong><small>{{ risk.recommendedAction }}</small><small *ngIf="risk.anomalyModel">{{ risk.anomalyModel.replaceAll('_', ' ') }} score: {{ risk.anomalyScore | number:'1.2-2' }}<span *ngIf="risk.anomalyDetected"> · anomaly detected</span></small></td>
                 </tr>
                 <tr *ngIf="!inventoryRisks.length"><td colspan="8" class="empty-row">No risks match the selected filters.</td></tr>
               </tbody>
@@ -421,7 +442,7 @@
     <section class="content workspace" *ngIf="activeView === 'warehouses'">
       <div class="page-heading">
         <div><span class="eyebrow">INVENTORY MASTER</span><h1>Warehouses</h1><p>Live warehouse capacity, cold-chain readiness and inventory footprint for the selected tenant.</p></div>
-        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadWarehouseWorkspace()">⟳ Refresh</button></div>
+        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadWarehouseWorkspace()">Refresh Refresh</button></div>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading warehouse master data…</span></div>
@@ -439,8 +460,8 @@
         <section class="warehouse-grid">
           <article *ngFor="let warehouse of filteredWarehouses()" class="card warehouse-card">
             <div class="warehouse-card-header">
-              <div class="warehouse-symbol">⌂</div>
-              <div><span>{{ warehouse.warehouseId }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('warehouses'), warehouse.warehouseId)">Updated</em></span><h2>{{ warehouse.warehouseName }}</h2><p>{{ warehouse.city }}, {{ warehouse.state }}, {{ warehouse.country }}</p></div>
+              <div class="warehouse-symbol"></div>
+              <div><span>{{ warehouseDisplayId(warehouse.warehouseId) }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('warehouses'), warehouse.warehouseId)">Updated</em></span><h2>{{ warehouse.warehouseName }}</h2><p>{{ warehouse.city }}, {{ warehouse.state }}, {{ warehouse.country }}</p></div>
               <div class="warehouse-card-actions"><span class="cold-chain-pill" [class.active]="warehouse.coldChainAvailable">{{ warehouse.coldChainAvailable ? 'Cold chain' : 'Standard' }}</span><button type="button" class="record-edit-button" (click)="startWarehouseEdit(warehouse)">Edit</button></div>
             </div>
             <div class="warehouse-stat-grid">
@@ -466,7 +487,7 @@
     <section class="content workspace" *ngIf="activeView === 'products'">
       <div class="page-heading">
         <div><span class="eyebrow">INVENTORY MASTER</span><h1>Products & SKUs</h1><p>Commercial, replenishment, shelf-life and FEFO settings from the live SKU master.</p></div>
-        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadProductWorkspace()">⟳ Refresh</button></div>
+        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadProductWorkspace()">Refresh Refresh</button></div>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading product and SKU data…</span></div>
@@ -515,7 +536,7 @@
     <section class="content workspace" *ngIf="activeView === 'batches'">
       <div class="page-heading">
         <div><span class="eyebrow">INVENTORY EXECUTION</span><h1>Batch Inventory</h1><p>Inspect usable, reserved, blocked and expiry-sensitive stock by warehouse and SKU.</p></div>
-        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadBatchWorkspace()">⟳ Refresh</button></div>
+        <div class="page-heading-actions"><span [class]="'data-source-badge ' + (foundationDataSource === 'LIVE API' ? 'live' : 'fallback')">{{ foundationDataSource }}</span><button class="secondary-button" (click)="loadBatchWorkspace()">Refresh Refresh</button></div>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading batch inventory…</span></div>
@@ -548,7 +569,7 @@
                   <td><span [class]="'batch-status ' + operationalStatusClass(batch)">{{ batchOperationalStatus(batch) }}</span></td>
                   <td><strong>{{ batch.batchNumber }} <em class="changed-marker" *ngIf="prototype.isChanged(prototypeCollection('batches'), batch.batchInventoryId)">Updated</em></strong><small>Snapshot: {{ batch.snapshotDate }}</small></td>
                   <td><strong>{{ batch.skuId }}</strong><small>{{ batch.unitCost | currency:batch.currency:'symbol':'1.2-2' }} per unit</small></td>
-                  <td><strong>{{ batch.warehouseId }}</strong><small>{{ batch.storageConditionCode }}</small></td>
+                  <td><strong>{{ warehouseDisplayId(batch.warehouseId) }}</strong><small>{{ batch.storageConditionCode }}</small></td>
                   <td class="numeric">{{ batch.availableQuantity | number }}</td>
                   <td class="numeric">{{ batch.reservedQuantity | number }}</td>
                   <td class="numeric">{{ batch.blockedQuantity | number }}</td>
@@ -568,7 +589,7 @@
     <section class="content workspace" *ngIf="activeView === 'integrations'">
       <div class="page-heading">
         <div><span class="eyebrow">DATA OPERATIONS</span><h1>Data Imports</h1><p>Validate or upsert controlled StockFlow foundation and sales packages with complete import-job traceability.</p></div>
-        <button class="secondary-button" (click)="loadImportWorkspace()">⟳ Refresh history</button>
+        <button class="secondary-button" (click)="loadImportWorkspace()">Refresh Refresh history</button>
       </div>
 
       <div class="inline-state" *ngIf="pageLoading"><div class="spinner"></div><span>Loading import history…</span></div>
@@ -641,7 +662,7 @@
         <header><div><span>PROTOTYPE EDITOR</span><h2>{{ activeEditor === 'warehouse' ? 'Edit warehouse' : activeEditor === 'sku' ? 'Edit SKU policy' : 'Adjust batch inventory' }}</h2><p>Changes are validated, saved in this browser and reflected across related prototype screens.</p></div><button type="button" (click)="cancelEditor()" aria-label="Close editor">×</button></header>
 
         <form *ngIf="activeEditor === 'warehouse' && warehouseDraft as draft" class="master-editor-form" (ngSubmit)="saveWarehouseEdit()">
-          <div class="editor-id"><span>Warehouse ID</span><strong>{{ draft.warehouseId }}</strong></div>
+          <div class="editor-id"><span>Warehouse ID</span><strong>{{ warehouseDisplayId(draft.warehouseId) }}</strong></div>
           <label class="full"><span>Warehouse name</span><input name="warehouseName" [(ngModel)]="draft.warehouseName" required></label>
           <label><span>City</span><input name="warehouseCity" [(ngModel)]="draft.city" required></label>
           <label><span>State</span><input name="warehouseState" [(ngModel)]="draft.state" required></label>
@@ -667,7 +688,7 @@
 
         <form *ngIf="activeEditor === 'batch' && batchDraft as draft" class="master-editor-form" (ngSubmit)="saveBatchEdit()">
           <div class="editor-id"><span>Batch</span><strong>{{ draft.batchNumber }} · {{ draft.skuId }}</strong></div>
-          <div class="editor-context full"><span>{{ draft.warehouseId }}</span><small>Current calculated signal: {{ batchOperationalStatus(draft) }}</small></div>
+          <div class="editor-context full"><span>{{ warehouseDisplayId(draft.warehouseId) }}</span><small>Current calculated signal: {{ batchOperationalStatus(draft) }}</small></div>
           <label><span>Available quantity</span><input name="batchAvailable" type="number" min="0" step="1" [(ngModel)]="draft.availableQuantity"></label>
           <label><span>Reserved quantity</span><input name="batchReserved" type="number" min="0" step="1" [(ngModel)]="draft.reservedQuantity"></label>
           <label><span>Blocked quantity</span><input name="batchBlocked" type="number" min="0" step="1" [(ngModel)]="draft.blockedQuantity"></label>
@@ -703,7 +724,7 @@
               <time>{{ activity.timestamp | date:'short' }}</time>
             </article>
           </div>
-          <ng-template #noPrototypeActivity><div class="empty-activity"><i>↻</i><strong>No demo changes yet</strong><p>Follow the presentation journey to create an auditable sequence of decisions.</p></div></ng-template>
+          <ng-template #noPrototypeActivity><div class="empty-activity"><i></i><strong>No demo changes yet</strong><p>Follow the presentation journey to create an auditable sequence of decisions.</p></div></ng-template>
         </article>
 
         <aside class="card presentation-flow">
@@ -712,7 +733,7 @@
           <button type="button" (click)="selectView('transfers')"><i>02</i><span><strong>Approve transfer</strong><small>Choose an explainable stock movement.</small></span><b>›</b></button>
           <button type="button" (click)="selectView('routes')"><i>03</i><span><strong>Optimize and dispatch</strong><small>Advance a route through approval and delivery.</small></span><b>›</b></button>
           <button type="button" (click)="selectView('sustainability')"><i>04</i><span><strong>Verify impact</strong><small>Show updated emissions and waste savings.</small></span><b>›</b></button>
-          <button type="button" (click)="selectView('activity')"><i>05</i><span><strong>Show audit trail</strong><small>Return here to prove every change was retained.</small></span><b>✓</b></button>
+          <button type="button" (click)="selectView('activity')"><i>05</i><span><strong>Show audit trail</strong><small>Return here to prove every change was retained.</small></span><b>Done</b></button>
           <div class="flow-note"><strong>Prototype behavior</strong><p>This workflow uses deterministic demo data and browser storage. The same screens can later connect to secured backend APIs without changing the presentation flow.</p></div>
         </aside>
       </section>
@@ -740,7 +761,7 @@
 
     <section class="content workspace" *ngIf="!isImplementedView()">
       <div class="placeholder-page card">
-        <div class="placeholder-icon">◫</div>
+        <div class="placeholder-icon"></div>
         <span class="eyebrow">FRONTEND ROADMAP</span>
         <h1>{{ pageTitle() }}</h1>
         <p>This navigation item is wired and ready for its backend workflow. The current frontend delivers live intelligence, warehouse, product, batch-inventory and controlled data-import workspaces. This remaining item requires a future backend workflow.</p>
@@ -759,7 +780,7 @@
   (click)="toggleCopilot($event)"
 >
   <span class="copilot-launcher__glow"></span>
-  <span class="copilot-launcher__mark">✦</span>
+  <span class="copilot-launcher__mark"><svg xmlns="http://www.w3.org/20event/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span>
 </button>
 
 <section
@@ -772,7 +793,7 @@
 >
   <header class="copilot-popover__header">
     <div class="copilot-popover__identity">
-      <span class="copilot-popover__logo">✦</span>
+      <span class="copilot-popover__logo"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span>
       <div><strong>StockFlow Copilot</strong><small>Grounded inventory intelligence</small></div>
     </div>
     <button type="button" class="copilot-popover__close" aria-label="Close StockFlow Copilot" (click)="closeCopilot($event)">×</button>
@@ -795,10 +816,16 @@
 
   <form class="copilot-popover__input" (ngSubmit)="sendCopilotMessage()">
     <input [(ngModel)]="copilotInput" name="copilotInput" autocomplete="off" placeholder="Ask about inventory, expiry or routes…" [disabled]="copilotLoading">
-    <button type="submit" aria-label="Send message" [disabled]="copilotLoading || !copilotInput.trim()">➤</button>
+    <button type="submit" aria-label="Send message" [disabled]="copilotLoading || !copilotInput.trim()">Send</button>
   </form>
 </section>
 
 <ng-template #dashboardLoadingState>
   <div class="loading-state"><div class="spinner"></div><p *ngIf="!error">Loading StockFlow data…</p><p *ngIf="error">{{ error }}</p></div>
 </ng-template>
+
+
+
+
+
+

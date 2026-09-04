@@ -174,7 +174,8 @@
 
   <div class="prototype-note">
     <span>INTERACTIVE PROTOTYPE</span>
-    <p *ngIf="view !== 'transfers' && view !== 'purchase'">Built for {{ tenantLabel }} with representative operational data. Changes are saved in this browser and remain after refresh.</p>
+    <p *ngIf="view !== 'transfers' && view !== 'purchase' && view !== 'orders'">Built for {{ tenantLabel }} with representative operational data. Changes are saved in this browser and remain after refresh.</p>
+    <p *ngIf="view === 'orders'">Orders, lifecycle transitions and audit history are persisted through the secured StockFlow Orders API.</p>
     <p *ngIf="view === 'transfers' || view === 'purchase'">Recommendations are representative; proposals and approval history are persisted through the secured StockFlow Action API.</p>
     <div class="prototype-save-state"><i></i><strong>{{ prototype.changeCount() }} saved changes</strong><small *ngIf="prototype.lastUpdatedAt()">Updated {{ prototype.lastUpdatedAt() | date:'shortTime' }}</small></div>
   </div>
@@ -216,7 +217,7 @@
         <article class="panel route-panel">
           <div class="panel-heading"><div><span>OPTIMIZED NETWORK</span><h2>Transfer route sequence</h2></div><span class="optimization-badge">12.6% fewer km</span></div>
           <div class="route-line">
-            <div><i>01</i><strong>Chennai</strong><small>2 dispatches</small></div><span><em>347 km</em></span><div><i>02</i><strong>Bengaluru</strong><small>1 cross-dock</small></div><span><em>148 km</em></span><div><i>03</i><strong>Mysuru</strong><small>Final delivery</small></div>
+            <div><i>01</i><strong>Guwahati</strong><small>2 relief dispatches</small></div><span><em>51 km</em></span><div><i>02</i><strong>Nongpoh</strong><small>Accessibility checkpoint</small></div><span><em>48 km</em></span><div><i>03</i><strong>Shillong</strong><small>Final relief hub</small></div>
           </div>
           <div class="route-footer"><span><strong>8h 35m</strong> planned transit</span><span><strong>92%</strong> vehicle utilization</span><span><strong>₹18.4K</strong> avoided expedite cost</span></div>
         </article>
@@ -254,19 +255,11 @@
 
       <section class="route-design-grid">
         <article class="panel route-map-panel">
-          <div class="panel-heading"><div><span>SELECTED PLAN · {{ selectedRoute().id }}</span><h2>{{ selectedRoute().lane }}</h2><p>Capacity-aware stop sequence and transfer consolidation preview</p></div><span class="optimization-badge">{{ selectedRoute().baselineKm - selectedRoute().optimizedKm }} km saved</span></div>
-          <div class="route-map-canvas">
-            <div class="map-chip"><i></i>Optimized sequence</div>
-            <div class="map-route">
-              <ng-container *ngFor="let stop of selectedRoute().stops; let index = index; let last = last">
-                <div class="map-stop" [class.destination]="last"><i>{{ index + 1 }}</i><span><strong>{{ stop }}</strong><small>{{ index === 0 ? 'Dispatch and load' : last ? 'Final receiving node' : 'Consolidation stop' }}</small></span></div>
-                <span class="map-connector" *ngIf="!last"><b></b><em>{{ index === 0 ? 'Priority lane' : 'Final leg' }}</em></span>
-              </ng-container>
-            </div>
-          </div>
+          <div class="panel-heading"><div><span>SELECTED PLAN · {{ selectedRoute().id }}</span><h2>{{ selectedRoute().lane }}</h2><p>Capacity-aware stop sequence and transfer consolidation preview</p></div><span class="optimization-badge">{{ selectedRoute().baselineKm - selectedRoute().optimizedKm | number:'1.0-1' }} km saved</span></div>
+          <sf-route-optimization-map [routeId]="selectedRoute().id" [stops]="selectedRouteMapStops()"></sf-route-optimization-map>
           <div class="route-summary-strip">
-            <span><small>Optimized distance</small><strong>{{ selectedRoute().optimizedKm }} km</strong></span>
-            <span><small>Planned duration</small><strong>{{ selectedRoute().duration }}</strong></span>
+            <span><small>Optimized distance</small><strong>{{ selectedRoute().optimizedKm }} km</strong><small *ngIf="selectedRoute().matrixProvider">{{ selectedRoute().matrixProvider!.replaceAll('_', ' ') }}</small></span>
+            <span><small>Planned duration</small><strong>{{ selectedRoute().duration }}</strong><small *ngIf="selectedRoute().arrivalTime">arrival {{ selectedRoute().arrivalTime }}</small></span>
             <span><small>Load utilization</small><strong>{{ selectedRoute().loadKg / selectedRoute().capacityKg | percent:'1.0-0' }}</strong></span>
             <span><small>Estimated route cost</small><strong>{{ selectedRoute().costInr | currency:'INR':'symbol':'1.0-0' }}</strong></span>
             <span><small>Estimated emissions</small><strong>{{ selectedRoute().co2Kg }} kg CO₂e</strong></span>
@@ -276,11 +269,13 @@
         <aside class="panel optimization-control">
           <div class="panel-heading"><div><span>OPTIMIZATION SETUP</span><h2>Planning constraints</h2><p>Change the ranking objective before generating plans.</p></div><i class="control-mark">⚙</i></div>
           <div class="control-form">
-            <label><span>Optimization objective</span><select [(ngModel)]="routeObjective"><option>Balanced cost and carbon</option><option>Lowest transport cost</option><option>Lowest carbon impact</option><option>Fastest service recovery</option></select></label>
+            <label><span>Optimization objective</span><select [(ngModel)]="routeObjective"><option>Balanced cost and carbon</option><option>Lowest transport cost</option><option>Lowest carbon impact</option><option>Fastest service recovery</option><option>Safest route</option><option>Shortest path</option><option>Greenest route</option></select></label>
             <label><span>Vehicle eligibility</span><select [(ngModel)]="vehicleType"><option>All eligible vehicles</option><option>Electric and CNG preferred</option><option>Cold-chain vehicles only</option><option>High-capacity fleet only</option></select></label>
-            <div class="constraint-list"><span><i>✓</i>Respect vehicle capacity</span><span><i>✓</i>Protect critical delivery priority</span><span><i>✓</i>Check cold-chain compatibility</span><span><i>✓</i>Keep human approval required</span></div>
+            <div class="constraint-list"><span><i>✓</i>Respect vehicle capacity and availability</span><span><i>✓</i>Enforce promised-delivery windows</span><span><i>✓</i>Check cold-chain and warehouse stock</span><span><i>✓</i>Penalize flood, landslide and road-block risk</span><span><i>✓</i>Keep human approval required</span></div>
             <button type="button" class="optimize-button" [disabled]="routeOptimizationRunning" (click)="optimizeRoutes()">{{ routeOptimizationRunning ? 'Calculating…' : 'Recalculate route candidates' }}</button>
-            <small class="method-note">Prototype calculations use representative lanes. Production optimization requires live road, fleet and dispatch data.</small>
+            <div class="route-engine-evidence" *ngIf="routeSolver"><strong>{{ routeSolver.replaceAll('_', ' ') }}</strong><span>{{ routeMatrixProviders.join(', ').replaceAll('_', ' ') }}</span><small>Solver and road-cost sources returned by the live optimisation API.</small></div>
+            <div class="route-rejection" *ngFor="let rejected of routeRejected"><strong>{{ rejected.id }} rejected</strong><span>{{ rejected.reason }}</span></div>
+            <small class="method-note">OR-Tools performs stop sequencing with capacity and time-window constraints. Google traffic matrices are used when the backend key is available; otherwise the response clearly identifies its fallback.</small>
           </div>
         </aside>
       </section>
@@ -292,7 +287,7 @@
             <td><strong>{{ item.id }} <em class="changed-marker" *ngIf="prototype.isChanged('routePlans', item.id)">Updated</em></strong><small><span [class]="'priority-dot ' + statusClass(item.priority)"></span>{{ item.priority }} service priority</small></td>
             <td><strong>{{ item.lane }}</strong><small>{{ item.vehicle }}</small></td>
             <td><strong>{{ item.stops.length }} planned stops</strong><small>Capacity-compatible sequence</small></td>
-            <td class="numeric"><strong>{{ item.optimizedKm }} km</strong><small>{{ item.baselineKm - item.optimizedKm }} km below baseline</small></td>
+            <td class="numeric"><strong>{{ item.optimizedKm | number:'1.0-1' }} km</strong><small>{{ item.baselineKm - item.optimizedKm | number:'1.0-1' }} km below baseline</small></td>
             <td><strong>{{ item.loadKg / item.capacityKg | percent:'1.0-0' }}</strong><div class="mini-progress"><i [style.width.%]="item.loadKg / item.capacityKg * 100"></i></div></td>
             <td class="numeric"><strong>{{ item.costInr | currency:'INR':'symbol':'1.0-0' }}</strong><small>estimated trip cost</small></td>
             <td><strong class="positive-text">−{{ item.co2SavedKg }} kg CO₂e</strong><small>{{ item.co2Kg }} kg estimated trip total</small></td>

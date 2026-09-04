@@ -63,7 +63,8 @@ class ForecastingService(
     private val performanceRepository: ForecastModelPerformanceRepository,
     private val resultRepository: ForecastResultRepository,
     private val exceptionRepository: ForecastExceptionRepository,
-    private val diagnosticRepository: ForecastPositionDiagnosticRepository
+    private val diagnosticRepository: ForecastPositionDiagnosticRepository,
+    private val statsForecastClient: StatsForecastClient
 ) {
     @Transactional
     fun createRun(tenantId: String, request: CreateForecastRunRequest): ForecastRunView {
@@ -156,6 +157,14 @@ class ForecastingService(
                         requestedModels = requestedModels,
                         profile = preprocessed,
                         actualDailyHistory = history
+                    ).toMutableList()
+                    scores += statsForecastScores(
+                        tenantId = tenantId,
+                        key = key,
+                        configuration = configuration,
+                        profile = preprocessed,
+                        actualDailyHistory = history,
+                        horizonDays = request.horizonDays
                     )
                     val selected = scores.minWithOrNull(
                         compareBy<ModelScore> { it.selectionScore }
@@ -211,6 +220,8 @@ class ForecastingService(
                         val intervalWidth = dailyRmse
                             .multiply(BigDecimal("1.96"))
                             .multiply(BigDecimal.valueOf(sqrt((index + 1).toDouble())))
+                        val externalLower = selected.lowerBounds?.getOrNull(index)
+                        val externalUpper = selected.upperBounds?.getOrNull(index)
                         ForecastResultEntity(
                             forecastRunId = run.forecastRunId,
                             tenantId = tenantId,
@@ -220,9 +231,10 @@ class ForecastingService(
                             horizonDay = index + 1,
                             modelCode = selected.model.code,
                             forecastQuantity = quantity,
-                            lowerBound = quantity.subtract(intervalWidth).nonNegative()
+                            lowerBound = (externalLower ?: quantity.subtract(intervalWidth)).nonNegative()
                                 .setScale(4, RoundingMode.HALF_UP),
-                            upperBound = quantity.add(intervalWidth).setScale(4, RoundingMode.HALF_UP),
+                            upperBound = (externalUpper ?: quantity.add(intervalWidth)).nonNegative()
+                                .setScale(4, RoundingMode.HALF_UP),
                             confidence = confidence
                         )
                     })
@@ -700,6 +712,54 @@ class ForecastingService(
         return candidates
     }
 
+    private fun statsForecastScores(
+        tenantId: String,
+        key: PositionKey,
+        configuration: ForecastConfigurationEntity,
+        profile: PreprocessedDemand,
+        actualDailyHistory: List<BigDecimal>,
+        horizonDays: Int
+    ): List<ModelScore> {
+        val minimumTraining = (configuration.minimumHistoryDays / 2).coerceAtLeast(14)
+        val candidates = statsForecastClient.candidates(
+            StatsForecastRequest(
+                tenantId = tenantId,
+                warehouseId = key.warehouseId,
+                skuId = key.skuId,
+                modelHistory = profile.history,
+                actualHistory = actualDailyHistory,
+                horizonDays = horizonDays,
+                backtestPeriods = configuration.backtestDays,
+                minimumTrainingPeriods = minimumTraining,
+                seasonLength = configuration.seasonalPeriodDays,
+                demandPattern = profile.demandPattern
+            )
+        )
+        return candidates.mapNotNull { candidate ->
+            if (candidate.forecast.size != horizonDays ||
+                candidate.lowerBounds.size != horizonDays ||
+                candidate.upperBounds.size != horizonDays
+            ) return@mapNotNull null
+            ModelScore(
+                model = PrecomputedForecastModel(candidate.modelCode, candidate.forecast),
+                aggregation = ForecastAggregationLevel.DAILY,
+                trainingSampleCount = candidate.trainingSampleCount,
+                backtestPoints = candidate.backtestPoints,
+                mae = candidate.mae,
+                rmse = candidate.rmse,
+                mape = candidate.mape,
+                wape = candidate.wape,
+                smape = candidate.smape,
+                mase = candidate.mase,
+                rmsse = candidate.rmsse,
+                bias = candidate.bias,
+                selectionScore = candidate.selectionScore,
+                lowerBounds = candidate.lowerBounds,
+                upperBounds = candidate.upperBounds
+            )
+        }
+    }
+
     private fun forecastDailyValues(
         selected: ModelScore,
         dailyHistory: List<BigDecimal>,
@@ -926,6 +986,11 @@ class ForecastingService(
                     demandAlpha = configuration.smoothingAlpha.toDouble(),
                     probabilityBeta = configuration.trendBeta.toDouble()
                 )
+                ForecastModelCode.STATS_AUTO_ETS,
+                ForecastModelCode.STATS_AUTO_ARIMA,
+                ForecastModelCode.STATS_CROSTON_OPTIMIZED,
+                ForecastModelCode.STATS_SEASONAL_NAIVE ->
+                    throw InvalidForecastException("StatsForecast models are evaluated by the external challenger service")
             }
         }
     }
@@ -1226,10 +1291,22 @@ private data class ModelScore(
     val mase: BigDecimal?,
     val rmsse: BigDecimal?,
     val bias: BigDecimal,
-    val selectionScore: BigDecimal
+    val selectionScore: BigDecimal,
+    val lowerBounds: List<BigDecimal>? = null,
+    val upperBounds: List<BigDecimal>? = null
 ) {
     fun sameCandidate(other: ModelScore): Boolean =
         model.code == other.model.code && aggregation == other.aggregation
+}
+
+private class PrecomputedForecastModel(
+    override val code: ForecastModelCode,
+    private val values: List<BigDecimal>
+) : DemandForecastModel {
+    override fun forecast(history: List<BigDecimal>, horizonPeriods: Int): List<BigDecimal> {
+        require(horizonPeriods <= values.size) { "Precomputed forecast does not cover the requested horizon" }
+        return values.take(horizonPeriods)
+    }
 }
 
 private fun List<BigDecimal>.averageBigDecimal(scale: Int): BigDecimal =

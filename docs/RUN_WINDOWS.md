@@ -45,15 +45,18 @@ From the repository root:
 RUN_ALL_WINDOWS.cmd
 ```
 
-The launcher validates the installed tools, generates and validates synthetic data, and opens separate Command Prompt windows for:
+The launcher validates the installed tools, starts each service as a hidden child
+process, waits for its health check, and keeps everything attached to this one
+Command Prompt. It starts:
 
 - Kotlin Core API
 - Angular UI
 - Forecasting service
 - Optimisation service
-- MCP data server
-- MCP intelligence server
-- MCP action server
+
+When all checks pass, open `http://localhost:4200`. Keep the launcher window
+open; press `Ctrl+C` once to stop the child processes. Per-service output is
+written under `.stockflow\logs\<timestamp>`.
 
 ## Manual commands
 
@@ -87,20 +90,64 @@ mvn spring-boot:run
 ### Forecasting
 
 ```cmd
-cd services\forecasting-service
-uv sync
-uv run uvicorn stockflow_forecasting.main:app --port 8101
+call run-forecasting-windows.cmd
 ```
+
+Keep this CMD window open before starting the Kotlin API. The service exposes:
+
+- health: `http://127.0.0.1:8101/health`
+- API documentation: `http://127.0.0.1:8101/docs`
+- governed candidate endpoint: `POST /api/v1/forecast/candidates`
+
+The standard `run-core-api-windows.cmd` launcher enables the StatsForecast
+challenger automatically and points Spring Boot at port `8101`. StatsForecast
+adds AutoETS, AutoARIMA, Croston Optimized and Seasonal Naive candidates to the
+existing Kotlin candidates. Spring Boot still performs the final model
+selection and persists the forecast. If the Python process is unavailable, the
+forecast run safely continues with the internal models.
 
 ### Optimisation
 
 ```cmd
-cd services\optimisation-service
-uv sync
-uv run uvicorn stockflow_optimisation.main:app --port 8102
+call run-optimisation-windows.cmd
 ```
 
+Keep this window open before starting the Kotlin API. It provides Stockpyl
+inventory policies, OR-Tools stock-transfer and multi-stop vehicle routing,
+PyOD anomaly scoring, and normalized NASA LHASA plus GloFAS/LISFLOOD
+model-output adapters. The local Route Optimization page uses this service on
+port `8102`. API docs:
+`http://127.0.0.1:8102/docs`.
+
+When `GOOGLE_MAPS_BACKEND_API_KEY` is defined, vehicle routing uses a Google
+Routes traffic matrix. Otherwise it uses a labelled geodesic fallback. A
+caller may also submit a road graph with closures and hazard scores.
+
+Configure that backend key once from the project root. The prompt hides the
+key and writes it to the Git-ignored `.env` file; Windows launchers load it
+automatically on future starts:
+
+```cmd
+configure-google-maps-windows.cmd
+RUN_ALL_WINDOWS.cmd
+```
+
+Live hazard model outputs are optional and must be supplied as GeoJSON feeds:
+
+```cmd
+set LHASA_GEOJSON_URL=https://your-data-host/lhasa-outlook.geojson
+set GLOFAS_GEOJSON_URL=https://your-data-host/glofas-outlook.geojson
+run-optimisation-windows.cmd
+```
+
+Unconfigured providers return no model zones and are shown as unconfigured;
+StockFlow never turns prototype polygons into live hazard predictions.
+
 ### MCP data server
+
+The recommended `RUN_ALL_WINDOWS.cmd` command starts the Data MCP,
+Intelligence MCP, and Copilot automatically. Use the commands below only when
+you want to run or debug one service separately.
 
 ```cmd
 cd mcp

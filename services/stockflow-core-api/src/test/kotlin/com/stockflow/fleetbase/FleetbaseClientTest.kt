@@ -141,8 +141,8 @@ class FleetbaseClientTest {
 
         val created = client.createOrder(FleetbaseOrderCreateCommand(
             internalId = "SF-TRF-ABC123",
-            pickup = mapOf("name" to "Chennai Warehouse", "address" to "Chennai, India"),
-            dropoff = mapOf("name" to "Bengaluru Warehouse", "address" to "Bengaluru, India"),
+            pickup = mapOf("name" to "Guwahati Warehouse", "address" to "Guwahati, India"),
+            dropoff = mapOf("name" to "Shillong Warehouse", "address" to "Shillong, India"),
             vehicleId = "vehicle_01",
             notes = "StockFlow transfer",
             meta = mapOf("stockflow_execution_id" to "execution-01")
@@ -196,7 +196,7 @@ class FleetbaseClientTest {
                 exchange.responseBody.use { it.write(bytes) }
             }
             createContext("/v1/orders/order_track_01/tracker") { exchange ->
-                val body = """{"driver_current_location":{"latitude":12.9716,"longitude":77.5946},"progress_percentage":42.5,"total_distance":10000,"completed_distance":4250,"current_destination_eta":600,"completion_eta":1200,"estimated_completion_time":"2026-08-25T15:00:00Z","current_destination":{"name":"Bengaluru Hub"}}"""
+                val body = """{"driver_current_location":{"latitude":25.5788,"longitude":91.8933},"progress_percentage":42.5,"total_distance":10000,"completed_distance":4250,"current_destination_eta":600,"completion_eta":1200,"estimated_completion_time":"2026-08-25T15:00:00Z","current_destination":{"name":"Shillong Hub"}}"""
                 val bytes = body.toByteArray(StandardCharsets.UTF_8)
                 exchange.responseHeaders.add("Content-Type", "application/json")
                 exchange.sendResponseHeaders(200, bytes.size.toLong())
@@ -220,8 +220,8 @@ class FleetbaseClientTest {
         assertTrue(order.dispatched)
         assertEquals("FB-TRACK-01", order.trackingNumber)
         assertEquals(42.5, tracking.progressPercentage)
-        assertEquals(12.9716, tracking.latitude)
-        assertEquals("Bengaluru Hub", tracking.currentDestination)
+        assertEquals(25.5788, tracking.latitude)
+        assertEquals("Shillong Hub", tracking.currentDestination)
         assertEquals(1200L, tracking.etaByDestination["place_02"])
     }
 }

@@ -1,6 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+call "%~dp0load-env-windows.cmd"
 call "%~dp0configure-maven-windows.cmd"
 if errorlevel 1 (
   echo ============================================================
@@ -17,6 +18,11 @@ if errorlevel 1 (
 
 cd /d "%~dp0services\stockflow-core-api"
 
+if not defined STATSFORECAST_ENABLED set "STATSFORECAST_ENABLED=true"
+if not defined STATSFORECAST_API_URL set "STATSFORECAST_API_URL=http://127.0.0.1:8101"
+if not defined STOCKFLOW_DECISION_INTELLIGENCE_ENABLED set "STOCKFLOW_DECISION_INTELLIGENCE_ENABLED=true"
+if not defined STOCKFLOW_DECISION_INTELLIGENCE_URL set "STOCKFLOW_DECISION_INTELLIGENCE_URL=http://127.0.0.1:8102"
+
 echo ============================================================
 echo StockFlow Core API
 echo ============================================================
@@ -28,16 +34,23 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo.
-echo Running tests...
-call mvn -Dkotlin.compiler.daemon=false clean test
-if errorlevel 1 (
+if /I "%STOCKFLOW_SKIP_TESTS%"=="true" (
   echo.
-  echo ERROR: Backend tests failed. The API was not started.
-  pause
-  exit /b 1
+  echo Skipping startup tests for the single-window launcher.
+) else (
+  echo.
+  echo Running tests...
+  call mvn -Dkotlin.compiler.daemon=false clean test
+  if errorlevel 1 (
+    echo.
+    echo ERROR: Backend tests failed. The API was not started.
+    pause
+    exit /b 1
+  )
 )
 
 echo.
 echo Starting Spring Boot API on http://localhost:8080
+echo StatsForecast challenger: %STATSFORECAST_API_URL%
+echo Decision intelligence: %STOCKFLOW_DECISION_INTELLIGENCE_URL%
 call mvn -Dkotlin.compiler.daemon=false spring-boot:run

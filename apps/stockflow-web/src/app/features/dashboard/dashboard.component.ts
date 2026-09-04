@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { catchError, finalize, forkJoin, of, throwError } from 'rxjs';
 import { DashboardOverview } from '../../core/models/dashboard.models';
 import { createPrototypeFoundationData } from '../../core/data/prototype-foundation.data';
 import {
@@ -63,6 +63,12 @@ interface NavigationItem {
   label: string;
   icon: string;
   view: ViewId;
+}
+
+interface NavigationGroup {
+  title: string;
+  icon?: string;
+  items: NavigationItem[];
 }
 
 type TopbarPanel = 'notifications' | 'help' | 'profile' | null;
@@ -169,6 +175,12 @@ export class DashboardComponent implements OnInit {
   globalSearch = '';
   sidebarCollapsed = true;
   sidebarHoverExpanded = false;
+  readonly expandedNavGroups: Record<string, boolean> = {
+    INTELLIGENCE: false,
+    OPERATIONS: false,
+    INVENTORY: false,
+    ADMIN: false
+  };
   isPillHovered = false;
   private pillHoverTimeout?: any;
 
@@ -195,9 +207,9 @@ export class DashboardComponent implements OnInit {
   foundationDataSource: 'LIVE API' | 'DEMO FALLBACK' = 'LIVE API';
 
   readonly tenants = [
-    { id: 'TEN-ACME-PHARMA', label: 'Acme Pharma' },
-    { id: 'TEN-FRESH-MART', label: 'Fresh Mart' },
-    { id: 'TEN-URBAN-TRADE', label: 'Urban Trade' }
+    { id: 'TEN-ACME-PHARMA', label: 'NER Medical Relief Network' },
+    { id: 'TEN-FRESH-MART', label: 'NER Essential Supplies Network' },
+    { id: 'TEN-URBAN-TRADE', label: 'NER Community Distribution' }
   ];
 
 
@@ -288,13 +300,14 @@ export class DashboardComponent implements OnInit {
     { value: 'DEMAND_SURGE', label: 'Demand surge' }
   ];
 
-  readonly navGroups: { title: string; items: NavigationItem[] }[] = [
+  readonly navGroups: NavigationGroup[] = [
     {
       title: '',
       items: [{ label: 'Dashboard', icon: 'assets/nav-icons/icons8-home-48.png', view: 'dashboard' }]
     },
     {
       title: 'INTELLIGENCE',
+      icon: 'assets/nav-icons/icons8-graph-50.png',
       items: [
         { label: 'Demand Forecast', icon: 'assets/nav-icons/icons8-graph-50.png', view: 'demand' },
         { label: 'Inventory Analytics', icon: 'assets/nav-icons/icons8-analysis-50.png', view: 'inventory' },
@@ -304,6 +317,7 @@ export class DashboardComponent implements OnInit {
     },
     {
       title: 'OPERATIONS',
+      icon: 'assets/nav-icons/icons8-logistics-32-2.png',
       items: [
         { label: 'Vehicle Fleet', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'fleet' },
         { label: 'Transfers', icon: 'assets/nav-icons/icons8-transfer-30.png', view: 'transfers' },
@@ -316,6 +330,7 @@ export class DashboardComponent implements OnInit {
     },
     {
       title: 'INVENTORY',
+      icon: 'assets/nav-icons/icons8-inventory-30.png',
       items: [
         { label: 'Warehouses', icon: 'assets/nav-icons/icons8-country-house-48.png', view: 'warehouses' },
         { label: 'Products & SKUs', icon: 'assets/nav-icons/icons8-product-30.png', view: 'products' },
@@ -324,6 +339,7 @@ export class DashboardComponent implements OnInit {
     },
     {
       title: 'ADMIN',
+      icon: 'assets/nav-icons/icons8-settings-50.png',
       items: [
         { label: 'Demo Activity', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'activity' },
         { label: 'Users & Roles', icon: 'assets/nav-icons/icons8-user-30.png', view: 'users' },
@@ -354,6 +370,7 @@ export class DashboardComponent implements OnInit {
 
   selectView(view: ViewId): void {
     this.closeTopbarPanels();
+    this.expandNavGroupForView(view);
     this.activeView = view;
     this.pageError = '';
     this.pageNotice = '';
@@ -604,7 +621,7 @@ export class DashboardComponent implements OnInit {
     this.activeView = 'dashboard';
     this.closeTopbarPanels();
     this.onTenantChange();
-    this.showTopbarToast('Demo session reset to Acme Pharma.');
+    this.showTopbarToast('Demo session reset to the NER Medical Relief Network.');
   }
 
   onPillMouseEnter(): void {
@@ -709,6 +726,30 @@ export class DashboardComponent implements OnInit {
 
   riskTypeLabel(type: string): string {
     return type.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, value => value.toUpperCase());
+  }
+
+  toggleNavGroup(title: string): void {
+    if (!title) return;
+    this.expandedNavGroups[title] = !this.expandedNavGroups[title];
+  }
+
+  isNavGroupExpanded(title: string): boolean {
+    return !title || this.expandedNavGroups[title] === true;
+  }
+
+  isNavGroupActive(group: NavigationGroup): boolean {
+    return group.items.some(item => item.view === this.activeView);
+  }
+
+  private expandNavGroupForView(view: ViewId): void {
+    const group = this.navGroups.find(candidate =>
+      candidate.title && candidate.items.some(item => item.view === view)
+    );
+    if (group?.title) this.expandedNavGroups[group.title] = true;
+  }
+
+  warehouseDisplayId(warehouseId: string): string {
+    return warehouseId;
   }
 
   pageTitle(): string {
@@ -1159,7 +1200,7 @@ export class DashboardComponent implements OnInit {
 
   private applyThemePreference(): void {
     document.documentElement.style.colorScheme = this.darkMode ? 'dark' : 'light';
-    document.body.style.backgroundColor = this.darkMode ? '#0d1422' : '';
+    document.body.style.backgroundColor = this.darkMode ? '#0A0A0C' : '';
   }
 
   private showTopbarToast(message: string): void {
@@ -1211,7 +1252,11 @@ export class DashboardComponent implements OnInit {
       summary: this.intelligenceData.demandSummary(this.selectedWindowDays),
       skus: this.intelligenceData.demandSkus(this.selectedWindowDays, 50),
       trend: this.intelligenceData.demandTrend(16),
-      forecasts: this.forecastOps.latest(50)
+      forecasts: this.forecastOps.latest(50).pipe(
+        catchError(error => error?.status === 404
+          ? of([] as LatestForecastPosition[])
+          : throwError(() => error))
+      )
     }).pipe(finalize(() => this.pageLoading = false))
       .subscribe({
         next: result => {
@@ -1276,6 +1321,7 @@ export class DashboardComponent implements OnInit {
       cost: item.estimatedTransferCost, carbonKg: item.estimatedCarbonKgCo2e, confidence: item.confidencePercent,
       asOf: item.asOfDate, explanation: item.explanation,
       evidence: [
+        `Decision engine: ${item.decisionModel.replaceAll('_', ' ')}.`,
         `Source after transfer: ${item.sourceUsableAfter.toLocaleString()} units; safety stock: ${item.sourceSafetyStock.toLocaleString()}.`,
         `Destination before transfer: ${item.destinationUsableBefore.toLocaleString()} units; target: ${item.destinationTargetStock.toLocaleString()}.`,
         `Purchase alternative: INR ${item.estimatedPurchaseCost.toLocaleString('en-IN')}; transfer: INR ${item.estimatedTransferCost.toLocaleString('en-IN')}.`,
@@ -1292,6 +1338,7 @@ export class DashboardComponent implements OnInit {
       quantity: item.recommendedQuantity, primaryBenefit: item.plannedValue, primaryBenefitLabel: 'Planned commitment',
       cost: item.plannedValue, confidence: item.confidencePercent, asOf: item.asOfDate, explanation: item.explanation,
       evidence: [
+        `Decision engine: ${item.decisionModel.replaceAll('_', ' ')}.`,
         `Usable: ${item.usableQuantity.toLocaleString()} units; safety stock: ${item.safetyStock.toLocaleString()}; target: ${item.targetStock.toLocaleString()}.`,
         `Demand: ${item.averageDailyDemand.toLocaleString()} units/day from ${item.demandSource.replaceAll('_', ' ').toLowerCase()}.`,
         `Lead time: ${item.leadTimeDays} days; open supply already deducted: ${item.openPurchaseQuantity.toLocaleString()} units.`,
@@ -1467,3 +1514,4 @@ export class DashboardComponent implements OnInit {
     return records.map(record => ({ ...record, ...this.prototype.recordPatch<T>(collection, id(record)) }));
   }
 }
+

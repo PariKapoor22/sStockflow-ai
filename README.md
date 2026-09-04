@@ -15,7 +15,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Route and carbon API | https://stockflow-carbon-100044030673.asia-southeast1.run.app | Explainable route, capacity, cost and prototype CO2e calculations |
 | Health check | https://stockflow-core-api-100044030673.asia-southeast1.run.app/actuator/health | Cloud API health |
 
-> Phase 3 forecasting increments and the integrated route/carbon backend are verified. Advanced OR-Tools vehicle routing remains a future solver phase.
+> Phase 3 forecasting and the local OR-Tools vehicle-routing integration are verified. The deployed Carbon API remains the production-facing legacy route service until the decision-intelligence service is deployed.
 
 ---
 
@@ -36,6 +36,7 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 | Frontend Increment 2 | Warehouses, products/SKUs, batches, and imports | Complete |
 | Frontend Increment 3 | Predictive-demand forecasting workspace | Complete locally |
 | Frontend authentication | Supabase login, signup, session recovery, sign-out, and password recovery | Complete and deployed |
+| Frontend navigation | Icon-led collapsible `INTELLIGENCE`, `OPERATIONS`, `INVENTORY`, and `ADMIN` groups with responsive compact mode | Complete locally |
 | Frontend operations UX | Transfers, purchase planning, orders, returns, route and sustainability views | Complete interactive UI |
 | Frontend admin UX | Users and roles, settings, sustainability policy, security, and integration health | Complete interactive UI |
 | Phase 3 Increment 5A | Forecasting foundation and backtesting | Complete |
@@ -100,7 +101,16 @@ StockFlow AI helps multi-warehouse businesses identify stockout exposure, near-e
 - Displays the authenticated user's profile metadata and provides sign-out
 - Adds the Supabase user access token to backend API requests as `Authorization: Bearer <token>`
 
-The Core API and Copilot validate Supabase JWTs. The Core API verifies active tenant membership before trusting `X-Tenant-ID`, applies role permissions to write operations, supports optional warehouse scopes, and exposes `/api/v1/security/me` plus administrator membership management APIs. On a new tenant, the first authenticated member can be bootstrapped as administrator only when the explicit deployment flag is enabled.
+In secured deployments, the Core API validates Supabase JWTs, verifies active membership before accepting `X-Tenant-ID`, and permission-gates mutating operations. The Copilot host separately validates Supabase JWTs, derives tenant scope from trusted token claims or an explicitly configured server-side default, and forwards the bearer token to Core API-backed MCP tools. The Core API exposes `/api/v1/security/me` plus administrator membership-management APIs; first-user administrator bootstrap remains opt-in.
+
+### Multi-tenancy and role-based access control
+
+- Tenant-owned operational records carry a `tenant_id`, and Core API queries scope records to the authenticated tenant.
+- `X-Tenant-ID` selects a tenant context; it is not authorization by itself. With production security enabled, the Core API accepts it only after validating the Supabase JWT and an active database-backed tenant membership.
+- Built-in roles include Administrator, Inventory Manager, Warehouse Manager, Purchase Manager, Logistics Manager, Sustainability Analyst, Approver, and Viewer.
+- Permissions cover inventory and risk reads, forecast execution, imports, transfer and purchase proposals, independent approval, routing, sustainability, execution, order management, and user administration.
+- Optional warehouse assignments narrow operational access within a tenant, while security audit events record membership changes and denied permission checks.
+- Local development is intentionally permissive. Any externally reachable Core API deployment must set `STOCKFLOW_SECURITY_ENABLED=true` and configure the Supabase JWT issuer.
 
 ---
 
@@ -137,11 +147,13 @@ TEN-FRESH-MART
 TEN-URBAN-TRADE
 ```
 
-Every tenant-scoped business API requires:
+Tenant-scoped services use the following header to carry tenant context:
 
 ```http
 X-Tenant-ID: TEN-ACME-PHARMA
 ```
+
+The header alone is not proof of access. A secured Core API request must also carry a valid JWT whose subject has an active membership in that tenant. The authenticated Copilot endpoint derives its tenant scope from verified JWT metadata or an explicitly configured server-side default.
 
 ---
 
@@ -166,7 +178,7 @@ Acme Pharma validation:
 
 ## Phase 3 forecasting models
 
-The current engine evaluates ten candidate models:
+The core engine evaluates ten built-in candidate models:
 
 1. Naive
 2. Moving Average
@@ -178,6 +190,44 @@ The current engine evaluates ten candidate models:
 8. Croston Classic
 9. Croston SBA
 10. TSB
+
+When `STATSFORECAST_ENABLED=true`, the Python forecasting service also supplies
+four open-source StatsForecast challengers:
+
+11. AutoETS
+12. AutoARIMA
+13. Croston Optimized
+14. Seasonal Naive (StatsForecast)
+
+Spring Boot sends tenant-scoped demand history to the Python service over HTTP,
+compares all successful candidates using the same governed backtest metrics,
+selects the winner, and remains responsible for persistence and API responses.
+If the Python service is down or rejects a series, the run falls back to the ten
+built-in models instead of failing the whole forecast job. Selected external
+models appear in the website as `Stats Auto Ets`, `Stats Auto Arima`,
+`Stats Croston Optimized`, or `Stats Seasonal Naive`.
+
+The decision-intelligence service on port `8102` adds these open-source engines:
+
+- Stockpyl normal-demand newsvendor inventory policies
+- Google OR-Tools integer stock-transfer optimisation
+- Google OR-Tools multi-vehicle, multi-stop route optimisation
+- PyOD ECOD anomaly scoring
+- normalized NASA LHASA landslide model outputs
+- normalized Copernicus GloFAS/LISFLOOD flood model outputs
+
+Run it with `run-optimisation-windows.cmd`, or start the full application with
+`RUN_ALL_WINDOWS.cmd`. Spring Boot exposes configured model
+hazards to the website, where they are merged with official alerts on the GIS
+map. Unconfigured model feeds return no zones instead of synthetic live data.
+
+The Route Optimization page calls the same service directly in local
+development. It supports fleet assignment, stop sequencing, payload,
+availability, cold-chain, warehouse-stock, time-window, closure and hazard
+constraints. It uses a supplied road graph first, Google Routes traffic data
+when the backend key is configured, and an explicitly labelled geodesic
+fallback otherwise. Every run is persisted and route status transitions are
+audited before their resulting delivery impact is applied in the UI.
 
 Forecast-quality metrics:
 
@@ -398,9 +448,10 @@ Some future folders may still be placeholders until their increments are impleme
 - Java 17
 - Maven 3.9+
 - Node.js and npm
-- PostgreSQL 18
 - Python 3
+- [`uv`](https://docs.astral.sh/uv/) for the Python services
 - Git
+- PostgreSQL 18 only when running the persistent `phase2` profile; the default local launcher uses an in-memory H2 database
 
 Verified local ports:
 
@@ -408,12 +459,63 @@ Verified local ports:
 |---|---:|
 | Angular frontend | 4200 |
 | Spring Boot API | 8080 |
+| StatsForecast service | 8101 |
+| Decision intelligence service | 8102 |
+| Data MCP server | 8201 |
+| Intelligence MCP server | 8202 |
+| StockFlow Copilot | 8300 |
 | Route and carbon service | 8400 |
 | PostgreSQL | 5433 |
 
 ---
 
-## Local database configuration
+## Run the complete application locally
+
+The recommended Windows launcher starts StatsForecast, decision intelligence/OR-Tools, route and carbon calculation, the Spring Boot Core API, both read-only MCP servers, the StockFlow Copilot, and the Angular website from one Command Prompt. It keeps their output in timestamped log files and stops the processes it started when you press `Ctrl+C`.
+
+From the repository root:
+
+```cmd
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair"
+RUN_ALL_WINDOWS.cmd
+```
+
+Keep that Command Prompt open. When all readiness checks pass, open:
+
+```text
+http://localhost:4200
+```
+
+The first run can take several minutes while Maven, npm, and `uv` resolve dependencies. The launcher reuses a service if its expected port is already occupied. Runtime logs are written under:
+
+```text
+.stockflow\logs\<timestamp>\
+```
+
+To check prerequisites and launcher files without starting the services:
+
+```cmd
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-all-windows.ps1 -CheckOnly
+```
+
+The single-window launcher skips the Core API test suite during startup. Run the tests separately before committing or deploying changes.
+
+### Optional local environment file
+
+The launcher scripts load `.env` from the repository root when it exists. Create it from the safe example, then replace only the values needed on your machine:
+
+```cmd
+copy .env.example .env
+notepad .env
+```
+
+Do not commit `.env`. Google Maps, Fleetbase, and other external integrations remain disabled or use a clearly identified fallback until their server-side credentials are configured.
+
+### Local database configuration
+
+The default `sprint1` profile uses an in-memory H2 database populated with demo data, so PostgreSQL is not required for the one-command prototype run. Data is recreated when the Core API restarts.
+
+To use persistent PostgreSQL data, add `SPRING_PROFILES_ACTIVE=phase2` to `.env` and configure:
 
 Example local environment:
 
@@ -436,17 +538,19 @@ Never commit production passwords or database URLs containing embedded credentia
 
 ---
 
-## Run Increment 5B.1 locally
+## Run services individually
 
-From the repository root:
+Use this only when debugging a particular service. Open a separate Command Prompt for each command and run them from the repository root:
 
 ```cmd
-cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4
-
-run-core-api-phase3-forecast-calibration-windows.cmd
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair"
+run-forecasting-windows.cmd
+run-optimisation-windows.cmd
+run-core-api-windows.cmd
+run-web-windows.cmd
 ```
 
-Expected startup:
+Expected Core API startup:
 
 ```text
 Tomcat started on port 8080
@@ -459,7 +563,7 @@ Health check:
 curl http://localhost:8080/actuator/health
 ```
 
-Run the calibration verification:
+Optional calibration verification:
 
 ```cmd
 verify-forecast-calibration-api-windows.cmd
@@ -470,18 +574,15 @@ verify-forecast-calibration-api-windows.cmd
 ## Run backend tests
 
 ```cmd
-cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4\services\stockflow-core-api
-
-"C:\Users\oveyj\Tools\apache-maven-3.9.16\bin\mvn.cmd" ^
-  -Dkotlin.compiler.daemon=false clean test
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair"
+call configure-maven-windows.cmd
+cd services\stockflow-core-api
+mvn -Dkotlin.compiler.daemon=false clean test
 ```
 
-Current expected result:
+Expected result:
 
 ```text
-Tests run: 20
-Failures: 0
-Errors: 0
 BUILD SUCCESS
 ```
 
@@ -490,7 +591,7 @@ BUILD SUCCESS
 ## Run the frontend
 
 ```cmd
-cd /d C:\Users\oveyj\Downloads\StockFlow_AI_Phase2_Increment4\apps\stockflow-web
+cd /d "C:\Users\oveyj\Documents\New project\stockflow-repair\apps\stockflow-web"
 
 npm install
 npm start
@@ -619,7 +720,7 @@ Read a position diagnostic:
 ```cmd
 curl ^
   -H "X-Tenant-ID: TEN-ACME-PHARMA" ^
-  "http://localhost:8080/api/v1/forecasts/diagnostics/WH-CHENNAI/SKU-PARA-650"
+  "http://localhost:8080/api/v1/forecasts/diagnostics/WH-GUWAHATI/SKU-PARA-650"
 ```
 
 ---
@@ -646,6 +747,8 @@ curl ^
 Frontend UX includes:
 
 - Dark and light themes
+- Icon-led collapsible navigation groups for Intelligence, Operations, Inventory, and Admin, with active-group highlighting and automatic expansion when a workspace is selected
+- Compact sidebar mode that displays the group symbols while preserving expandable navigation on larger layouts
 - Responsive mobile navigation
 - Responsive filters and tables
 - Functional notification, help, and profile panels
@@ -654,6 +757,7 @@ Frontend UX includes:
 - Improved dark-mode contrast
 - Responsive operations workspaces with interactive filters and local demo-state actions
 - Responsive admin workspaces with role controls, policy settings, and clearly labelled local demo-state actions
+- StockFlow Copilot remains available through its floating launcher and popover; only the redundant dashboard-header AI button has been removed
 
 Notifications remain frontend-managed. Signed-in user identity and session state come from Supabase Auth.
 
@@ -667,12 +771,17 @@ Notifications remain frontend-managed. Signed-in user identity and session state
 - Forecast operations are not yet scheduled.
 - Retry, cancellation, and failure-recovery workflows are not implemented.
 - Forecast accuracy degradation alerts are not implemented.
-- Routes and sustainability now call the dedicated FastAPI calculation service. The current solver is an explainable deterministic prototype; live traffic, road-network matrices and OR-Tools VRP remain future work.
-- Users & Roles remains a frontend preview; the secured tenant membership and role-assignment APIs are deployed, but the UI is not connected to them yet.
+- OR-Tools vehicle routing is complete locally. Live traffic requires `GOOGLE_MAPS_BACKEND_API_KEY`; without it the response and UI disclose the geodesic fallback. Production-scale dispatch still needs real fleet availability, orders, road closures and telemetry feeds.
+- LHASA and GloFAS/LISFLOOD require externally prepared GeoJSON model-output feeds. The adapters are integrated, but a live source is not bundled with the repository.
+- The tenant picker is a static prototype list, while Users & Roles and Settings remain frontend previews. The UI does not yet discover the signed-in user's memberships, restrict tenant choices through `/api/v1/security/me`, or call the implemented membership-management APIs.
+- Supabase signup creates an authenticated identity but does not automatically grant tenant membership; an administrator must provision it unless the normally disabled first-user bootstrap is explicitly enabled.
 - Transfer and purchase proposals can be persisted and independently approved, but approval does not execute inventory movement, dispatch a vehicle or place a supplier order.
-- Supabase JWT validation and tenant RBAC are deployed for the Core API and Copilot. The Carbon API still requires the same JWT membership enforcement before all operational services share one security boundary.
+- Supabase JWT validation and tenant RBAC are implemented for the Core API and Copilot, but the Core API configuration defaults to permissive local mode unless `STOCKFLOW_SECURITY_ENABLED=true` is supplied by the deployment. Protected local workflows receive a synthetic `LOCAL_ADMIN` context.
+- RBAC currently concentrates on mutating workflows and membership administration. Most general read endpoints require active tenant membership when security is enabled but do not yet enforce their domain-specific read permission codes, and warehouse scopes are not universal across every read API.
+- The Carbon and optimisation APIs currently trust tenant/user headers and must remain private behind the Core API until JWT or authenticated service-to-service enforcement is added.
+- Tenant isolation is primarily enforced in application queries. PostgreSQL Row-Level Security remains a defence-in-depth production-hardening item.
 - Production password-recovery email delivery should use custom SMTP instead of Supabase's testing email service.
-- The MCP Copilot is deployed. Gemini fallback requires `GEMINI_API_KEY` to be configured on the Cloud Run Copilot service.
+- The MCP Copilot is deployed. When `GEMINI_API_KEY` is configured on the Cloud Run Copilot service, Gemini can select and call allow-listed read-only MCP tools for natural-language questions that the deterministic domain router does not recognize. Tenant credentials are injected server-side and mutation/approval tools are excluded from autonomous calls.
 
 ### Human-gated Action API
 
@@ -774,7 +883,7 @@ Purchase-order execution completed:
 
 Remaining:
 
-- Advanced road-network and multi-stop OR-Tools optimization
+- Production deployment and load testing of the completed local road-network and multi-stop OR-Tools service
 
 Fleetbase integration status: all eight phases are complete locally, including tenant-bound reads, vehicle UI, durable transfer-order linkage, guarded creation, FEFO-gated dispatch, tracker/ETA visibility, signed idempotent webhooks, reconciliation, recovery and production-readiness reporting.
 
@@ -816,6 +925,8 @@ Implemented:
 - No secret or `service_role` credentials committed to source control; the browser-safe Supabase publishable key is intentionally public
 - Supabase user JWT validation at the backend boundary before trusting authenticated requests
 - Active database-backed tenant membership and role permissions
+- Tenant membership verification before accepting a caller-selected `X-Tenant-ID`
+- Optional warehouse-level access scopes for operational actions
 - First-user administrator bootstrap disabled unless explicitly configured
 - Human approval for high-value actions
 - Read-only AI tools by default

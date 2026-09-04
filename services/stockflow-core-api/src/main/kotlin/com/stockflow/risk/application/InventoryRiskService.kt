@@ -4,6 +4,9 @@ import com.stockflow.intelligence.application.DemandPositionMetric
 import com.stockflow.intelligence.application.InventoryIntelligenceQueryService
 import com.stockflow.intelligence.application.InventoryPositionMetric
 import com.stockflow.intelligence.application.PositionKey
+import com.stockflow.intelligence.application.AnomalyObservation
+import com.stockflow.intelligence.application.AnomalyScoreRequest
+import com.stockflow.intelligence.application.DecisionIntelligenceClient
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -14,6 +17,7 @@ import java.time.temporal.ChronoUnit
 @Service
 class InventoryRiskService(
     private val intelligenceQueryService: InventoryIntelligenceQueryService,
+    private val decisionIntelligence: DecisionIntelligenceClient,
     @Value("\${stockflow.intelligence.stockout-cover-days:14}") private val stockoutCoverDays: Int,
     @Value("\${stockflow.intelligence.excess-cover-days:90}") private val excessCoverDays: Int,
     @Value("\${stockflow.intelligence.near-expiry-days:60}") private val defaultNearExpiryDays: Int,
@@ -182,13 +186,34 @@ class InventoryRiskService(
             }
         }
 
-        return risks.sortedWith(
+        val sorted = risks.sortedWith(
             compareBy<InventoryRiskView> { severityRank(it.severity) }
                 .thenBy { typeRank(it.riskType) }
                 .thenByDescending { it.inventoryValue }
                 .thenBy { it.warehouseId }
                 .thenBy { it.skuId }
         )
+        val anomalyResponse = decisionIntelligence.scoreAnomalies(AnomalyScoreRequest(
+            tenantId = tenantId,
+            observations = sorted.map { risk -> AnomalyObservation(risk.riskId, mapOf(
+                "usableQuantity" to risk.usableQuantity.toDouble(),
+                "minimumSafetyStock" to risk.minimumSafetyStock.toDouble(),
+                "averageDailyDemand30" to risk.averageDailyDemand30.toDouble(),
+                "daysOfCover" to (risk.daysOfCover?.toDouble() ?: 0.0),
+                "lostSales30" to risk.lostSales30.toDouble(),
+                "stockoutRows30" to risk.stockoutRows30.toDouble(),
+                "inventoryValue" to risk.inventoryValue.toDouble()
+            )) }
+        )) ?: return sorted
+        val anomalyById = anomalyResponse.observations.associateBy { it.observationId }
+        return sorted.map { risk ->
+            val result = anomalyById[risk.riskId]
+            if (result == null) risk else risk.copy(
+                anomalyScore = result.anomalyScore,
+                anomalyDetected = result.isAnomaly,
+                anomalyModel = anomalyResponse.model
+            )
+        }
     }
 
     private fun positionRisk(

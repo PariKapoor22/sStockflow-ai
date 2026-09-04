@@ -13,3 +13,9 @@ logging:
   level:
     org.flywaydb: WARN
     org.hibernate.SQL: WARN
+
+stockflow:
+  decision-intelligence:
+    enabled: ${STOCKFLOW_DECISION_INTELLIGENCE_ENABLED:true}
+  demo-demand:
+    enabled: ${STOCKFLOW_DEMO_DEMAND_ENABLED:true}

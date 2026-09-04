@@ -37,6 +37,11 @@ management:
       show-details: always
 
 stockflow:
+  decision-intelligence:
+    enabled: ${STOCKFLOW_DECISION_INTELLIGENCE_ENABLED:false}
+    api-url: ${STOCKFLOW_DECISION_INTELLIGENCE_URL:http://127.0.0.1:8102}
+    connect-timeout-seconds: 2
+    read-timeout-seconds: 25
   tenant-header: X-Tenant-ID
   security:
     enabled: ${STOCKFLOW_SECURITY_ENABLED:false}
@@ -66,3 +71,8 @@ stockflow:
     api-url: ${GOOGLE_WEATHER_API_URL:https://weather.googleapis.com}
     connect-timeout-seconds: ${GOOGLE_WEATHER_CONNECT_TIMEOUT_SECONDS:5}
     read-timeout-seconds: ${GOOGLE_WEATHER_READ_TIMEOUT_SECONDS:15}
+  statsforecast:
+    enabled: ${STATSFORECAST_ENABLED:false}
+    api-url: ${STATSFORECAST_API_URL:http://127.0.0.1:8101}
+    connect-timeout-seconds: ${STATSFORECAST_CONNECT_TIMEOUT_SECONDS:2}
+    read-timeout-seconds: ${STATSFORECAST_READ_TIMEOUT_SECONDS:90}

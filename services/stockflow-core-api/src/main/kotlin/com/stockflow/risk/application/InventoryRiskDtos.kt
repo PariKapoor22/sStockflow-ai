@@ -27,7 +27,10 @@ data class InventoryRiskView(
     val lostSales30: Long,
     val stockoutRows30: Long,
     val reason: String,
-    val recommendedAction: String
+    val recommendedAction: String,
+    val anomalyScore: Double? = null,
+    val anomalyDetected: Boolean = false,
+    val anomalyModel: String? = null
 )
 
 data class InventoryRiskSummaryView(

@@ -1324,7 +1324,7 @@ forecasting-service/
 ```json
 {
   "tenantId": "acme-pharma",
-  "warehouseIds": ["WH-CHENNAI", "WH-BENGALURU"],
+  "warehouseIds": ["WH-GUWAHATI", "WH-SHILLONG"],
   "skuIds": ["SKU-PARA-650"],
   "horizonDays": 30,
   "granularity": "DAY",
@@ -1342,7 +1342,7 @@ forecasting-service/
   "modelVersion": "ensemble-2026-07-01",
   "series": [
     {
-      "warehouseId": "WH-BENGALURU",
+      "warehouseId": "WH-SHILLONG",
       "skuId": "SKU-PARA-650",
       "predictedDemand": 1200,
       "lowerBound": 1010,
@@ -1707,7 +1707,7 @@ Example result:
   "asOf": "2026-07-26T10:25:00+05:30",
   "items": [
     {
-      "warehouseId": "WH-CHENNAI",
+      "warehouseId": "WH-GUWAHATI",
       "skuId": "SKU-PARA-650",
       "batchNumber": "B2456",
       "availableQuantity": 2450,
@@ -1771,8 +1771,8 @@ Example result:
   "recommendation": {
     "action": "TRANSFER",
     "skuId": "SKU-PARA-650",
-    "sourceWarehouseId": "WH-CHENNAI",
-    "destinationWarehouseId": "WH-BENGALURU",
+    "sourceWarehouseId": "WH-GUWAHATI",
+    "destinationWarehouseId": "WH-SHILLONG",
     "batchNumber": "B2456",
     "quantity": 900,
     "expectedStockoutPrevented": true,
@@ -1789,7 +1789,7 @@ Example result:
     "COLD_CHAIN",
     "WAREHOUSE_CAPACITY"
   ],
-  "explanation": "Bengaluru is expected to stock out in eight days. Chennai has excess stock that is unlikely to be consumed before expiry."
+  "explanation": "Shillong is expected to stock out in eight days. Guwahati has excess stock that is unlikely to be consumed before expiry."
 }
 ```
 
@@ -1849,7 +1849,7 @@ Resources should be read-oriented and URI-addressable.
 Examples:
 
 ```text
-stockflow://tenant/acme/warehouse/WH-CHENNAI
+stockflow://tenant/acme/warehouse/WH-GUWAHATI
 stockflow://tenant/acme/sku/SKU-PARA-650
 stockflow://tenant/acme/batch/B2456
 stockflow://tenant/acme/recommendation/REC-20341
@@ -2030,8 +2030,8 @@ Example warehouse manager access:
 ```yaml
 tenant: acme-pharma
 warehouse_scope:
-  - WH-CHENNAI
-  - WH-BENGALURU
+  - WH-GUWAHATI
+  - WH-SHILLONG
 permissions:
   - inventory:read
   - risk:read
@@ -2272,7 +2272,7 @@ Example:
   "errorCode": "DATA_STALE",
   "message": "Inventory data is older than the permitted threshold.",
   "details": {
-    "warehouseId": "WH-CHENNAI",
+    "warehouseId": "WH-GUWAHATI",
     "lastSyncedAt": "2026-07-25T08:00:00+05:30",
     "maximumAgeMinutes": 60
   },
@@ -2721,23 +2721,23 @@ One sudden demand event
 Primary pharmaceutical demonstration:
 
 ```text
-Chennai:
+Guwahati:
 - 2,450 units of Paracetamol 650 mg
 - Batch B2456
 - Expiry in 45 days
 - Expected local consumption: 700 units
 
-Bengaluru:
+Shillong:
 - Expected stockout in 8 days
 - Forecast demand: 1,200 units
 
-Hyderabad:
+Imphal:
 - Forecast demand: 650 units
 
 Recommended action:
-- Transfer 900 units to Bengaluru
-- Transfer 600 units to Hyderabad
-- Retain sufficient stock in Chennai
+- Transfer 900 units to Shillong
+- Transfer 600 units to Imphal
+- Retain sufficient stock in Guwahati
 - Avoid or postpone an open purchase order
 ```
 
@@ -2780,12 +2780,12 @@ Final copilot output:
 ```text
 Recommended action:
 Transfer 900 units of Paracetamol 650 mg, Batch B2456,
-from Chennai to Bengaluru.
+from Guwahati to Shillong.
 
 Reason:
-- Bengaluru is expected to stock out in eight days.
-- Chennai cannot consume the complete batch before expiry.
-- Bengaluru can consume the transferred quantity before expiry.
+- Shillong is expected to stock out in eight days.
+- Guwahati cannot consume the complete batch before expiry.
+- Shillong can consume the transferred quantity before expiry.
 - Source safety stock remains protected.
 
 Estimated result:

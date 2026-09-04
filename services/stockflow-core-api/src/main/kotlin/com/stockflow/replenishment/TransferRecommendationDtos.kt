@@ -28,6 +28,7 @@ data class TransferRecommendationView(
     val estimatedCarbonKgCo2e: BigDecimal,
     val risk: String,
     val confidencePercent: Int,
+    val decisionModel: String,
     val explanation: String,
     val constraintsChecked: List<String>,
     val assumptions: List<String>,

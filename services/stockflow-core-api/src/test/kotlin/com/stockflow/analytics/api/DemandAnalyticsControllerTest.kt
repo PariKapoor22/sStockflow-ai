@@ -54,7 +54,7 @@ class DemandAnalyticsControllerTest(
         jdbcTemplate.update(
             """INSERT INTO retailer
                (retailer_id, tenant_id, retailer_name, retailer_type, warehouse_id, city, region, credit_days, active)
-               VALUES (?, 'TEN-ACME-PHARMA', 'Demand Test Retailer', 'PHARMACY', 'WH-CHENNAI', 'Chennai', 'SOUTH', 30, TRUE)""",
+               VALUES (?, 'TEN-ACME-PHARMA', 'Demand Test Retailer', 'PHARMACY', 'WH-GUWAHATI', 'Guwahati', 'NORTHEAST', 30, TRUE)""",
             retailerId
         )
     }
@@ -72,7 +72,7 @@ class DemandAnalyticsControllerTest(
                (sales_history_id, sales_date, tenant_id, warehouse_id, retailer_id, sku_id,
                 ordered_quantity, fulfilled_quantity, sales_quantity, return_quantity,
                 lost_sales_quantity, unit_selling_price, promotion_id, stockout_flag)
-               VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-CHENNAI', ?, 'SKU-PARA-650', ?, ?, ?, 0, ?, ?, NULL, ?)""",
+               VALUES (?, ?, 'TEN-ACME-PHARMA', 'WH-GUWAHATI', ?, 'SKU-PARA-650', ?, ?, ?, 0, ?, ?, NULL, ?)""",
             UUID.randomUUID(), salesDate, retailerId, ordered, sold, sold, lost, BigDecimal("25.00"), stockout
         )
     }

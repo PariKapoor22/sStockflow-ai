@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 import { firstValueFrom } from 'rxjs';
+import { NerContractAdapterService } from '../../core/services/ner-contract-adapter.service';
 import { FleetbaseVehicle } from '../../core/models/fleetbase.models';
 import { HazardAlert, HazardAlertLocation } from '../../core/models/google-weather.models';
 import { GoogleRoutesService } from '../../core/services/google-routes.service';
@@ -49,11 +50,14 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   readonly mapLayers: MapLayerDefinition[] = [
     { key: 'vehicles', label: 'Fleetbase GPS', description: 'Reported vehicle positions', tone: 'green', enabled: true },
     { key: 'prototype', label: 'Prototype live tracker', description: 'Simulated route and truck', tone: 'violet', enabled: true },
-    { key: 'hazards', label: 'Flood & landslide alerts', description: 'Official Google Public Alerts', tone: 'red', enabled: true },
+    { key: 'hazards', label: 'Flood & landslide alerts', description: 'Official + LHASA/GloFAS models', tone: 'red', enabled: true },
     { key: 'infrastructure', label: 'Roads & bridges', description: 'Accessibility checkpoints', tone: 'orange', enabled: true },
     { key: 'corridors', label: 'Essential-supply corridors', description: 'Operational movement lanes', tone: 'blue', enabled: true },
     { key: 'checkpoints', label: 'GIS checkpoints', description: 'Logistics hubs and nodes', tone: 'indigo', enabled: true }
   ];
+  showDistrictForecasts = true;
+  activeEvidence: any = null;
+  private districtForecastsLoaded = false;
 
   private map?: google.maps.Map;
   private infoWindow?: google.maps.InfoWindow;
@@ -79,7 +83,8 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
 
   constructor(
     private readonly googleRoutes: GoogleRoutesService,
-    private readonly googleWeather: GoogleWeatherService
+    private readonly googleWeather: GoogleWeatherService,
+    private readonly nerAdapter: NerContractAdapterService
   ) {}
 
   get positionedVehicles(): FleetbaseVehicle[] {
@@ -267,15 +272,20 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
     this.hazardError = '';
     const locations = this.hazardMonitoringLocations();
     try {
-      const response = await firstValueFrom(this.googleWeather.hazardAlerts(locations));
-      this.hazardAlerts = response.alerts;
-      this.hazardLocationsMonitored = response.monitoredLocations;
+      const [official, modelled] = await Promise.all([
+        firstValueFrom(this.googleWeather.hazardAlerts(locations)).catch(() => null),
+        firstValueFrom(this.googleWeather.modelHazards()).catch(() => null)
+      ]);
+      if (!official && !modelled) throw new Error('Official alerts and open-source model outlooks are both unavailable.');
+      this.hazardAlerts = [...(official?.alerts ?? []), ...(modelled?.alerts ?? [])]
+        .filter((alert, index, all) => all.findIndex(other => other.id === alert.id) === index);
+      this.hazardLocationsMonitored = official?.monitoredLocations ?? locations.length;
       this.renderHazardAlerts();
     } catch (error: any) {
       this.hazardAlerts = [];
       this.hazardLocationsMonitored = locations.length;
       this.clearHazardOverlays();
-      this.hazardError = error?.error?.message || 'Google Public Alerts could not be loaded.';
+      this.hazardError = error?.error?.message || error?.message || 'Hazard sources could not be loaded.';
     } finally {
       this.hazardLoading = false;
     }
@@ -303,6 +313,7 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
       this.addGisLayers();
       this.renderVehicles();
       this.loading = false;
+      this.loadDistrictForecasts();
       await this.loadHazardAlerts();
     } catch (error) {
       this.loading = false;
@@ -586,6 +597,56 @@ export class GoogleFleetGisMapComponent implements AfterViewInit, OnChanges, OnD
   private saveLayerState(): void {
     const value = Object.fromEntries(this.mapLayers.map(layer => [layer.key, layer.enabled]));
     localStorage.setItem('stockflowGoogleMapLayers', JSON.stringify(value));
+  }
+
+  toggleDistrictForecasts(): void {
+    this.showDistrictForecasts = !this.showDistrictForecasts;
+    if (!this.map) return;
+    if (this.showDistrictForecasts && !this.districtForecastsLoaded) {
+      this.loadDistrictForecasts();
+      return;
+    }
+    this.map.data.setStyle(feature => ({
+      visible: this.showDistrictForecasts,
+      ...this.getDistrictStyle(feature)
+    }));
+  }
+
+  private loadDistrictForecasts(): void {
+    if (!this.map || this.districtForecastsLoaded) return;
+    this.nerAdapter.getDistrictForecasts().subscribe(data => {
+      this.map!.data.addGeoJson(data as any);
+      this.map!.data.setStyle(feature => ({
+        visible: this.showDistrictForecasts,
+        ...this.getDistrictStyle(feature)
+      }));
+      this.map!.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
+        if (!event.feature.getProperty('districtId')) return;
+        this.activeEvidence = {
+          districtId: event.feature.getProperty('districtId'),
+          name: event.feature.getProperty('name'),
+          status: event.feature.getProperty('status'),
+          provenance: event.feature.getProperty('provenance')
+        };
+      });
+      this.districtForecastsLoaded = true;
+    });
+  }
+
+  closeEvidencePanel(): void {
+    this.activeEvidence = null;
+  }
+
+  private getDistrictStyle(feature: google.maps.Data.Feature): google.maps.Data.StyleOptions {
+    if (!feature.getProperty('districtId')) return {};
+    const status = feature.getProperty('status');
+    switch (status) {
+      case 'OPEN': return { strokeColor: '#22c55e', strokeWeight: 2, fillColor: '#22c55e', fillOpacity: .35 };
+      case 'CAUTION': return { strokeColor: '#f59e0b', strokeWeight: 2, fillColor: '#f59e0b', fillOpacity: .35 };
+      case 'RESTRICTED': return { strokeColor: '#ef4444', strokeWeight: 2, fillColor: '#ef4444', fillOpacity: .35 };
+      case 'ISOLATED': return { strokeColor: '#7e22ce', strokeWeight: 2, fillColor: '#7e22ce', fillOpacity: .35 };
+      default: return { strokeColor: '#888888', strokeWeight: 2, fillColor: '#888888', fillOpacity: .35 };
+    }
   }
 
   private hasUsablePosition(vehicle: FleetbaseVehicle): boolean {
