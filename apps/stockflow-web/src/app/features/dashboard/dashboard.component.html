@@ -1,8 +1,6 @@
-<div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed && !sidebarHoverExpanded" [class.dark-theme]="darkMode">
+<div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed" [class.dark-theme]="darkMode">
   <aside
-    class="sidebar"
-    (mouseenter)="expandSidebarOnHover()"
-    (mouseleave)="collapseSidebarAfterHover()">
+    class="sidebar">
     <div class="brand">
       <div class="brand-mark"><span></span><span></span><span></span></div>
       <div class="brand-copy">
@@ -18,7 +16,6 @@
           type="button"
           class="nav-group-toggle"
           [class.expanded]="isNavGroupExpanded(group.title)"
-          [class.active]="isNavGroupActive(group)"
           [attr.aria-expanded]="isNavGroupExpanded(group.title)"
           [attr.aria-controls]="'nav-group-' + group.title.toLowerCase()"
           (click)="toggleNavGroup(group.title)">
@@ -170,7 +167,7 @@
     <section class="content" *ngIf="activeView === 'dashboard'">
       <ng-container *ngIf="data as dashboard; else dashboardLoadingState">
         <div class="welcome-row">
-          <div><h1>Good morning, {{ dashboard.userName.split(' ')[0] }}! </h1><p>Here’s what’s happening with your inventory today.</p></div>
+          <div><h1>Good morning, {{ profileName().split(' ')[0] }}! </h1><p>Here’s what’s happening with your inventory today.</p></div>
         </div>
 
         <section class="kpi-grid">
@@ -797,6 +794,10 @@
       [tenantLabel]="currentTenantLabel()"
       [tenantId]="selectedTenant"
     ></sf-fleet-workspace>
+
+    <sf-disaster-monitor-workspace
+      *ngIf="activeView === 'disaster-monitor'"
+    ></sf-disaster-monitor-workspace>
 
     <sf-operations-workspace
       *ngIf="activeOperationView() as operationView"

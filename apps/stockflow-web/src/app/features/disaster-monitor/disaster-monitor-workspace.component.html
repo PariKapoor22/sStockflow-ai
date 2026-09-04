@@ -1,0 +1,103 @@
+<section class="content disaster-workspace">
+  <div class="disaster-header">
+    <div>
+      <span class="eyebrow">NER DISASTER INTELLIGENCE</span>
+      <h1>Disaster Monitor</h1>
+      <p>Real-time geospatial hazard monitoring across the North Eastern Region. Flood zones, landslide corridors and seismic activity.</p>
+    </div>
+    <div class="header-actions">
+      <div class="severity-summary">
+        <span class="severity-chip severe">{{ severityCounts.severe }} Severe</span>
+        <span class="severity-chip warning">{{ severityCounts.warning }} Warning</span>
+        <span class="severity-chip monitoring">{{ severityCounts.monitoring }} Monitoring</span>
+      </div>
+      <button class="refresh-button" [class.spinning]="refreshing" (click)="refreshData()">⟳ <span>Refresh</span></button>
+    </div>
+  </div>
+
+  <div class="disaster-layout">
+    <!-- Map Container -->
+    <div class="map-container">
+      <div #disasterMap class="disaster-map"></div>
+
+
+
+      <!-- Map Legend -->
+      <div class="map-legend">
+        <span class="legend-dot severe-dot"></span> Severe
+        <span class="legend-dot warning-dot"></span> Warning
+        <span class="legend-dot monitoring-dot"></span> Monitoring
+      </div>
+    </div>
+
+    <!-- Glassmorphic Side Panel -->
+    <aside class="incident-panel" [class.collapsed]="panelCollapsed">
+      <div class="panel-header">
+        <h2>Active Incidents</h2>
+        <select [ngModel]="severityFilter" (ngModelChange)="onFilterChange($event)" class="severity-filter">
+          <option value="all">All severities</option>
+          <option value="severe">Severe only</option>
+          <option value="warning">Warnings</option>
+          <option value="monitoring">Monitoring</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <div class="layer-toggles">
+          <span class="panel-label">LAYER CONTROLS</span>
+          <label *ngFor="let layer of layers" class="layer-toggle" [class.enabled]="layer.enabled">
+            <input type="checkbox" [checked]="layer.enabled" (change)="toggleLayer(layer)">
+            <span class="layer-swatch" [style.background]="layer.color"></span>
+            <span class="layer-info">
+              <strong>{{ layer.label }}</strong>
+              <small>{{ layer.description }}</small>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="panel-section incident-feed">
+        <span class="panel-label">INCIDENT FEED <small>({{ filteredIncidents.length }})</small></span>
+        <button
+          *ngFor="let incident of filteredIncidents"
+          class="incident-item"
+          [class.selected]="selectedIncident?.id === incident.id"
+          [class]="'incident-item ' + severityClass(incident.severity)"
+          (click)="selectIncident(incident)">
+          <span class="incident-icon">{{ severityIcon(incident.type) }}</span>
+          <span class="incident-copy">
+            <strong>{{ incident.title }}</strong>
+            <small>{{ incident.location }}</small>
+            <em>{{ incident.timestamp }}</em>
+          </span>
+          <span class="incident-severity" [class]="incident.severity">{{ incident.severity }}</span>
+        </button>
+      </div>
+
+      <!-- Selected incident detail -->
+      <div class="incident-detail" *ngIf="selectedIncident">
+        <div class="detail-header">
+          <span class="detail-id">{{ selectedIncident.id }}</span>
+          <span class="detail-severity" [class]="selectedIncident.severity">{{ selectedIncident.severity | uppercase }}</span>
+        </div>
+        <h3>{{ selectedIncident.title }}</h3>
+        <p class="detail-location">📍 {{ selectedIncident.location }}</p>
+        <p class="detail-body">{{ selectedIncident.detail }}</p>
+        <small class="detail-time">{{ selectedIncident.timestamp }}</small>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="disaster-footer">
+    <div class="footer-stats">
+      <div><span>🌊</span><strong>{{ severityCounts.severe }}</strong><small>Active Hazards</small></div>
+
+      <div><span>📡</span><strong>8</strong><small>NER States Monitored</small></div>
+    </div>
+    <div class="footer-sync">
+      <i></i> Data as of {{ lastUpdated }}
+      <button (click)="refreshData()">⟳</button>
+      <small>NeSDR prototype overlay</small>
+    </div>
+  </footer>
+</section>
