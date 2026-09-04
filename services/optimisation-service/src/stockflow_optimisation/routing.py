@@ -35,6 +35,12 @@ KNOWN_COORDINATES = {
     "Dimapur Drop": (25.9091, 93.7266),
 }
 
+# Proximity buffer (in km) to associate a route stop with a road segment hazard LineString.
+# Starting value is 35 km (approx. corridor segment influence radius in hilly NER terrain).
+# NOTE FOR PARI: This is a domain judgment call for routing accuracy and can be tuned
+# based on corridor topography, resolution of GPS checkpoints, or routing network density.
+LINESTRING_PROXIMITY_KM = 35.0
+
 
 def _point_in_ring(longitude: float, latitude: float, ring: list[list[float]]) -> bool:
     inside = False
@@ -55,6 +61,11 @@ def _geometry_affects(longitude: float, latitude: float, geometry: dict[str, Any
     coordinates = geometry.get("coordinates") or []
     if geometry_type == "Point" and len(coordinates) >= 2:
         return haversine_km((latitude, longitude), (float(coordinates[1]), float(coordinates[0]))) <= 75
+    if geometry_type == "LineString" and coordinates:
+        return any(
+            len(point) >= 2 and haversine_km((latitude, longitude), (float(point[1]), float(point[0]))) <= LINESTRING_PROXIMITY_KM
+            for point in coordinates
+        )
     if geometry_type == "Polygon":
         return bool(coordinates and _point_in_ring(longitude, latitude, coordinates[0]))
     if geometry_type == "MultiPolygon":
@@ -66,6 +77,8 @@ def apply_hazard_alerts(payload: dict[str, Any], alerts: list[dict[str, Any]]) -
     """Overlay configured LHASA/GloFAS GeoJSON outlooks onto route stop risk inputs."""
     applied_sources: set[str] = set()
     for route in payload.get("routes", []):
+        if not route.get("stopDetails") and route.get("stops"):
+            route["stopDetails"] = _stop_details(route)
         for stop in route.get("stopDetails", []):
             latitude, longitude = stop.get("latitude"), stop.get("longitude")
             if latitude is None or longitude is None:
