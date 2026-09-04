@@ -799,6 +799,11 @@
       *ngIf="activeView === 'disaster-monitor'"
     ></sf-disaster-monitor-workspace>
 
+    <sf-billing-dashboard
+      *ngIf="activeView === 'billing'"
+      [tenantLabel]="currentTenantLabel()"
+    ></sf-billing-dashboard>
+
     <sf-operations-workspace
       *ngIf="activeOperationView() as operationView"
       [view]="operationView"

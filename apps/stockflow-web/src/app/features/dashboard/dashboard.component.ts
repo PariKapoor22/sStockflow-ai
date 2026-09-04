@@ -40,6 +40,7 @@ import { FleetWorkspaceComponent } from '../fleet/fleet-workspace.component';
 import { TacticalSignalsService } from '../../core/services/tactical-signals.service';
 import { inject } from '@angular/core';
 import { DisasterMonitorWorkspaceComponent } from '../disaster-monitor/disaster-monitor-workspace.component';
+import { BillingDashboardComponent } from '../billing/billing-dashboard.component';
 
 type ViewId =
   | 'dashboard'
@@ -54,6 +55,7 @@ type ViewId =
   | 'routes'
   | 'sustainability'
   | 'fleet'
+  | 'billing'
   | 'warehouses'
   | 'products'
   | 'batches'
@@ -123,7 +125,7 @@ interface DecisionRecommendationView {
 @Component({
   selector: 'sf-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent, AdminWorkspaceComponent, FleetWorkspaceComponent, DisasterMonitorWorkspaceComponent],
+  imports: [CommonModule, FormsModule, OperationsWorkspaceComponent, AdminWorkspaceComponent, FleetWorkspaceComponent, DisasterMonitorWorkspaceComponent, BillingDashboardComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
@@ -351,6 +353,7 @@ export class DashboardComponent implements OnInit {
       title: 'ADMIN',
       icon: 'assets/nav-icons/icons8-settings-50.png',
       items: [
+        { label: 'Billing Dashboard', icon: '₹', view: 'billing' },
         { label: 'Demo Activity', icon: 'assets/nav-icons/icons8-logistics-32-2.png', view: 'activity' },
         { label: 'Users & Roles', icon: 'assets/nav-icons/icons8-user-30.png', view: 'users' },
         { label: 'Settings', icon: 'assets/nav-icons/icons8-settings-50.png', view: 'settings' },
@@ -793,6 +796,7 @@ export class DashboardComponent implements OnInit {
       routes: 'Route Optimization',
       sustainability: 'Carbon & Waste Impact',
       fleet: 'Vehicle Fleet',
+      billing: 'Billing Dashboard',
       warehouses: 'Warehouses',
       products: 'Products & SKUs',
       batches: 'Batch Inventory',
@@ -831,6 +835,7 @@ export class DashboardComponent implements OnInit {
       'routes',
       'sustainability',
       'fleet',
+      'billing',
       'warehouses',
       'products',
       'batches',
