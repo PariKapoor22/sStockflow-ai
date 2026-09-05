@@ -1,3 +1,7 @@
+﻿import {
+  RouteReroutingService,
+  RouteAlert
+} from '../../core/services/route-rerouting.service';
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -168,6 +172,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   readonly prototype = inject(PrototypeStateService);
   private readonly carbonApi = inject(CarbonApiService);
+  private readonly routeReroutingService = inject(RouteReroutingService);
   private readonly actionApi = inject(ActionProposalService);
   private readonly foundationApi = inject(FoundationDataService);
   readonly auth = inject(AuthService);
@@ -317,10 +322,10 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
   ];
 
   routePlans: RoutePlan[] = [
-    { id: 'RTE-301', lane: 'Guwahati → Nongpoh → Shillong', stops: ['Guwahati Central', 'Nongpoh Checkpoint', 'Shillong Hub'], vehicle: '12T electric-assisted truck', loadKg: 10860, capacityKg: 12000, baselineKm: 118, optimizedKm: 99, duration: '2h 45m', costInr: 8400, co2Kg: 17.2, co2SavedKg: 7.8, priority: 'Critical', status: 'Ready for approval' },
-    { id: 'RTE-302', lane: 'Guwahati → Silchar', stops: ['Guwahati Central', 'Shillong Hub', 'Silchar DC'], vehicle: '16T diesel BS-VI truck', loadKg: 13120, capacityKg: 16000, baselineKm: 365, optimizedKm: 332, duration: '8h 40m', costInr: 24150, co2Kg: 82.6, co2SavedKg: 12.4, priority: 'High', status: 'Optimized' },
-    { id: 'RTE-303', lane: 'Silchar → Aizawl', stops: ['Silchar DC', 'Kolasib Checkpoint', 'Aizawl Hub'], vehicle: '9T CNG truck', loadKg: 7960, capacityKg: 9000, baselineKm: 188, optimizedKm: 173, duration: '5h 05m', costInr: 13800, co2Kg: 29.4, co2SavedKg: 8.7, priority: 'High', status: 'Approved' },
-    { id: 'RTE-304', lane: 'Guwahati → Dimapur', stops: ['Guwahati Central', 'Nagaon Cross-dock', 'Dimapur Drop'], vehicle: '6T electric truck', loadKg: 5160, capacityKg: 6000, baselineKm: 302, optimizedKm: 281, duration: '6h 10m', costInr: 15400, co2Kg: 28.8, co2SavedKg: 10.2, priority: 'Medium', status: 'In transit' }
+    { id: 'RTE-301', lane: 'Guwahati â†’ Nongpoh â†’ Shillong', stops: ['Guwahati Central', 'Nongpoh Checkpoint', 'Shillong Hub'], vehicle: '12T electric-assisted truck', loadKg: 10860, capacityKg: 12000, baselineKm: 118, optimizedKm: 99, duration: '2h 45m', costInr: 8400, co2Kg: 17.2, co2SavedKg: 7.8, priority: 'Critical', status: 'Ready for approval' },
+    { id: 'RTE-302', lane: 'Guwahati â†’ Silchar', stops: ['Guwahati Central', 'Shillong Hub', 'Silchar DC'], vehicle: '16T diesel BS-VI truck', loadKg: 13120, capacityKg: 16000, baselineKm: 365, optimizedKm: 332, duration: '8h 40m', costInr: 24150, co2Kg: 82.6, co2SavedKg: 12.4, priority: 'High', status: 'Optimized' },
+    { id: 'RTE-303', lane: 'Silchar â†’ Aizawl', stops: ['Silchar DC', 'Kolasib Checkpoint', 'Aizawl Hub'], vehicle: '9T CNG truck', loadKg: 7960, capacityKg: 9000, baselineKm: 188, optimizedKm: 173, duration: '5h 05m', costInr: 13800, co2Kg: 29.4, co2SavedKg: 8.7, priority: 'High', status: 'Approved' },
+    { id: 'RTE-304', lane: 'Guwahati â†’ Dimapur', stops: ['Guwahati Central', 'Nagaon Cross-dock', 'Dimapur Drop'], vehicle: '6T electric truck', loadKg: 5160, capacityKg: 6000, baselineKm: 302, optimizedKm: 281, duration: '6h 10m', costInr: 15400, co2Kg: 28.8, co2SavedKg: 10.2, priority: 'Medium', status: 'In transit' }
   ];
 
   sustainabilityRecords: SustainabilityRecord[] = [
@@ -435,14 +440,76 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
 
   selectedRouteMapStops(): OptimizedRouteMapStop[] {
     const route = this.selectedRoute();
-    const signature = `${route.id}:${route.stops.join('|')}`;
+    const displayStops = this.routeStopsForObjective(route);
+    const signature = `${route.id}:${this.routeObjective}:${displayStops.join('|')}`;
     if (signature === this.routeMapStopsSignature) return this.routeMapStopsCache;
+
     this.routeMapStopsSignature = signature;
-    this.routeMapStopsCache = route.stops.map(name => {
-      const profile = this.routeStopProfiles[name];
-      return { name, latitude: profile.latitude, longitude: profile.longitude };
-    });
+    this.routeMapStopsCache = displayStops
+      .map(name => {
+        const profile = this.routeStopProfiles[name];
+        if (!profile) return null;
+        return { name, latitude: profile.latitude, longitude: profile.longitude };
+      })
+      .filter((stop): stop is OptimizedRouteMapStop => stop !== null);
+
     return this.routeMapStopsCache;
+  }
+
+  onRouteObjectiveChange(): void {
+    this.routeMapStopsSignature = '';
+    this.routeMapStopsCache = [];
+    const route = this.selectedRoute();
+    this.showToast(`${this.routeObjective} selected for ${route.id}. Map route updated.`);
+  }
+
+  private routeStopsForObjective(route: RoutePlan): string[] {
+    const original = [...route.stops];
+    const first = original[0];
+    const last = original[original.length - 1];
+
+    // Frontend preview alternatives. They use existing StockFlow stop profiles.
+    // The backend optimizer remains the source of truth when Optimize routes is pressed.
+    const alternatives: Record<string, Record<string, string[]>> = {
+      'RTE-301': {
+        'Balanced cost and carbon': ['Guwahati Central', 'Nongpoh Checkpoint', 'Shillong Hub'],
+        'Lowest transport cost': ['Guwahati Central', 'Jorabat Cross-dock', 'Nongpoh Checkpoint', 'Shillong Hub'],
+        'Lowest carbon impact': ['Guwahati Central', 'Nongpoh Checkpoint', 'Shillong Hub'],
+        'Fastest service recovery': ['Guwahati Central', 'Shillong Hub'],
+        'Safest route': ['Guwahati Central', 'Jorabat Cross-dock', 'Nongpoh Checkpoint', 'Shillong Hub'],
+        'Shortest path': ['Guwahati Central', 'Shillong Hub'],
+        'Greenest route': ['Guwahati Central', 'Nongpoh Checkpoint', 'Shillong Hub']
+      },
+      'RTE-302': {
+        'Balanced cost and carbon': ['Guwahati Central', 'Shillong Hub', 'Silchar DC'],
+        'Lowest transport cost': ['Guwahati Central', 'Jorabat Cross-dock', 'Nongpoh Checkpoint', 'Shillong Hub', 'Silchar DC'],
+        'Lowest carbon impact': ['Guwahati Central', 'Shillong Hub', 'Silchar DC'],
+        'Fastest service recovery': ['Guwahati Central', 'Silchar DC'],
+        'Safest route': ['Guwahati Central', 'Nongpoh Checkpoint', 'Shillong Hub', 'Silchar DC'],
+        'Shortest path': ['Guwahati Central', 'Silchar DC'],
+        'Greenest route': ['Guwahati Central', 'Shillong Hub', 'Silchar DC']
+      },
+      'RTE-303': {
+        'Balanced cost and carbon': ['Silchar DC', 'Kolasib Checkpoint', 'Aizawl Hub'],
+        'Lowest transport cost': ['Silchar DC', 'Kolasib Checkpoint', 'Aizawl Hub'],
+        'Lowest carbon impact': ['Silchar DC', 'Kolasib Checkpoint', 'Aizawl Hub'],
+        'Fastest service recovery': ['Silchar DC', 'Aizawl Hub'],
+        'Safest route': ['Silchar DC', 'Kolasib Checkpoint', 'Aizawl Hub'],
+        'Shortest path': ['Silchar DC', 'Aizawl Hub'],
+        'Greenest route': ['Silchar DC', 'Kolasib Checkpoint', 'Aizawl Hub']
+      },
+      'RTE-304': {
+        'Balanced cost and carbon': ['Guwahati Central', 'Nagaon Cross-dock', 'Dimapur Drop'],
+        'Lowest transport cost': ['Guwahati Central', 'Nagaon Cross-dock', 'Dimapur Drop'],
+        'Lowest carbon impact': ['Guwahati Central', 'Nagaon Cross-dock', 'Dimapur Drop'],
+        'Fastest service recovery': ['Guwahati Central', 'Dimapur Drop'],
+        'Safest route': ['Guwahati Central', 'Nagaon Cross-dock', 'Dimapur Drop'],
+        'Shortest path': ['Guwahati Central', 'Dimapur Drop'],
+        'Greenest route': ['Guwahati Central', 'Nagaon Cross-dock', 'Dimapur Drop']
+      }
+    };
+
+    return alternatives[route.id]?.[this.routeObjective] ?? [first, ...original.slice(1, -1), last];
   }
 
   totalOptimizedKm(): number {
@@ -674,7 +741,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
           this.prototype.patchRecord('routePlans', route.id, { ...route }, {
             module: 'Route Optimization',
             title: `${route.id} recalculated`,
-            detail: `${route.lane}: ${route.optimizedKm} km and ${route.co2Kg} kg CO₂e using the ${response.solver}.`,
+            detail: `${route.lane}: ${route.optimizedKm} km and ${route.co2Kg} kg COâ‚‚e using the ${response.solver}.`,
             tone: 'info'
           });
         });
@@ -712,7 +779,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
       });
       return;
     }
-    this.showToast(`${item.id} is not persisted yet. Recalculating it before the status change…`);
+    this.showToast(`${item.id} is not persisted yet. Recalculating it before the status changeâ€¦`);
     this.optimizeRoutes(() => {
       const persisted = this.routePlans.find(route => route.id === item.id);
       if (persisted?.optimizationRunId) this.advanceRoute(persisted);
@@ -968,6 +1035,93 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     });
   }
 
+
+  /**
+   * Automatically reroutes a route when an alert
+   * reports a blocked, flooded or otherwise affected stop.
+   */
+  handleRouteAlert(alert: RouteAlert): void {
+
+    const route = this.routePlans.find(
+      item => item.id === alert.routeId
+    );
+
+    if (!route) {
+      this.showToast(
+        `Route ${alert.routeId} could not be found.`
+      );
+      return;
+    }
+
+    const currentStops = route.stops
+      .map(name => {
+
+        const profile = this.routeStopProfiles[name];
+
+        if (!profile) {
+          return null;
+        }return {
+          name,
+          latitude: profile.latitude,
+          longitude: profile.longitude
+        };
+      })
+      .filter(
+        (
+          stop
+        ): stop is {
+          name: string;
+          latitude: number;
+          longitude: number;
+        } => stop !== null
+      );
+
+    if (currentStops.length === 0) {
+      this.showToast(
+        `No valid stops found for ${route.id}.`
+      );
+      return;
+    }
+
+    const result =
+      this.routeReroutingService.reroute(
+        currentStops,
+        alert
+      );
+
+    if (!result.rerouted) {
+      this.showToast(result.message);
+      return;
+    }
+
+    route.stops =
+      result.reroutedStops.map(
+        stop => stop.name
+      );
+
+    this.selectedRouteId =
+      route.id;
+
+    this.prototype.patchRecord(
+      'routePlans',
+      route.id,
+      {
+        ...route,
+        stops: route.stops
+      },
+      {
+        module: 'Route Optimization',
+        title: `${route.id} automatically rerouted`,
+        detail: result.message,
+        tone: 'info'
+      }
+    );
+
+    this.showToast(
+      `${route.id} automatically rerouted via ` +
+      `${route.stops.join(' → ')}`
+    );
+  }
   private routeStopDetails(route: RoutePlan, departureMinutes: number, promisedDeliveryMinutes: number): RouteStopInput[] {
     const deliveryCount = Math.max(route.stops.length - 1, 1);
     return route.stops.map((name, index) => {
@@ -1223,7 +1377,7 @@ export class OperationsWorkspaceComponent implements OnChanges, OnDestroy, OnIni
     }, {
       module: 'Sustainability',
       title: `${destination} impact updated`,
-      detail: `${item.co2SavedKg} kg CO₂e savings were realized when ${item.id} was delivered.`,
+      detail: `${item.co2SavedKg} kg COâ‚‚e savings were realized when ${item.id} was delivered.`,
       tone: 'success'
     });
   }
